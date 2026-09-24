@@ -1,13 +1,37 @@
 'use client';
 
-import { ARROW_DESTINATIONS, ARROW_DESTINATION_BY_ID, readIncomingArrowSource, type ArrowDestination, type OrbitSelectionId } from '@/lib/arrow-map';
+import {
+  ARROW_DESTINATIONS,
+  ARROW_DESTINATION_BY_ID,
+  readIncomingArrowSource,
+  type ArrowDestination,
+  type OrbitSelectionId,
+} from '@/lib/arrow-map';
 import { createCloudRenderer, fitCanvas } from '@/lib/particle-renderer';
+import {
+  ArrowLeftIcon,
+  ArrowMarkIcon,
+  ArrowUpRightIcon,
+  CloseIcon,
+  CommandIcon,
+  CompassIcon,
+  CoreIcon,
+  FutureNodeIcon,
+  PulseIcon,
+  RadioTowerIcon,
+  RotateWorldIcon,
+  SearchIcon,
+  TargetIcon,
+  ZoomInIcon,
+  ZoomOutIcon,
+} from '@/components/orbit-icons';
 import {
   useEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent as ReactKeyboardEvent,
   type PointerEvent as ReactPointerEvent,
   type WheelEvent as ReactWheelEvent,
 } from 'react';
@@ -15,9 +39,6 @@ import {
 type Destination = ArrowDestination;
 type DestinationId = OrbitSelectionId;
 type TravelPhase = 'idle' | 'launching' | 'preview' | 'returning';
-
-const destinations = ARROW_DESTINATIONS;
-const destinationIndex = ARROW_DESTINATION_BY_ID;
 
 type RotationState = {
   yaw: number;
@@ -32,7 +53,23 @@ type RotationState = {
   lastY: number;
 };
 
+type FlightPath = {
+  startX: number;
+  startY: number;
+  targetX: number;
+  targetY: number;
+};
 
+type UiState = {
+  selectedId: DestinationId;
+  travelPhase: TravelPhase;
+  travelId: Destination['id'] | null;
+  incomingFrom: Destination['id'] | null;
+  navigatorOpen: boolean;
+};
+
+const destinations = ARROW_DESTINATIONS;
+const destinationIndex = ARROW_DESTINATION_BY_ID;
 const TAU = Math.PI * 2;
 
 function clamp(value: number, min: number, max: number) {
@@ -44,7 +81,7 @@ function nearestEquivalentAngle(angle: number, current: number) {
 }
 
 function projectAnchor(
-  anchor: Destination['anchor'],
+  anchor: readonly [number, number, number],
   yaw: number,
   pitch: number,
   roll: number,
@@ -81,15 +118,36 @@ function projectAnchor(
   };
 }
 
+function DestinationIcon({ id, size = 18 }: { id: Destination['id']; size?: number }) {
+  if (id === 'atlas') return <CompassIcon size={size} />;
+  if (id === 'ravin') return <CoreIcon size={size} />;
+  if (id === 'relay') return <RadioTowerIcon size={size} />;
+  return <FutureNodeIcon size={size} />;
+}
+
 export function OrbitWorld() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
+  const ringsRef = useRef<HTMLDivElement>(null);
+  const craftRef = useRef<HTMLDivElement>(null);
+  const navigatorRef = useRef<HTMLElement>(null);
+  const navigatorInputRef = useRef<HTMLInputElement>(null);
+  const previousFocusRef = useRef<HTMLElement | null>(null);
   const nodeRefs = useRef<Partial<Record<Destination['id'], HTMLButtonElement | null>>>({});
   const linkRefs = useRef<Partial<Record<Destination['id'], SVGLineElement | null>>>({});
   const pointerRef = useRef({ x: 0, y: 0, inside: false });
   const impulseRef = useRef(0);
   const zoomRef = useRef({ current: 1, target: 1 });
+  const autoYawRef = useRef(0);
+  const craftAngleRef = useRef(-0.8);
   const timersRef = useRef<number[]>([]);
+  const uiRef = useRef<UiState>({
+    selectedId: 'orbit',
+    travelPhase: 'idle',
+    travelId: null,
+    incomingFrom: null,
+    navigatorOpen: false,
+  });
   const rotationRef = useRef<RotationState>({
     yaw: 0,
     pitch: 0,
@@ -106,7 +164,12 @@ export function OrbitWorld() {
   const [selectedId, setSelectedId] = useState<DestinationId>('orbit');
   const [travelPhase, setTravelPhase] = useState<TravelPhase>('idle');
   const [travelId, setTravelId] = useState<Destination['id'] | null>(null);
-  const [travelVector, setTravelVector] = useState({ x: 0, y: 0 });
+  const [flightPath, setFlightPath] = useState<FlightPath>({
+    startX: 0,
+    startY: 0,
+    targetX: 0,
+    targetY: 0,
+  });
   const [dragging, setDragging] = useState(false);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [navigatorQuery, setNavigatorQuery] = useState('');
@@ -118,6 +181,10 @@ export function OrbitWorld() {
   const isTraveling = travelPhase === 'launching' || travelPhase === 'returning';
 
   useEffect(() => {
+    uiRef.current = { selectedId, travelPhase, travelId, incomingFrom, navigatorOpen };
+  }, [incomingFrom, navigatorOpen, selectedId, travelId, travelPhase]);
+
+  useEffect(() => {
     return () => {
       timersRef.current.forEach(timer => window.clearTimeout(timer));
     };
@@ -126,6 +193,7 @@ export function OrbitWorld() {
   useEffect(() => {
     const incoming = readIncomingArrowSource(window.location.search);
     if (!incoming) return;
+
     setIncomingFrom(incoming);
     pointerRef.current.inside = false;
     impulseRef.current = 1.5;
@@ -145,17 +213,32 @@ export function OrbitWorld() {
   }, []);
 
   useEffect(() => {
+    if (!navigatorOpen) return;
+
+    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusTimer = window.setTimeout(() => navigatorInputRef.current?.focus(), 0);
+
+    return () => {
+      window.clearTimeout(focusTimer);
+      previousFocusRef.current?.focus();
+      previousFocusRef.current = null;
+    };
+  }, [navigatorOpen]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      const ui = uiRef.current;
       const target = event.target as HTMLElement | null;
       const isTyping = target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
 
-      if (event.key === 'Escape') {
+      if (event.key === 'Escape' && ui.navigatorOpen) {
+        event.preventDefault();
         setNavigatorOpen(false);
         setNavigatorQuery('');
         return;
       }
 
-      if (travelPhase !== 'idle') return;
+      if (ui.incomingFrom || ui.travelPhase !== 'idle') return;
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -163,33 +246,27 @@ export function OrbitWorld() {
         return;
       }
 
-      if (!isTyping && event.key === '/') {
+      if (!ui.navigatorOpen && !isTyping && event.key === '/') {
         event.preventDefault();
         setNavigatorOpen(true);
         return;
       }
 
-      if (!isTyping && /^[1-4]$/.test(event.key)) {
-        const destination = destinations[Number(event.key) - 1];
-        if (!destination) return;
-        focusDestination(destination, 0.8);
+      if (ui.navigatorOpen || isTyping) return;
+
+      if (/^[1-4]$/.test(event.key)) {
+        const shortcut = Number(event.key);
+        const destination = destinations.find(item => item.shortcut === shortcut);
+        if (destination) focusDestination(destination, 0.8);
+        return;
       }
 
-      if (!isTyping && event.key.toLowerCase() === 'o') {
-        const rotation = rotationRef.current;
-        rotation.targetYaw = 0;
-        rotation.targetPitch = 0;
-        rotation.velocityYaw = 0;
-        rotation.velocityPitch = 0;
-        zoomRef.current.target = 1;
-        setSelectedId('orbit');
-        impulseRef.current = 0.7;
-      }
+      if (event.key.toLowerCase() === 'o') recenterWorld();
     };
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, [travelPhase]);
+  }, []);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -204,7 +281,8 @@ export function OrbitWorld() {
     let height = 1;
     let hover = 0;
     let impulse = 0;
-    let travelMix = travelPhase === 'preview' ? 1 : 0;
+    let travelMix = 0;
+    let lastFrame = performance.now();
 
     const resize = () => {
       const bounds = shell.getBoundingClientRect();
@@ -218,28 +296,41 @@ export function OrbitWorld() {
     resize();
 
     const draw = (now: number) => {
+      const dt = Math.min(0.05, Math.max(0, (now - lastFrame) / 1000));
+      lastFrame = now;
+
       const time = now / 1000;
       const pointer = pointerRef.current;
       const rotation = rotationRef.current;
-      const travelTarget = travelPhase === 'idle' ? 0 : travelPhase === 'returning' ? 0 : 1;
+      const ui = uiRef.current;
+      const locked =
+        ui.travelPhase !== 'idle' ||
+        ui.incomingFrom !== null ||
+        ui.navigatorOpen;
 
-      if (!rotation.dragging && travelPhase === 'idle') {
+      if (!rotation.dragging && !locked) {
         rotation.targetYaw += rotation.velocityYaw;
         rotation.targetPitch = clamp(rotation.targetPitch + rotation.velocityPitch, -0.72, 0.72);
         rotation.velocityYaw *= 0.945;
         rotation.velocityPitch *= 0.92;
       }
 
+      if (ui.selectedId === 'orbit' && !rotation.dragging && !locked) {
+        autoYawRef.current += dt * 0.052;
+      }
+
+      craftAngleRef.current += dt * (locked ? 0 : 0.24);
+
       rotation.yaw += (rotation.targetYaw - rotation.yaw) * 0.12;
       rotation.pitch += (rotation.targetPitch - rotation.pitch) * 0.12;
 
       const zoom = zoomRef.current;
       zoom.current += (zoom.target - zoom.current) * 0.11;
-      shell.style.setProperty('--world-zoom', zoom.current.toFixed(3));
 
-      hover += ((pointer.inside && travelPhase === 'idle' && !rotation.dragging ? 1 : 0) - hover) * 0.075;
+      hover += ((pointer.inside && !locked && !rotation.dragging ? 1 : 0) - hover) * 0.075;
       impulse += (impulseRef.current - impulse) * 0.14;
       impulseRef.current *= 0.91;
+      const travelTarget = ui.travelPhase === 'launching' || ui.travelPhase === 'preview' ? 1 : 0;
       travelMix += (travelTarget - travelMix) * 0.055;
 
       ctx.clearRect(0, 0, width, height);
@@ -250,8 +341,12 @@ export function OrbitWorld() {
       const normalizedY = (pointer.y - centerY) / Math.max(1, height * 0.5);
       const worldScale =
         (width < 720 ? 0.9 : 1.12) *
-        zoomRef.current.current *
+        zoom.current *
         (1 + travelMix * 0.16);
+
+      const worldYaw = autoYawRef.current + rotation.yaw;
+      const worldPitch = Math.sin(time * 0.14) * 0.028 + rotation.pitch;
+      const worldRoll = Math.sin(time * 0.09) * 0.016;
 
       renderer(ctx, centerX, centerY, width, time, true, {
         mx: normalizedX,
@@ -263,16 +358,14 @@ export function OrbitWorld() {
         scale: worldScale,
         alpha: 1 - travelMix * 0.44,
         loadingMix: travelMix * 0.72,
-        yawOffset: rotation.yaw,
-        pitchOffset: rotation.pitch,
+        yaw: worldYaw,
+        pitch: worldPitch,
+        roll: worldRoll,
       });
 
-      const sphereRadius =
-        Math.min(width * 0.228, height * 0.258, 292) *
-        worldScale;
-      const nodeYaw = time * (0.052 + travelMix * 0.045) + rotation.yaw;
-      const nodePitch = Math.sin(time * 0.14) * 0.028 + rotation.pitch;
-      const nodeRoll = Math.sin(time * 0.09) * 0.016;
+      const sphereRadius = Math.min(width * 0.228, height * 0.258, 292) * worldScale;
+      const safeTopLeftX = Math.min(390, width * 0.38);
+      const safeBottomRightX = Math.min(390, width * 0.4);
 
       for (const destination of destinations) {
         const node = nodeRefs.current[destination.id];
@@ -280,36 +373,92 @@ export function OrbitWorld() {
 
         const projected = projectAnchor(
           destination.anchor,
-          nodeYaw,
-          nodePitch,
-          nodeRoll,
+          worldYaw,
+          worldPitch,
+          worldRoll,
           sphereRadius,
           centerX,
           centerY,
         );
 
-        node.style.left = `${projected.x}px`;
-        node.style.top = `${projected.y}px`;
-        node.style.zIndex = String(travelId === destination.id ? 35 : 18 + Math.round(projected.depth * 8));
-        node.style.setProperty('--node-depth', projected.depth.toFixed(3));
-        node.style.setProperty('--node-scale', (0.86 + projected.depth * 0.24).toFixed(3));
-        node.style.setProperty('--node-opacity', (0.4 + projected.depth * 0.6).toFixed(3));
+        const isBack = projected.depth < 0.42;
+        const isSelected = ui.selectedId === destination.id;
+        const inTopLeftSafeZone = projected.x < safeTopLeftX && projected.y < 275;
+        const inBottomRightSafeZone =
+          projected.x > width - safeBottomRightX &&
+          projected.y > height - 250;
+        const hideLabel =
+          isBack ||
+          (!isSelected && (inTopLeftSafeZone || inBottomRightSafeZone));
+
+        node.style.setProperty('--node-x', `${projected.x}px`);
+        node.style.setProperty('--node-y', `${projected.y}px`);
+        node.style.setProperty('--node-scale', (0.84 + projected.depth * 0.22).toFixed(3));
+        node.style.setProperty('--node-opacity', isBack ? '0.12' : (0.52 + projected.depth * 0.48).toFixed(3));
+        node.style.setProperty('--label-opacity', hideLabel ? '0' : '1');
+        node.style.zIndex = String(ui.travelId === destination.id ? 35 : 18 + Math.round(projected.depth * 7));
+        node.dataset.side = projected.x < centerX ? 'left' : 'right';
+        node.dataset.backface = isBack ? 'true' : 'false';
+        node.tabIndex = locked || isBack ? -1 : 0;
+        node.style.pointerEvents = locked || isBack ? 'none' : 'auto';
 
         const link = linkRefs.current[destination.id];
         if (link) {
           const dx = projected.x - centerX;
           const dy = projected.y - centerY;
-          link.setAttribute('x1', String(centerX + dx * 0.16));
-          link.setAttribute('y1', String(centerY + dy * 0.16));
-          link.setAttribute('x2', String(centerX + dx * 0.88));
-          link.setAttribute('y2', String(centerY + dy * 0.88));
-          link.style.setProperty('--link-depth', projected.depth.toFixed(3));
+          link.setAttribute('x1', String(centerX + dx * 0.18));
+          link.setAttribute('y1', String(centerY + dy * 0.18));
+          link.setAttribute('x2', String(centerX + dx * 0.86));
+          link.setAttribute('y2', String(centerY + dy * 0.86));
           link.style.opacity = String(
-            selectedId === destination.id
-              ? 0.64
-              : 0.08 + projected.depth * 0.18,
+            isBack ? 0.025 : isSelected ? 0.58 : 0.08 + projected.depth * 0.12,
           );
         }
+      }
+
+      const orbitAngle = craftAngleRef.current;
+      const craftAnchor: readonly [number, number, number] = [
+        Math.cos(orbitAngle) * 1.32,
+        Math.sin(orbitAngle * 0.7) * 0.23,
+        Math.sin(orbitAngle) * 1.32,
+      ];
+      const nextCraftAnchor: readonly [number, number, number] = [
+        Math.cos(orbitAngle + 0.025) * 1.32,
+        Math.sin((orbitAngle + 0.025) * 0.7) * 0.23,
+        Math.sin(orbitAngle + 0.025) * 1.32,
+      ];
+      const craftPoint = projectAnchor(
+        craftAnchor,
+        worldYaw,
+        worldPitch,
+        worldRoll,
+        sphereRadius,
+        centerX,
+        centerY,
+      );
+      const nextCraftPoint = projectAnchor(
+        nextCraftAnchor,
+        worldYaw,
+        worldPitch,
+        worldRoll,
+        sphereRadius,
+        centerX,
+        centerY,
+      );
+      const craftRotation =
+        Math.atan2(nextCraftPoint.y - craftPoint.y, nextCraftPoint.x - craftPoint.x) *
+        (180 / Math.PI);
+
+      if (craftRef.current) {
+        craftRef.current.style.setProperty('--craft-x', `${craftPoint.x}px`);
+        craftRef.current.style.setProperty('--craft-y', `${craftPoint.y}px`);
+        craftRef.current.style.setProperty('--craft-rotation', `${craftRotation}deg`);
+        craftRef.current.style.setProperty('--craft-depth', craftPoint.depth.toFixed(3));
+      }
+
+      if (ringsRef.current) {
+        ringsRef.current.style.setProperty('--ring-pitch', `${worldPitch * (180 / Math.PI)}deg`);
+        ringsRef.current.style.setProperty('--ring-yaw', `${(worldYaw % TAU) * (180 / Math.PI)}deg`);
       }
 
       frame = window.requestAnimationFrame(draw);
@@ -321,10 +470,15 @@ export function OrbitWorld() {
       observer.disconnect();
       window.cancelAnimationFrame(frame);
     };
-  }, [renderer, selectedId, travelId, travelPhase]);
+  }, [renderer]);
+
+  const interactionLocked =
+    travelPhase !== 'idle' ||
+    incomingFrom !== null ||
+    navigatorOpen;
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (travelPhase !== 'idle' || navigatorOpen) return;
+    if (interactionLocked) return;
 
     const bounds = event.currentTarget.getBoundingClientRect();
     pointerRef.current = {
@@ -350,8 +504,8 @@ export function OrbitWorld() {
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (travelPhase !== 'idle' || navigatorOpen || event.button !== 0) return;
-    if ((event.target as HTMLElement).closest('button')) return;
+    if (interactionLocked || event.button !== 0) return;
+    if ((event.target as HTMLElement).closest('button, input, a, [role="dialog"]')) return;
 
     const rotation = rotationRef.current;
     rotation.dragging = true;
@@ -377,43 +531,43 @@ export function OrbitWorld() {
     }
   };
 
+  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
+    if (interactionLocked) return;
+    if ((event.target as HTMLElement).closest('button, input, a, [role="dialog"]')) return;
+
+    event.preventDefault();
+    zoomRef.current.target = clamp(
+      zoomRef.current.target - event.deltaY * 0.0007,
+      0.82,
+      1.22,
+    );
+  };
+
   const resetPointer = () => {
     pointerRef.current.inside = false;
   };
 
-  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-    if (travelPhase !== 'idle' || navigatorOpen) return;
-    if ((event.target as HTMLElement).closest('button, input, a')) return;
-
-    event.preventDefault();
-    const zoom = zoomRef.current;
-    zoom.target = clamp(zoom.target - event.deltaY * 0.0007, 0.82, 1.22);
-  };
-
   const changeZoom = (amount: number) => {
-    if (travelPhase !== 'idle') return;
-    const zoom = zoomRef.current;
-    zoom.target = clamp(zoom.target + amount, 0.82, 1.22);
+    if (interactionLocked) return;
+    zoomRef.current.target = clamp(zoomRef.current.target + amount, 0.82, 1.22);
     impulseRef.current = Math.max(impulseRef.current, 0.32);
   };
 
   const focusDestination = (destination: Destination, impulse = 1) => {
-    if (travelPhase !== 'idle') return;
+    if (uiRef.current.travelPhase !== 'idle' || uiRef.current.incomingFrom) return;
 
     const [x, y, z] = destination.anchor;
     const horizontal = Math.max(0.001, Math.hypot(x, z));
     const sideOffset = x >= 0 ? 0.38 : -0.38;
     const baseYaw = Math.atan2(-x, z);
-    const desiredYaw = nearestEquivalentAngle(
-      baseYaw + sideOffset,
-      rotationRef.current.targetYaw,
-    );
+    const currentWorldYaw = autoYawRef.current + rotationRef.current.targetYaw;
+    const desiredWorldYaw = nearestEquivalentAngle(baseYaw + sideOffset, currentWorldYaw);
     const forwardDepth = horizontal * Math.cos(sideOffset);
     const basePitch = Math.atan2(y, Math.max(0.001, forwardDepth));
     const desiredPitch = clamp(basePitch + 0.13, -0.58, 0.58);
 
     const rotation = rotationRef.current;
-    rotation.targetYaw = desiredYaw;
+    rotation.targetYaw = desiredWorldYaw - autoYawRef.current;
     rotation.targetPitch = desiredPitch;
     rotation.velocityYaw = 0;
     rotation.velocityPitch = 0;
@@ -422,35 +576,38 @@ export function OrbitWorld() {
     impulseRef.current = impulse;
   };
 
-  const selectDestination = (destination: Destination) => {
-    focusDestination(destination);
-  };
-
   const clearTimers = () => {
     timersRef.current.forEach(timer => window.clearTimeout(timer));
     timersRef.current = [];
   };
 
-  const computeTravelVector = (destination: Destination) => {
+  const relativePoint = (element: HTMLElement | null) => {
     const shell = shellRef.current;
-    const node = nodeRefs.current[destination.id];
-    if (!shell || !node) return { x: 0, y: 0 };
+    if (!shell || !element) return { x: 0, y: 0 };
 
     const shellRect = shell.getBoundingClientRect();
-    const nodeRect = node.getBoundingClientRect();
+    const rect = element.getBoundingClientRect();
     return {
-      x: nodeRect.left + nodeRect.width / 2 - (shellRect.left + shellRect.width / 2),
-      y: nodeRect.top + nodeRect.height / 2 - (shellRect.top + shellRect.height / 2),
+      x: rect.left + rect.width / 2 - (shellRect.left + shellRect.width / 2),
+      y: rect.top + rect.height / 2 - (shellRect.top + shellRect.height / 2),
     };
   };
 
   const launchDestination = () => {
-    if (!selected || travelPhase !== 'idle') return;
+    if (!selected || interactionLocked) return;
+
+    const start = relativePoint(craftRef.current);
+    const target = relativePoint(nodeRefs.current[selected.id] ?? null);
 
     clearTimers();
     pointerRef.current.inside = false;
     setTravelId(selected.id);
-    setTravelVector(computeTravelVector(selected));
+    setFlightPath({
+      startX: start.x,
+      startY: start.y,
+      targetX: target.x,
+      targetY: target.y,
+    });
     setTravelPhase('launching');
     impulseRef.current = 1.35;
 
@@ -471,13 +628,18 @@ export function OrbitWorld() {
       setTravelPhase('idle');
       setTravelId(null);
       setSelectedId('orbit');
-      setTravelVector({ x: 0, y: 0 });
+      setFlightPath({ startX: 0, startY: 0, targetX: 0, targetY: 0 });
       impulseRef.current = 0.65;
     }, 1050));
   };
 
   const recenterWorld = () => {
+    if (incomingFrom || travelPhase !== 'idle') return;
+
     const rotation = rotationRef.current;
+    autoYawRef.current = 0;
+    rotation.yaw = 0;
+    rotation.pitch = 0;
     rotation.targetYaw = 0;
     rotation.targetPitch = 0;
     rotation.velocityYaw = 0;
@@ -490,6 +652,7 @@ export function OrbitWorld() {
   const filteredDestinations = destinations.filter(destination => {
     const query = navigatorQuery.trim().toLowerCase();
     if (!query) return true;
+
     return [destination.name, destination.code, destination.description]
       .join(' ')
       .toLowerCase()
@@ -497,23 +660,54 @@ export function OrbitWorld() {
   });
 
   const chooseFromNavigator = (destination: Destination) => {
-    focusDestination(destination, 0.9);
     setNavigatorOpen(false);
     setNavigatorQuery('');
+    window.setTimeout(() => focusDestination(destination, 0.9), 0);
   };
 
-  const travelStyle = {
-    '--travel-x': `${travelVector.x}px`,
-    '--travel-y': `${travelVector.y}px`,
+  const handleNavigatorKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    if (event.key !== 'Tab') return;
+
+    const focusable = Array.from(
+      navigatorRef.current?.querySelectorAll<HTMLElement>(
+        'button:not(:disabled), input:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])',
+      ) ?? [],
+    );
+
+    if (!focusable.length) return;
+
+    const first = focusable[0]!;
+    const last = focusable[focusable.length - 1]!;
+
+    if (event.shiftKey && document.activeElement === first) {
+      event.preventDefault();
+      last.focus();
+    } else if (!event.shiftKey && document.activeElement === last) {
+      event.preventDefault();
+      first.focus();
+    }
+  };
+
+  const flightStyle = {
+    '--flight-start-x': `${flightPath.startX}px`,
+    '--flight-start-y': `${flightPath.startY}px`,
+    '--flight-target-x': `${flightPath.targetX}px`,
+    '--flight-target-y': `${flightPath.targetY}px`,
   } as CSSProperties;
 
   return (
     <div
       ref={shellRef}
-      className={`world-shell travel-${travelPhase} ${dragging ? 'is-dragging' : ''} ${incomingFrom ? 'incoming-active' : ''}`}
+      className={[
+        'world-shell',
+        `travel-${travelPhase}`,
+        dragging ? 'is-dragging' : '',
+        incomingFrom ? 'incoming-active' : '',
+        navigatorOpen ? 'has-navigator' : '',
+      ].filter(Boolean).join(' ')}
       data-travel-destination={travelId ?? undefined}
       data-incoming-from={incomingFrom ?? undefined}
-      style={travelStyle}
+      style={flightStyle}
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerDown}
       onPointerUp={endDrag}
@@ -522,123 +716,218 @@ export function OrbitWorld() {
       onPointerLeave={resetPointer}
       onWheel={handleWheel}
     >
-      <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
-
-      {incomingFrom && (
-        <div className="incoming-flight-layer" aria-hidden="true">
-          <span className="incoming-arrival-ring ring-one" />
-          <span className="incoming-arrival-ring ring-two" />
-          <span className="incoming-trail trail-one" />
-          <span className="incoming-trail trail-two" />
-          <span className="incoming-trail trail-three" />
-          <span className="incoming-craft"><span /></span>
-          <span className="incoming-source-label">
-            returning from {destinationIndex.get(incomingFrom)?.name ?? incomingFrom}
-          </span>
+      <div className="world-scene" aria-hidden={navigatorOpen ? true : undefined}>
+        <div className="stage-copy">
+          <p className="eyebrow">CENTRAL WORLD</p>
+          <h1>Everything starts here.</h1>
+          <p className="stage-description">
+            Move through ARROW as one connected system. The sphere is the map; each signal is a destination.
+          </p>
         </div>
-      )}
 
-      <div className="orbit-rings" aria-hidden="true">
-        <span className="ring ring-a" />
-        <span className="ring ring-b" />
-        <span className="ring ring-c" />
-      </div>
+        <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
 
-      <svg className="orbit-links" aria-hidden="true">
-        {destinations.map(destination => (
-          <line
-            key={destination.id}
-            ref={line => {
-              linkRefs.current[destination.id] = line;
-            }}
-            className={`orbit-link ${selectedId === destination.id ? 'is-selected' : ''}`}
-          />
-        ))}
-      </svg>
-
-      <div className="craft-orbit" aria-hidden="true">
-        <span className="arrow-craft"><span /></span>
-      </div>
-
-      {travelingTo && (
-        <div className="travel-flight-layer" aria-hidden="true">
-          <span className="travel-path" />
-          <span className="travel-craft"><span /></span>
-          <span className="travel-wake wake-one" />
-          <span className="travel-wake wake-two" />
-          <span className="travel-wake wake-three" />
+        <div ref={ringsRef} className="orbit-rings" aria-hidden="true">
+          <span className="ring ring-a" />
+          <span className="ring ring-b" />
+          <span className="ring ring-c" />
         </div>
-      )}
 
-      <button
-        type="button"
-        className={`orbit-core-label ${selectedId === 'orbit' ? 'is-active' : ''}`}
-        disabled={travelPhase !== 'idle'}
-        onClick={recenterWorld}
-      >
-        <span className="core-kicker">YOU ARE HERE</span>
-        <span className="core-title">Orbit</span>
-      </button>
+        <svg className="orbit-links" aria-hidden="true">
+          {destinations.map(destination => (
+            <line
+              key={destination.id}
+              ref={line => {
+                linkRefs.current[destination.id] = line;
+              }}
+              className={`orbit-link ${selectedId === destination.id ? 'is-selected' : ''}`}
+            />
+          ))}
+        </svg>
 
-      <div className="destination-layer">
-        {destinations.map(destination => (
-          <button
-            ref={node => {
-              nodeRefs.current[destination.id] = node;
-            }}
-            type="button"
-            key={destination.id}
-            className={`destination-node ${selectedId === destination.id ? 'is-selected' : ''} ${travelId === destination.id ? 'is-travel-target' : ''}`}
-            onClick={() => selectDestination(destination)}
-            disabled={travelPhase !== 'idle'}
-            aria-pressed={selectedId === destination.id}
-          >
-            <span className="node-pulse" />
-            <span className="node-landmark" aria-hidden="true">
-              {destination.id === 'relay' && <span className="landmark-relay"><i /><i /><i /></span>}
-              {destination.id === 'atlas' && <span className="landmark-atlas"><i /></span>}
-              {destination.id === 'ravin' && <span className="landmark-ravin"><i /><i /></span>}
-              {destination.id === 'w' && <span className="landmark-w">W</span>}
+        <div ref={craftRef} className="craft-orbit" aria-hidden="true">
+          <ArrowMarkIcon size={20} />
+        </div>
+
+        {travelingTo && (
+          <div className="travel-flight-layer" aria-hidden="true">
+            <span className="travel-wake wake-one" />
+            <span className="travel-wake wake-two" />
+            <span className="travel-wake wake-three" />
+            <span className="travel-craft"><ArrowMarkIcon size={28} /></span>
+          </div>
+        )}
+
+        {incomingFrom && (
+          <div className="incoming-flight-layer" aria-hidden="true">
+            <span className="incoming-arrival-ring ring-one" />
+            <span className="incoming-arrival-ring ring-two" />
+            <span className="incoming-trail trail-one" />
+            <span className="incoming-trail trail-two" />
+            <span className="incoming-trail trail-three" />
+            <span className="incoming-craft"><ArrowMarkIcon size={28} /></span>
+            <span className="incoming-source-label">
+              returning from {destinationIndex.get(incomingFrom)?.name ?? incomingFrom}
             </span>
-            <span className="node-copy">
-              <span className="node-meta">
-                <span className="node-code">{destination.code}</span>
-                <span className={`route-chip ${destination.href ? 'is-live' : 'is-staged'}`}>
-                  {destination.href ? 'live' : 'staged'}
-                </span>
-              </span>
-              <strong>{destination.name}</strong>
-            </span>
-          </button>
-        ))}
-      </div>
+          </div>
+        )}
 
-      <div className="world-controls" aria-label="World controls">
-        <span className="drag-hint">
-          <span className="drag-icon" aria-hidden="true" />
-          drag world
-        </span>
-        <button type="button" onClick={recenterWorld} disabled={travelPhase !== 'idle'}>
-          recenter
-        </button>
-        <span className="zoom-controls" aria-label="World zoom">
-          <button type="button" onClick={() => changeZoom(-0.1)} disabled={travelPhase !== 'idle'} aria-label="Zoom out">−</button>
-          <button type="button" onClick={() => changeZoom(0.1)} disabled={travelPhase !== 'idle'} aria-label="Zoom in">+</button>
-        </span>
         <button
           type="button"
-          className="navigator-trigger"
-          onClick={() => {
-            pointerRef.current.inside = false;
-            setNavigatorOpen(true);
-          }}
-          disabled={travelPhase !== 'idle'}
+          className={`orbit-core-label ${selectedId === 'orbit' ? 'is-active' : ''}`}
+          disabled={interactionLocked}
+          onClick={recenterWorld}
         >
-          navigator <kbd>⌘K</kbd>
+          <span className="core-kicker">YOU ARE HERE</span>
+          <span className="core-title">Orbit</span>
         </button>
+
+        <div className="destination-layer">
+          {destinations.map(destination => (
+            <button
+              ref={node => {
+                nodeRefs.current[destination.id] = node;
+              }}
+              type="button"
+              key={destination.id}
+              className={[
+                'destination-node',
+                selectedId === destination.id ? 'is-selected' : '',
+                travelId === destination.id ? 'is-travel-target' : '',
+              ].filter(Boolean).join(' ')}
+              onClick={() => focusDestination(destination)}
+              aria-pressed={selectedId === destination.id}
+            >
+              <span className="node-pulse" />
+              <span className="node-landmark" aria-hidden="true">
+                <DestinationIcon id={destination.id} size={18} />
+              </span>
+              <span className="node-copy">
+                <span className="node-code">{destination.code}</span>
+                <strong>{destination.name}</strong>
+              </span>
+            </button>
+          ))}
+        </div>
+
+        <aside
+          className={`world-inspector ${selected ? 'has-selection' : ''}`}
+          aria-hidden={travelPhase !== 'idle' || Boolean(incomingFrom)}
+        >
+          <div className="inspector-topline">
+            <span>{selected ? selected.code : 'ORBIT'}</span>
+            <span className={`route-state ${selected?.href ? 'is-live' : selected ? 'is-staged' : ''}`}>
+              {selected ? (selected.href ? 'connected' : 'staged') : 'central world'}
+            </span>
+          </div>
+
+          <h2>{selected ? selected.name : 'Your ARROW system'}</h2>
+          <p>
+            {selected
+              ? selected.description
+              : 'Drag the world, choose a landmark, or use Navigator to move through ARROW.'}
+          </p>
+
+          <div className="world-control-row" aria-label="World controls">
+            <span className="control-hint" title="Drag the world to rotate it">
+              <RotateWorldIcon size={15} />
+              <span>drag</span>
+            </span>
+            <button type="button" onClick={recenterWorld} disabled={interactionLocked} title="Recenter Orbit">
+              <TargetIcon size={15} />
+              <span>recenter</span>
+            </button>
+            <button type="button" onClick={() => changeZoom(-0.1)} disabled={interactionLocked} title="Zoom out">
+              <ZoomOutIcon size={15} />
+              <span className="sr-only">Zoom out</span>
+            </button>
+            <button type="button" onClick={() => changeZoom(0.1)} disabled={interactionLocked} title="Zoom in">
+              <ZoomInIcon size={15} />
+              <span className="sr-only">Zoom in</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                pointerRef.current.inside = false;
+                setNavigatorOpen(true);
+              }}
+              disabled={interactionLocked}
+              title="Open ARROW Navigator"
+            >
+              <SearchIcon size={15} />
+              <span>navigator</span>
+              <kbd><CommandIcon size={11} />K</kbd>
+            </button>
+          </div>
+
+          <div className="inspector-actions">
+            {selected ? (
+              <button type="button" className="focus-button travel-button" onClick={launchDestination}>
+                Travel to {selected.name}
+                <ArrowUpRightIcon size={14} />
+              </button>
+            ) : (
+              <button
+                type="button"
+                className="focus-button"
+                onClick={() => {
+                  impulseRef.current = 1;
+                }}
+              >
+                <PulseIcon size={14} />
+                Pulse field
+              </button>
+            )}
+            <span className="handoff-state">
+              {selected ? (selected.href ? 'route connected' : 'route not connected yet') : 'select a destination'}
+            </span>
+          </div>
+        </aside>
+
+        {travelingTo && (
+          <section className="destination-preview" aria-live="polite" aria-hidden={travelPhase !== 'preview'}>
+            <div className="arrival-landmark" aria-hidden="true">
+              <DestinationIcon id={travelingTo.id} size={42} />
+            </div>
+            <p className="arrival-code">{travelingTo.code}</p>
+            <h2>{travelingTo.name}</h2>
+            <p className="arrival-line">{travelingTo.arrivalLine}</p>
+
+            <div className="arrival-actions">
+              {travelingTo.href ? (
+                <a className="arrival-primary is-live" href={travelingTo.href}>
+                  Open {travelingTo.name}
+                  <ArrowUpRightIcon size={14} />
+                </a>
+              ) : (
+                <button type="button" className="arrival-primary" disabled>
+                  Route not connected
+                </button>
+              )}
+              <button type="button" className="arrival-return" onClick={returnToOrbit}>
+                <ArrowLeftIcon size={14} />
+                Back to Orbit
+              </button>
+            </div>
+          </section>
+        )}
+
+        {isTraveling && (
+          <div className="travel-status" aria-live="polite">
+            <span className="travel-status-dot" />
+            {travelPhase === 'returning'
+              ? 'returning to Orbit'
+              : `traveling to ${travelingTo?.name ?? 'destination'}`}
+          </div>
+        )}
+
+        <div className="stage-footer">
+          <span><RotateWorldIcon size={13} /> drag to rotate</span>
+          <span><SearchIcon size={13} /> Navigator</span>
+        </div>
       </div>
 
-      {navigatorOpen && travelPhase === 'idle' && (
+      {navigatorOpen && travelPhase === 'idle' && !incomingFrom && (
         <div
           className="orbit-navigator-backdrop"
           role="presentation"
@@ -649,7 +938,14 @@ export function OrbitWorld() {
             }
           }}
         >
-          <section className="orbit-navigator" role="dialog" aria-modal="true" aria-label="Orbit navigator">
+          <section
+            ref={navigatorRef}
+            className="orbit-navigator"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Orbit navigator"
+            onKeyDown={handleNavigatorKeyDown}
+          >
             <div className="navigator-heading">
               <div>
                 <p>ARROW NAVIGATOR</p>
@@ -664,130 +960,58 @@ export function OrbitWorld() {
                 }}
                 aria-label="Close navigator"
               >
-                esc
+                <CloseIcon size={16} />
               </button>
             </div>
 
             <label className="navigator-search">
-              <span className="navigator-search-mark" aria-hidden="true">⌕</span>
+              <SearchIcon size={17} />
               <input
-                autoFocus
+                ref={navigatorInputRef}
                 value={navigatorQuery}
                 onChange={event => setNavigatorQuery(event.target.value)}
-                placeholder="Search ARROW"
+                placeholder="Search ARROW destinations"
                 aria-label="Search ARROW destinations"
               />
               <kbd>/</kbd>
             </label>
 
             <div className="navigator-results">
-              {filteredDestinations.map((destination, index) => (
+              {filteredDestinations.map(destination => (
                 <button
                   type="button"
                   key={destination.id}
                   className="navigator-result"
                   onClick={() => chooseFromNavigator(destination)}
                 >
-                  <span className="navigator-index">0{index + 1}</span>
+                  <span className="navigator-index">0{destination.shortcut}</span>
+                  <span className="navigator-result-icon" aria-hidden="true">
+                    <DestinationIcon id={destination.id} size={18} />
+                  </span>
                   <span className="navigator-result-copy">
                     <strong>{destination.name}</strong>
-                    <span className="navigator-result-meta">
-                      <span>{destination.code}</span>
-                      <em className={destination.href ? 'is-live' : 'is-staged'}>
-                        {destination.href ? 'live' : 'staged'}
-                      </em>
-                    </span>
+                    <span>{destination.code}</span>
                   </span>
                   <span className="navigator-result-description">{destination.description}</span>
-                  <span className="navigator-go" aria-hidden="true"><span /></span>
+                  <span className={`navigator-route ${destination.href ? 'is-live' : 'is-staged'}`}>
+                    {destination.href ? 'connected' : 'staged'}
+                  </span>
+                  <ArrowUpRightIcon size={15} />
                 </button>
               ))}
 
               {filteredDestinations.length === 0 && (
                 <div className="navigator-empty">
-                  No destination matches “{navigatorQuery}”.
+                  No ARROW destination matches “{navigatorQuery}”.
                 </div>
               )}
             </div>
 
             <footer className="navigator-footer">
-              <span><kbd>1–4</kbd> quick focus</span>
+              <span><kbd>1–4</kbd> focus destination</span>
               <span><kbd>O</kbd> recenter Orbit</span>
             </footer>
           </section>
-        </div>
-      )}
-
-      <aside className={`world-inspector ${selected ? 'has-selection' : ''}`} aria-hidden={travelPhase !== 'idle'}>
-        <div className="inspector-topline">
-          <span>{selected ? selected.code : 'ORBIT'}</span>
-          <span>{selected ? selected.detail : 'CENTRAL WORLD'}</span>
-        </div>
-        <h2>{selected ? selected.name : 'Your ARROW system'}</h2>
-        <p>
-          {selected
-            ? selected.description
-            : 'Orbit is the connective layer between every ARROW product. Drag the world or select a landmark to choose where ARROW goes next.'}
-        </p>
-        <div className="inspector-actions">
-          {selected ? (
-            <button type="button" className="focus-button travel-button" onClick={launchDestination}>
-              Travel to {selected.name}
-              <span className="mini-arrow" aria-hidden="true" />
-            </button>
-          ) : (
-            <button
-              type="button"
-              className="focus-button"
-              onClick={() => {
-                impulseRef.current = 1;
-              }}
-            >
-              Pulse field
-            </button>
-          )}
-          <span className="handoff-state">
-            <span /> {selected ? (selected.href ? 'route online' : 'route staged') : 'navigation online'}
-          </span>
-        </div>
-      </aside>
-
-      {travelingTo && (
-        <section className="destination-preview" aria-live="polite" aria-hidden={travelPhase !== 'preview'}>
-          <div className="arrival-landmark" aria-hidden="true">
-            {travelingTo.id === 'relay' && <span className="landmark-relay large"><i /><i /><i /></span>}
-            {travelingTo.id === 'atlas' && <span className="landmark-atlas large"><i /></span>}
-            {travelingTo.id === 'ravin' && <span className="landmark-ravin large"><i /><i /></span>}
-            {travelingTo.id === 'w' && <span className="landmark-w large">W</span>}
-          </div>
-          <p className="arrival-code">{travelingTo.code}</p>
-          <h2>{travelingTo.name}</h2>
-          <p className="arrival-line">{travelingTo.arrivalLine}</p>
-
-          <div className="arrival-actions">
-            {travelingTo.href ? (
-              <a className="arrival-primary is-live" href={travelingTo.href}>
-                Open {travelingTo.name}
-                <span>route online</span>
-              </a>
-            ) : (
-              <button type="button" className="arrival-primary" disabled>
-                Open {travelingTo.name}
-                <span>connect route</span>
-              </button>
-            )}
-            <button type="button" className="arrival-return" onClick={returnToOrbit}>
-              <span className="return-arrow" aria-hidden="true" />
-              Back to Orbit
-            </button>
-          </div>
-        </section>
-      )}
-
-      {isTraveling && (
-        <div className="travel-status" aria-live="polite">
-          <span className="travel-status-dot" />
-          {travelPhase === 'returning' ? 'returning to Orbit' : `traveling to ${travelingTo?.name ?? 'destination'}`}
         </div>
       )}
     </div>
