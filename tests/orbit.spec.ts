@@ -214,11 +214,13 @@ test('reduced-motion incoming handoff clears the source query immediately', asyn
 test('ARROW system island expands from the Orbit header', async ({ page }) => {
   await openOrbit(page);
 
-  const trigger = page.getByRole('button', { name: 'Open ARROW controls' });
+  const trigger = page.locator('.arrow-system-trigger');
   await expect(trigger).toBeVisible();
+  await expect(trigger).toHaveAccessibleName('Open ARROW controls');
 
   await trigger.click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
+  await expect(trigger).toHaveAccessibleName('Close ARROW controls');
   await expect(page.getByRole('link', { name: 'Notes' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'Calendar' })).toBeVisible();
   await expect(page.getByRole('link', { name: 'ARROW settings' })).toBeVisible();
