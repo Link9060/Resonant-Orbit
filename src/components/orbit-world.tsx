@@ -716,7 +716,7 @@ export function OrbitWorld() {
       onPointerLeave={resetPointer}
       onWheel={handleWheel}
     >
-      <div className="world-scene" aria-hidden={navigatorOpen ? true : undefined}>
+      <div className="world-scene" aria-hidden={navigatorOpen ? true : undefined} inert={navigatorOpen ? true : undefined}>
         <div className="stage-copy">
           <p className="eyebrow">CENTRAL WORLD</p>
           <h1>Everything starts here.</h1>
