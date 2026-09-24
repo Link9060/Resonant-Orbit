@@ -1,5 +1,6 @@
 'use client';
 
+import { readIncomingArrowSource } from '@/lib/arrow-map';
 import { useEffect, useRef, useState } from 'react';
 
 const STARTUP_SESSION_KEY = 'orbit-startup-seen';
@@ -197,10 +198,9 @@ export function StartupSequence() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      const source = new URLSearchParams(window.location.search).get('from');
-      const isIncomingHandoff = source === 'relay' || source === 'ravin' || source === 'atlas' || source === 'w';
+      const source = readIncomingArrowSource(window.location.search);
 
-      if (isIncomingHandoff) {
+      if (source) {
         sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
         setReady(true);
         setVisible(false);
