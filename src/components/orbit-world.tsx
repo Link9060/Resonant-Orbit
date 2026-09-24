@@ -125,6 +125,7 @@ export function OrbitWorld() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
   const nodeRefs = useRef<Partial<Record<Destination['id'], HTMLButtonElement | null>>>({});
+  const linkRefs = useRef<Partial<Record<Destination['id'], SVGLineElement | null>>>({});
   const pointerRef = useRef({ x: 0, y: 0, inside: false });
   const impulseRef = useRef(0);
   const timersRef = useRef<number[]>([]);
@@ -299,10 +300,26 @@ export function OrbitWorld() {
 
         node.style.left = `${projected.x}px`;
         node.style.top = `${projected.y}px`;
-        node.style.zIndex = String(18 + Math.round(projected.depth * 8));
+        node.style.zIndex = String(travelId === destination.id ? 35 : 18 + Math.round(projected.depth * 8));
         node.style.setProperty('--node-depth', projected.depth.toFixed(3));
         node.style.setProperty('--node-scale', (0.86 + projected.depth * 0.24).toFixed(3));
         node.style.setProperty('--node-opacity', (0.4 + projected.depth * 0.6).toFixed(3));
+
+        const link = linkRefs.current[destination.id];
+        if (link) {
+          const dx = projected.x - centerX;
+          const dy = projected.y - centerY;
+          link.setAttribute('x1', String(centerX + dx * 0.16));
+          link.setAttribute('y1', String(centerY + dy * 0.16));
+          link.setAttribute('x2', String(centerX + dx * 0.88));
+          link.setAttribute('y2', String(centerY + dy * 0.88));
+          link.style.setProperty('--link-depth', projected.depth.toFixed(3));
+          link.style.opacity = String(
+            selectedId === destination.id
+              ? 0.64
+              : 0.08 + projected.depth * 0.18,
+          );
+        }
       }
 
       frame = window.requestAnimationFrame(draw);
@@ -314,7 +331,7 @@ export function OrbitWorld() {
       observer.disconnect();
       window.cancelAnimationFrame(frame);
     };
-  }, [renderer, travelPhase]);
+  }, [renderer, selectedId, travelId, travelPhase]);
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (travelPhase !== 'idle') return;
@@ -481,6 +498,18 @@ export function OrbitWorld() {
         <span className="ring ring-b" />
         <span className="ring ring-c" />
       </div>
+
+      <svg className="orbit-links" aria-hidden="true">
+        {destinations.map(destination => (
+          <line
+            key={destination.id}
+            ref={line => {
+              linkRefs.current[destination.id] = line;
+            }}
+            className={`orbit-link ${selectedId === destination.id ? 'is-selected' : ''}`}
+          />
+        ))}
+      </svg>
 
       <div className="craft-orbit" aria-hidden="true">
         <span className="arrow-craft"><span /></span>
