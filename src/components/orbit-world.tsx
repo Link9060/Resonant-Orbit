@@ -20,6 +20,7 @@ type Destination = {
   description: string;
   detail: string;
   arrivalLine: string;
+  href?: string;
   anchor: readonly [number, number, number];
 };
 
@@ -62,6 +63,7 @@ const destinations: Destination[] = [
     description: 'Messaging, planning, coordination, and the social layer.',
     detail: 'Broadcast landmark',
     arrivalLine: 'Communication without breaking flow.',
+    href: 'https://resonantrelay.org',
     anchor: [0.76, 0.5, 0.34],
   },
   {
@@ -654,7 +656,7 @@ export function OrbitWorld() {
             </button>
           )}
           <span className="handoff-state">
-            <span /> {selected ? 'route staged' : 'navigation online'}
+            <span /> {selected ? (selected.href ? 'route online' : 'route staged') : 'navigation online'}
           </span>
         </div>
       </aside>
@@ -672,10 +674,17 @@ export function OrbitWorld() {
           <p className="arrival-line">{travelingTo.arrivalLine}</p>
 
           <div className="arrival-actions">
-            <button type="button" className="arrival-primary" disabled>
-              Open {travelingTo.name}
-              <span>connect route</span>
-            </button>
+            {travelingTo.href ? (
+              <a className="arrival-primary is-live" href={travelingTo.href}>
+                Open {travelingTo.name}
+                <span>route online</span>
+              </a>
+            ) : (
+              <button type="button" className="arrival-primary" disabled>
+                Open {travelingTo.name}
+                <span>connect route</span>
+              </button>
+            )}
             <button type="button" className="arrival-return" onClick={returnToOrbit}>
               <span className="return-arrow" aria-hidden="true" />
               Back to Orbit
