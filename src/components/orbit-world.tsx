@@ -1,7 +1,14 @@
 'use client';
 
 import { createCloudRenderer, fitCanvas } from '@/lib/particle-renderer';
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent as ReactPointerEvent,
+} from 'react';
 
 type DestinationId = 'orbit' | 'atlas' | 'ravin' | 'relay' | 'w';
 type TravelPhase = 'idle' | 'launching' | 'preview' | 'returning';
@@ -11,9 +18,22 @@ type Destination = {
   name: string;
   code: string;
   description: string;
-  position: string;
   detail: string;
   arrivalLine: string;
+  anchor: readonly [number, number, number];
+};
+
+type RotationState = {
+  yaw: number;
+  pitch: number;
+  targetYaw: number;
+  targetPitch: number;
+  velocityYaw: number;
+  velocityPitch: number;
+  dragging: boolean;
+  pointerId: number | null;
+  lastX: number;
+  lastY: number;
 };
 
 const destinations: Destination[] = [
@@ -22,40 +42,82 @@ const destinations: Destination[] = [
     name: 'Atlas',
     code: 'NAVIGATION',
     description: 'Maps, place, movement, and spatial context.',
-    position: 'node-atlas',
     detail: 'Compass landmark',
     arrivalLine: 'Place becomes context.',
+    anchor: [-0.82, -0.42, 0.38],
   },
   {
     id: 'ravin',
     name: 'RAVIN',
     code: 'INTELLIGENCE',
     description: 'Reasoning, memory, conversation, and the ARROW intelligence layer.',
-    position: 'node-ravin',
     detail: 'Core landmark',
     arrivalLine: 'Intelligence, connected to everything.',
+    anchor: [0.48, -0.7, 0.52],
   },
   {
     id: 'relay',
     name: 'Relay',
     code: 'COMMUNICATION',
     description: 'Messaging, planning, coordination, and the social layer.',
-    position: 'node-relay',
     detail: 'Broadcast landmark',
     arrivalLine: 'Communication without breaking flow.',
+    anchor: [0.76, 0.5, 0.34],
   },
   {
     id: 'w',
     name: 'W',
     code: 'FUTURE MODULE',
     description: 'Reserved space for the next ARROW destination.',
-    position: 'node-w',
     detail: 'Uncharted',
     arrivalLine: 'This destination has not been charted yet.',
+    anchor: [-0.62, 0.56, -0.55],
   },
 ];
 
 const destinationIndex = new Map(destinations.map(destination => [destination.id, destination]));
+
+function clamp(value: number, min: number, max: number) {
+  return Math.max(min, Math.min(max, value));
+}
+
+function projectAnchor(
+  anchor: Destination['anchor'],
+  yaw: number,
+  pitch: number,
+  roll: number,
+  radius: number,
+  centerX: number,
+  centerY: number,
+) {
+  const [ax, ay, az] = anchor;
+  const length = Math.hypot(ax, ay, az) || 1;
+  const shellRadius = 1.22;
+  const px = (ax / length) * shellRadius;
+  const py = (ay / length) * shellRadius;
+  const pz = (az / length) * shellRadius;
+
+  const cyaw = Math.cos(yaw);
+  const syaw = Math.sin(yaw);
+  const cpitch = Math.cos(pitch);
+  const spitch = Math.sin(pitch);
+  const croll = Math.cos(roll);
+  const sroll = Math.sin(roll);
+
+  const x1 = px * cyaw + pz * syaw;
+  const z1 = -px * syaw + pz * cyaw;
+  const y2 = py * cpitch - z1 * spitch;
+  const z2 = py * spitch + z1 * cpitch;
+  const x3 = x1 * croll - y2 * sroll;
+  const y3 = x1 * sroll + y2 * croll;
+  const perspective = 1 / Math.max(0.76, 1 - z2 * 0.13);
+
+  return {
+    x: centerX + x3 * radius * perspective,
+    y: centerY + y3 * radius * perspective,
+    depth: clamp((z2 + 1.22) / 2.44, 0, 1),
+  };
+}
 
 export function OrbitWorld() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -64,11 +126,24 @@ export function OrbitWorld() {
   const pointerRef = useRef({ x: 0, y: 0, inside: false });
   const impulseRef = useRef(0);
   const timersRef = useRef<number[]>([]);
+  const rotationRef = useRef<RotationState>({
+    yaw: 0,
+    pitch: 0,
+    targetYaw: 0,
+    targetPitch: 0,
+    velocityYaw: 0,
+    velocityPitch: 0,
+    dragging: false,
+    pointerId: null,
+    lastX: 0,
+    lastY: 0,
+  });
 
   const [selectedId, setSelectedId] = useState<DestinationId>('orbit');
   const [travelPhase, setTravelPhase] = useState<TravelPhase>('idle');
   const [travelId, setTravelId] = useState<Destination['id'] | null>(null);
   const [travelVector, setTravelVector] = useState({ x: 0, y: 0 });
+  const [dragging, setDragging] = useState(false);
 
   const renderer = useMemo(() => createCloudRenderer(false, { density: 0.92, size: 1.02 }), []);
   const selected = selectedId === 'orbit' ? null : destinationIndex.get(selectedId) ?? null;
@@ -110,9 +185,20 @@ export function OrbitWorld() {
     const draw = (now: number) => {
       const time = now / 1000;
       const pointer = pointerRef.current;
+      const rotation = rotationRef.current;
       const travelTarget = travelPhase === 'idle' ? 0 : travelPhase === 'returning' ? 0 : 1;
 
-      hover += ((pointer.inside && travelPhase === 'idle' ? 1 : 0) - hover) * 0.075;
+      if (!rotation.dragging && travelPhase === 'idle') {
+        rotation.targetYaw += rotation.velocityYaw;
+        rotation.targetPitch = clamp(rotation.targetPitch + rotation.velocityPitch, -0.72, 0.72);
+        rotation.velocityYaw *= 0.945;
+        rotation.velocityPitch *= 0.92;
+      }
+
+      rotation.yaw += (rotation.targetYaw - rotation.yaw) * 0.12;
+      rotation.pitch += (rotation.targetPitch - rotation.pitch) * 0.12;
+
+      hover += ((pointer.inside && travelPhase === 'idle' && !rotation.dragging ? 1 : 0) - hover) * 0.075;
       impulse += (impulseRef.current - impulse) * 0.14;
       impulseRef.current *= 0.91;
       travelMix += (travelTarget - travelMix) * 0.055;
@@ -123,6 +209,7 @@ export function OrbitWorld() {
       const centerY = height * 0.5;
       const normalizedX = (pointer.x - centerX) / Math.max(1, width * 0.5);
       const normalizedY = (pointer.y - centerY) / Math.max(1, height * 0.5);
+      const worldScale = (width < 720 ? 0.9 : 1.12) * (1 + travelMix * 0.16);
 
       renderer(ctx, centerX, centerY, width, time, true, {
         mx: normalizedX,
@@ -131,10 +218,41 @@ export function OrbitWorld() {
         impulse: impulse + travelMix * 0.28,
         pointerX: pointer.x - centerX,
         pointerY: pointer.y - centerY,
-        scale: (width < 720 ? 0.9 : 1.12) * (1 + travelMix * 0.16),
+        scale: worldScale,
         alpha: 1 - travelMix * 0.44,
         loadingMix: travelMix * 0.72,
+        yawOffset: rotation.yaw,
+        pitchOffset: rotation.pitch,
       });
+
+      const sphereRadius =
+        Math.min(width * 0.228, height * 0.258, 292) *
+        worldScale;
+      const nodeYaw = time * (0.052 + travelMix * 0.045) + rotation.yaw;
+      const nodePitch = Math.sin(time * 0.14) * 0.028 + rotation.pitch;
+      const nodeRoll = Math.sin(time * 0.09) * 0.016;
+
+      for (const destination of destinations) {
+        const node = nodeRefs.current[destination.id];
+        if (!node) continue;
+
+        const projected = projectAnchor(
+          destination.anchor,
+          nodeYaw,
+          nodePitch,
+          nodeRoll,
+          sphereRadius,
+          centerX,
+          centerY,
+        );
+
+        node.style.left = `${projected.x}px`;
+        node.style.top = `${projected.y}px`;
+        node.style.zIndex = String(18 + Math.round(projected.depth * 8));
+        node.style.setProperty('--node-depth', projected.depth.toFixed(3));
+        node.style.setProperty('--node-scale', (0.86 + projected.depth * 0.24).toFixed(3));
+        node.style.setProperty('--node-opacity', (0.4 + projected.depth * 0.6).toFixed(3));
+      }
 
       frame = window.requestAnimationFrame(draw);
     };
@@ -149,12 +267,56 @@ export function OrbitWorld() {
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (travelPhase !== 'idle') return;
+
     const bounds = event.currentTarget.getBoundingClientRect();
     pointerRef.current = {
       x: event.clientX - bounds.left,
       y: event.clientY - bounds.top,
       inside: true,
     };
+
+    const rotation = rotationRef.current;
+    if (!rotation.dragging || rotation.pointerId !== event.pointerId) return;
+
+    const dx = event.clientX - rotation.lastX;
+    const dy = event.clientY - rotation.lastY;
+    rotation.lastX = event.clientX;
+    rotation.lastY = event.clientY;
+
+    const yawDelta = dx * 0.0054;
+    const pitchDelta = dy * 0.0045;
+    rotation.targetYaw += yawDelta;
+    rotation.targetPitch = clamp(rotation.targetPitch + pitchDelta, -0.72, 0.72);
+    rotation.velocityYaw = yawDelta * 0.42;
+    rotation.velocityPitch = pitchDelta * 0.32;
+  };
+
+  const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (travelPhase !== 'idle' || event.button !== 0) return;
+    if ((event.target as HTMLElement).closest('button')) return;
+
+    const rotation = rotationRef.current;
+    rotation.dragging = true;
+    rotation.pointerId = event.pointerId;
+    rotation.lastX = event.clientX;
+    rotation.lastY = event.clientY;
+    rotation.velocityYaw = 0;
+    rotation.velocityPitch = 0;
+    setDragging(true);
+    event.currentTarget.setPointerCapture(event.pointerId);
+  };
+
+  const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
+    const rotation = rotationRef.current;
+    if (!rotation.dragging || rotation.pointerId !== event.pointerId) return;
+
+    rotation.dragging = false;
+    rotation.pointerId = null;
+    setDragging(false);
+
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
   };
 
   const resetPointer = () => {
@@ -217,6 +379,16 @@ export function OrbitWorld() {
     }, 1050));
   };
 
+  const recenterWorld = () => {
+    const rotation = rotationRef.current;
+    rotation.targetYaw = 0;
+    rotation.targetPitch = 0;
+    rotation.velocityYaw = 0;
+    rotation.velocityPitch = 0;
+    setSelectedId('orbit');
+    impulseRef.current = 0.7;
+  };
+
   const travelStyle = {
     '--travel-x': `${travelVector.x}px`,
     '--travel-y': `${travelVector.y}px`,
@@ -225,10 +397,13 @@ export function OrbitWorld() {
   return (
     <div
       ref={shellRef}
-      className={`world-shell travel-${travelPhase}`}
+      className={`world-shell travel-${travelPhase} ${dragging ? 'is-dragging' : ''}`}
       data-travel-destination={travelId ?? undefined}
       style={travelStyle}
       onPointerMove={handlePointerMove}
+      onPointerDown={handlePointerDown}
+      onPointerUp={endDrag}
+      onPointerCancel={endDrag}
       onPointerEnter={handlePointerMove}
       onPointerLeave={resetPointer}
     >
@@ -258,10 +433,7 @@ export function OrbitWorld() {
         type="button"
         className={`orbit-core-label ${selectedId === 'orbit' ? 'is-active' : ''}`}
         disabled={travelPhase !== 'idle'}
-        onClick={() => {
-          setSelectedId('orbit');
-          impulseRef.current = 1;
-        }}
+        onClick={recenterWorld}
       >
         <span className="core-kicker">YOU ARE HERE</span>
         <span className="core-title">Orbit</span>
@@ -275,7 +447,7 @@ export function OrbitWorld() {
             }}
             type="button"
             key={destination.id}
-            className={`destination-node ${destination.position} ${selectedId === destination.id ? 'is-selected' : ''} ${travelId === destination.id ? 'is-travel-target' : ''}`}
+            className={`destination-node ${selectedId === destination.id ? 'is-selected' : ''} ${travelId === destination.id ? 'is-travel-target' : ''}`}
             onClick={() => selectDestination(destination)}
             disabled={travelPhase !== 'idle'}
             aria-pressed={selectedId === destination.id}
@@ -295,6 +467,16 @@ export function OrbitWorld() {
         ))}
       </div>
 
+      <div className="world-controls" aria-label="World controls">
+        <span className="drag-hint">
+          <span className="drag-icon" aria-hidden="true" />
+          drag world
+        </span>
+        <button type="button" onClick={recenterWorld} disabled={travelPhase !== 'idle'}>
+          recenter
+        </button>
+      </div>
+
       <aside className={`world-inspector ${selected ? 'has-selection' : ''}`} aria-hidden={travelPhase !== 'idle'}>
         <div className="inspector-topline">
           <span>{selected ? selected.code : 'ORBIT'}</span>
@@ -304,7 +486,7 @@ export function OrbitWorld() {
         <p>
           {selected
             ? selected.description
-            : 'Orbit is the connective layer between every ARROW product. Select a landmark to bring that destination into focus.'}
+            : 'Orbit is the connective layer between every ARROW product. Drag the world or select a landmark to choose where ARROW goes next.'}
         </p>
         <div className="inspector-actions">
           {selected ? (
