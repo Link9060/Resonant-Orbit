@@ -2,7 +2,6 @@ import { OrbitWorld } from '@/components/orbit-world';
 import { ArrowMarkIcon } from '@/components/orbit-icons';
 import { ARROW_DESTINATIONS } from '@/lib/arrow-map';
 import { StartupSequence } from '@/components/startup-sequence';
-import { ArrowSystemIsland } from '@/components/arrow-system-island';
 
 export default function Home() {
   const destinationCount = ARROW_DESTINATIONS.length;
@@ -27,7 +26,7 @@ export default function Home() {
               <span>{destinationCount} nodes</span>
               <span>{liveRouteCount} connected</span>
             </div>
-            <ArrowSystemIsland />
+            <div data-arrow-os-shell data-module="orbit" suppressHydrationWarning />
           </div>
         </header>
 
