@@ -601,7 +601,12 @@ export function OrbitWorld() {
               {destination.id === 'w' && <span className="landmark-w">W</span>}
             </span>
             <span className="node-copy">
-              <span className="node-code">{destination.code}</span>
+              <span className="node-meta">
+                <span className="node-code">{destination.code}</span>
+                <span className={`route-chip ${destination.href ? 'is-live' : 'is-staged'}`}>
+                  {destination.href ? 'live' : 'staged'}
+                </span>
+              </span>
               <strong>{destination.name}</strong>
             </span>
           </button>
@@ -686,7 +691,12 @@ export function OrbitWorld() {
                   <span className="navigator-index">0{index + 1}</span>
                   <span className="navigator-result-copy">
                     <strong>{destination.name}</strong>
-                    <span>{destination.code}</span>
+                    <span className="navigator-result-meta">
+                      <span>{destination.code}</span>
+                      <em className={destination.href ? 'is-live' : 'is-staged'}>
+                        {destination.href ? 'live' : 'staged'}
+                      </em>
+                    </span>
                   </span>
                   <span className="navigator-result-description">{destination.description}</span>
                   <span className="navigator-go" aria-hidden="true"><span /></span>
