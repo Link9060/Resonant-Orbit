@@ -149,6 +149,7 @@ export function OrbitWorld() {
   const [dragging, setDragging] = useState(false);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [navigatorQuery, setNavigatorQuery] = useState('');
+  const [incomingFrom, setIncomingFrom] = useState<Destination['id'] | null>(null);
 
   const renderer = useMemo(() => createCloudRenderer(false, { density: 0.92, size: 1.02 }), []);
   const selected = selectedId === 'orbit' ? null : destinationIndex.get(selectedId) ?? null;
@@ -159,6 +160,29 @@ export function OrbitWorld() {
     return () => {
       timersRef.current.forEach(timer => window.clearTimeout(timer));
     };
+  }, []);
+
+  useEffect(() => {
+    const source = new URLSearchParams(window.location.search).get('from');
+    if (!source || !destinationIndex.has(source as Destination['id'])) return;
+
+    const incoming = source as Destination['id'];
+    setIncomingFrom(incoming);
+    pointerRef.current.inside = false;
+    impulseRef.current = 1.5;
+
+    timersRef.current.push(
+      window.setTimeout(() => {
+        impulseRef.current = 1.15;
+      }, 980),
+      window.setTimeout(() => {
+        setIncomingFrom(null);
+        const url = new URL(window.location.href);
+        url.searchParams.delete('from');
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+        impulseRef.current = 0.75;
+      }, 2200),
+    );
   }, []);
 
   useEffect(() => {
@@ -481,8 +505,9 @@ export function OrbitWorld() {
   return (
     <div
       ref={shellRef}
-      className={`world-shell travel-${travelPhase} ${dragging ? 'is-dragging' : ''}`}
+      className={`world-shell travel-${travelPhase} ${dragging ? 'is-dragging' : ''} ${incomingFrom ? 'incoming-active' : ''}`}
       data-travel-destination={travelId ?? undefined}
+      data-incoming-from={incomingFrom ?? undefined}
       style={travelStyle}
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerDown}
@@ -492,6 +517,20 @@ export function OrbitWorld() {
       onPointerLeave={resetPointer}
     >
       <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
+
+      {incomingFrom && (
+        <div className="incoming-flight-layer" aria-hidden="true">
+          <span className="incoming-arrival-ring ring-one" />
+          <span className="incoming-arrival-ring ring-two" />
+          <span className="incoming-trail trail-one" />
+          <span className="incoming-trail trail-two" />
+          <span className="incoming-trail trail-three" />
+          <span className="incoming-craft"><span /></span>
+          <span className="incoming-source-label">
+            returning from {destinationIndex.get(incomingFrom)?.name ?? incomingFrom}
+          </span>
+        </div>
+      )}
 
       <div className="orbit-rings" aria-hidden="true">
         <span className="ring ring-a" />
