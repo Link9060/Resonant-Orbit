@@ -117,6 +117,7 @@ export function OrbitWorld() {
   const craftRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<HTMLButtonElement>(null);
   const travelButtonRef = useRef<HTMLButtonElement>(null);
+  const arrivalPanelRef = useRef<HTMLElement>(null);
   const arrivalPrimaryRef = useRef<HTMLButtonElement>(null);
   const arrivalReturnRef = useRef<HTMLButtonElement>(null);
   const navigatorRef = useRef<HTMLElement>(null);
@@ -321,11 +322,7 @@ export function OrbitWorld() {
 
     if (travelPhase === 'preview') {
       const timer = window.setTimeout(() => {
-        const target =
-          arrivalPrimaryRef.current ??
-          arrivalReturnRef.current;
-
-        target?.focus({ preventScroll: true });
+        arrivalPanelRef.current?.focus({ preventScroll: true });
       }, reducedMotionRef.current ? 16 : 80);
 
       return () => window.clearTimeout(timer);
@@ -1277,9 +1274,13 @@ export function OrbitWorld() {
 
         {travelingTo && (
           <section
+            ref={arrivalPanelRef}
             className="destination-preview"
+            role="region"
+            aria-label={`${travelingTo.name} arrival`}
             aria-live="polite"
             aria-hidden={travelPhase !== 'preview'}
+            tabIndex={-1}
           >
             <div className="arrival-landmark" aria-hidden="true">
               <DestinationIcon id={travelingTo.id} size={42} />
@@ -1294,7 +1295,6 @@ export function OrbitWorld() {
                   {travelingTo.href ? (
                     <button
                       ref={arrivalPrimaryRef}
-                      autoFocus
                       type="button"
                       className="arrival-primary is-live"
                       onClick={() => window.location.assign(travelingTo.href!)}
@@ -1309,7 +1309,6 @@ export function OrbitWorld() {
                   )}
                   <button
                     ref={arrivalReturnRef}
-                    autoFocus={!travelingTo.href}
                     type="button"
                     className="arrival-return"
                     onClick={returnToOrbit}
