@@ -363,7 +363,7 @@ input:focus-visible {
     translate(-50%, -50%)
     rotate(var(--craft-rotation, 0deg))
     scale(calc(.76 + var(--craft-depth, .5) * .32));
-  opacity: calc(.38 + var(--craft-depth, .5) * .62);
+  opacity: var(--craft-opacity, 0);
   color: #fff;
   filter:
     drop-shadow(0 0 7px rgba(255, 255, 255, 0.62))
@@ -448,7 +448,7 @@ input:focus-visible {
     translate3d(var(--node-x, 50vw), var(--node-y, 50vh), 0)
     translate(-50%, -50%)
     scale(var(--node-scale, 1));
-  opacity: var(--node-opacity, 1);
+  opacity: var(--node-opacity, 0);
   will-change: transform, opacity;
   transition: opacity 160ms ease, filter 160ms ease;
 }
@@ -529,7 +529,7 @@ input:focus-visible {
   min-width: 0;
   flex-direction: column;
   gap: 2px;
-  opacity: var(--label-opacity, 1);
+  opacity: var(--label-opacity, 0);
   transition: opacity 180ms ease, transform 180ms ease;
 }
 
