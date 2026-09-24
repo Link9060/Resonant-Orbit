@@ -830,7 +830,9 @@
       });
       applyTheme('system', false);
       applyMotion('system', false);
+      stopFocusTimer(false);
       state.focusRemaining = 25 * 60;
+      state.focusUpdatedAt = 0;
       renderSettings();
       state.instances.forEach(updateInstanceState);
     });
@@ -862,6 +864,10 @@
       });
       applyTheme(getThemeChoice(), false);
       applyMotion(getMotionChoice(), false);
+      applyExperienceChoice(getExperienceChoice(), false);
+      applyAccent(readString(STORAGE.accent, 'mono'), false);
+      stopFocusTimer(false);
+      restoreFocusState();
       renderSettings();
       alert('ARROW data imported.');
     } catch (error) {
