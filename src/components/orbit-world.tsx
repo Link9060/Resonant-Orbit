@@ -9,6 +9,7 @@ import {
   useState,
   type CSSProperties,
   type PointerEvent as ReactPointerEvent,
+  type WheelEvent as ReactWheelEvent,
 } from 'react';
 
 type Destination = ArrowDestination;
@@ -180,6 +181,7 @@ export function OrbitWorld() {
         rotation.targetPitch = 0;
         rotation.velocityYaw = 0;
         rotation.velocityPitch = 0;
+        zoomRef.current.target = 1;
         setSelectedId('orbit');
         impulseRef.current = 0.7;
       }
@@ -379,7 +381,7 @@ export function OrbitWorld() {
     pointerRef.current.inside = false;
   };
 
-  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+  const handleWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
     if (travelPhase !== 'idle' || navigatorOpen) return;
     if ((event.target as HTMLElement).closest('button, input, a')) return;
 
