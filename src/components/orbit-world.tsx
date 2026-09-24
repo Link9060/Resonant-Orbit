@@ -319,6 +319,18 @@ export function OrbitWorld() {
     const previous = previousTravelPhaseRef.current;
     previousTravelPhaseRef.current = travelPhase;
 
+    if (travelPhase === 'preview' && previous !== 'preview') {
+      const timer = window.setTimeout(() => {
+        const target =
+          arrivalPrimaryRef.current ??
+          arrivalReturnRef.current;
+
+        target?.focus({ preventScroll: true });
+      }, reducedMotionRef.current ? 16 : 80);
+
+      return () => window.clearTimeout(timer);
+    }
+
     if (travelPhase === 'idle' && previous === 'returning') {
       const frame = window.requestAnimationFrame(() => {
         coreRef.current?.focus({ preventScroll: true });
