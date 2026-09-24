@@ -31,47 +31,6 @@ type RotationState = {
   lastY: number;
 };
 
-const destinations: Destination[] = [
-  {
-    id: 'atlas',
-    name: 'Atlas',
-    code: 'NAVIGATION',
-    description: 'Maps, place, movement, and spatial context.',
-    detail: 'Compass landmark',
-    arrivalLine: 'Place becomes context.',
-    anchor: [-0.82, -0.42, 0.38],
-  },
-  {
-    id: 'ravin',
-    name: 'RAVIN',
-    code: 'INTELLIGENCE',
-    description: 'Reasoning, memory, conversation, and the ARROW intelligence layer.',
-    detail: 'Core landmark',
-    arrivalLine: 'Intelligence, connected to everything.',
-    anchor: [0.48, -0.7, 0.52],
-  },
-  {
-    id: 'relay',
-    name: 'Relay',
-    code: 'COMMUNICATION',
-    description: 'Messaging, planning, coordination, and the social layer.',
-    detail: 'Broadcast landmark',
-    arrivalLine: 'Communication without breaking flow.',
-    href: 'https://resonantrelay.org',
-    anchor: [0.76, 0.5, 0.34],
-  },
-  {
-    id: 'w',
-    name: 'W',
-    code: 'FUTURE MODULE',
-    description: 'Reserved space for the next ARROW destination.',
-    detail: 'Uncharted',
-    arrivalLine: 'This destination has not been charted yet.',
-    anchor: [-0.62, 0.56, -0.55],
-  },
-];
-
-const destinationIndex = new Map(destinations.map(destination => [destination.id, destination]));
 
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
