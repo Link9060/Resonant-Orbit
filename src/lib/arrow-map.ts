@@ -33,7 +33,7 @@ export const ARROW_DESTINATIONS: readonly ArrowDestination[] = [
     detail: 'Core landmark',
     arrivalLine: 'Intelligence, connected to everything.',
     shortcut: 2,
-    href: 'https://ravin-hyeq.onrender.com/',
+    href: 'https://link9060.github.io/Project-R.A.V.I.N.-1.1/',
     anchor: [0.48, -0.7, 0.52],
   },
   {
