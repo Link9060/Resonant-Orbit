@@ -7,6 +7,7 @@
     theme: 'arrow_os_theme_v1',
     motion: 'arrow_os_motion_v1',
     accent: 'arrow_os_accent_v1',
+    experience: 'arrow_os_experience_v1',
     focusMinutes: 'arrow_os_focus_minutes_v1',
   };
 
@@ -106,9 +107,12 @@
     } catch {}
 
     const root = document.documentElement;
-    root.classList.toggle('dark', resolved === 'dark');
-    root.dataset.theme = resolved;
-    root.setAttribute('data-theme', resolved);
+    const currentModule = [...state.instances][0]?.module;
+    if (currentModule !== 'orbit') {
+      root.classList.toggle('dark', resolved === 'dark');
+      root.dataset.theme = resolved;
+      root.setAttribute('data-theme', resolved);
+    }
     root.dataset.arrowTheme = resolved;
 
     window.dispatchEvent(new CustomEvent('arrow:themechange', {
@@ -117,6 +121,50 @@
 
     updateHostTheme();
     state.instances.forEach(updateInstanceState);
+    if (state.activePanel === 'appearance') renderPanel('appearance');
+  }
+
+  function getExperienceChoice() {
+    const value = readString(STORAGE.experience, 'balanced');
+    return ['balanced', 'quiet', 'dynamic', 'glass'].includes(value) ? value : 'balanced';
+  }
+
+  function applyExperienceChoice(choice, persist = false) {
+    if (persist) writeString(STORAGE.experience, choice);
+    const normalized = ['balanced', 'quiet', 'dynamic', 'glass'].includes(choice) ? choice : 'balanced';
+    document.documentElement.dataset.arrowExperience = normalized;
+
+    const relayMap = {
+      balanced: 'flow',
+      quiet: 'still',
+      dynamic: 'spark',
+      glass: 'lucid',
+    };
+
+    try {
+      localStorage.setItem('relay-experience-mode', relayMap[normalized] || 'flow');
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('relay-experience-change'));
+    window.dispatchEvent(new CustomEvent('arrow:experiencechange', { detail: { experience: normalized } }));
+
+    if (state.activePanel === 'appearance') renderPanel('appearance');
+  }
+
+  function applyAccent(accent, persist = false) {
+    const allowed = new Set(ACCENTS.map(([value]) => value));
+    const normalized = allowed.has(accent) ? accent : 'mono';
+    if (persist) writeString(STORAGE.accent, normalized);
+    document.documentElement.dataset.arrowAccent = normalized;
+
+    const relayPalette = normalized === 'mono' ? 'monochrome' : normalized;
+    try {
+      localStorage.setItem('relay-experience-palette', relayPalette);
+    } catch {}
+
+    window.dispatchEvent(new CustomEvent('relay-experience-change'));
+    window.dispatchEvent(new CustomEvent('arrow:accentchange', { detail: { accent: normalized } }));
+
     if (state.activePanel === 'appearance') renderPanel('appearance');
   }
 
@@ -260,8 +308,10 @@
 
     root.querySelector('.arrow-os-orbit').addEventListener('click', () => {
       if (module === 'orbit') {
-        window.dispatchEvent(new CustomEvent('arrow:orbit-home'));
         closePanel();
+        const core = document.querySelector('.orbit-core-label');
+        if (core instanceof HTMLButtonElement) core.click();
+        window.dispatchEvent(new CustomEvent('arrow:orbit-home'));
         return;
       }
       launchToOrbit(module);
@@ -602,8 +652,9 @@
   }
 
   function renderFocus() {
-    if (!state.focusRunning && (!state.focusRemaining || state.focusRemaining > 60 * 60)) {
+    if (!state.focusRunning && state.focusUpdatedAt === 0) {
       state.focusRemaining = focusMinutes() * 60;
+      state.focusUpdatedAt = Date.now();
     }
 
     state.panelBody.innerHTML =
@@ -641,8 +692,15 @@
     const theme = getThemeChoice();
     const motion = getMotionChoice();
     const accent = readString(STORAGE.accent, 'mono');
+    const experience = getExperienceChoice();
 
     state.panelBody.innerHTML =
+      '<div class="arrow-os-section">' +
+        '<span class="arrow-os-section-label">EXPERIENCE</span>' +
+        '<div class="arrow-os-segmented arrow-os-experience-grid">' +
+          [['balanced','Balanced'],['quiet','Quiet'],['dynamic','Dynamic'],['glass','Glass']].map(([value,label]) => '<button type="button" data-experience-choice="' + value + '" class="' + (experience === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
+        '</div>' +
+      '</div>' +
       '<div class="arrow-os-section">' +
         '<span class="arrow-os-section-label">THEME</span>' +
         '<div class="arrow-os-segmented">' +
@@ -666,6 +724,9 @@
         '</div>' +
       '</div>';
 
+    state.panelBody.querySelectorAll('[data-experience-choice]').forEach(button => {
+      button.addEventListener('click', () => applyExperienceChoice(button.dataset.experienceChoice, true));
+    });
     state.panelBody.querySelectorAll('[data-theme-choice]').forEach(button => {
       button.addEventListener('click', () => applyTheme(button.dataset.themeChoice, true));
     });
@@ -674,10 +735,7 @@
     });
     state.panelBody.querySelectorAll('[data-accent-choice]').forEach(button => {
       button.addEventListener('click', () => {
-        writeString(STORAGE.accent, button.dataset.accentChoice);
-        document.documentElement.dataset.arrowAccent = button.dataset.accentChoice;
-        window.dispatchEvent(new CustomEvent('arrow:accentchange', { detail: { accent: button.dataset.accentChoice } }));
-        renderAppearance();
+        applyAccent(button.dataset.accentChoice, true);
       });
     });
   }
@@ -906,6 +964,9 @@
   });
 
   document.documentElement.dataset.arrowAccent = readString(STORAGE.accent, 'mono');
+  if (readString(STORAGE.experience, '')) applyExperienceChoice(getExperienceChoice(), false);
+  if (readString(STORAGE.accent, '')) applyAccent(readString(STORAGE.accent, 'mono'), false);
+  if (readString(STORAGE.theme, '')) applyTheme(getThemeChoice(), false);
   applyMotion(getMotionChoice(), false);
 
   if (document.readyState === 'loading') {
@@ -920,5 +981,7 @@
     closePanel,
     applyTheme,
     applyMotion,
+    applyAccent,
+    applyExperienceChoice,
   };
 })();
