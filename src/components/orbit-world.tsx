@@ -9,6 +9,17 @@ import {
 } from '@/lib/arrow-map';
 import { createCloudRenderer, fitCanvas } from '@/lib/particle-renderer';
 import {
+  clamp,
+  drawOrbitSegments,
+  nearestEquivalentAngle,
+  projectAnchor,
+  projectPoint,
+  pushOutsideRect,
+  resolveScreenCollisions,
+  smoothstep,
+  type ScreenRect,
+} from '@/lib/orbit-spatial';
+import {
   ArrowLeftIcon,
   ArrowMarkIcon,
   ArrowUpRightIcon,
@@ -39,6 +50,7 @@ import {
 type Destination = ArrowDestination;
 type DestinationId = OrbitSelectionId;
 type TravelPhase = 'idle' | 'launching' | 'preview' | 'returning';
+type RenderProfile = 'high' | 'balanced' | 'low';
 
 type RotationState = {
   yaw: number;
@@ -68,55 +80,11 @@ type UiState = {
   navigatorOpen: boolean;
 };
 
+type TouchPoint = { x: number; y: number };
+
 const destinations = ARROW_DESTINATIONS;
 const destinationIndex = ARROW_DESTINATION_BY_ID;
 const TAU = Math.PI * 2;
-
-function clamp(value: number, min: number, max: number) {
-  return Math.max(min, Math.min(max, value));
-}
-
-function nearestEquivalentAngle(angle: number, current: number) {
-  return angle + Math.round((current - angle) / TAU) * TAU;
-}
-
-function projectAnchor(
-  anchor: readonly [number, number, number],
-  yaw: number,
-  pitch: number,
-  roll: number,
-  radius: number,
-  centerX: number,
-  centerY: number,
-) {
-  const [ax, ay, az] = anchor;
-  const length = Math.hypot(ax, ay, az) || 1;
-  const shellRadius = 1.22;
-  const px = (ax / length) * shellRadius;
-  const py = (ay / length) * shellRadius;
-  const pz = (az / length) * shellRadius;
-
-  const cyaw = Math.cos(yaw);
-  const syaw = Math.sin(yaw);
-  const cpitch = Math.cos(pitch);
-  const spitch = Math.sin(pitch);
-  const croll = Math.cos(roll);
-  const sroll = Math.sin(roll);
-
-  const x1 = px * cyaw + pz * syaw;
-  const z1 = -px * syaw + pz * cyaw;
-  const y2 = py * cpitch - z1 * spitch;
-  const z2 = py * spitch + z1 * cpitch;
-  const x3 = x1 * croll - y2 * sroll;
-  const y3 = x1 * sroll + y2 * croll;
-  const perspective = 1 / Math.max(0.76, 1 - z2 * 0.13);
-
-  return {
-    x: centerX + x3 * radius * perspective,
-    y: centerY + y3 * radius * perspective,
-    depth: clamp((z2 + 1.22) / 2.44, 0, 1),
-  };
-}
 
 function DestinationIcon({ id, size = 18 }: { id: Destination['id']; size?: number }) {
   if (id === 'atlas') return <CompassIcon size={size} />;
@@ -125,22 +93,56 @@ function DestinationIcon({ id, size = 18 }: { id: Destination['id']; size?: numb
   return <FutureNodeIcon size={size} />;
 }
 
+function relativeRect(
+  shell: HTMLElement,
+  element: HTMLElement | null,
+): ScreenRect | null {
+  if (!element) return null;
+  const shellRect = shell.getBoundingClientRect();
+  const rect = element.getBoundingClientRect();
+
+  return {
+    left: rect.left - shellRect.left,
+    top: rect.top - shellRect.top,
+    right: rect.right - shellRect.left,
+    bottom: rect.bottom - shellRect.top,
+  };
+}
+
 export function OrbitWorld() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const shellRef = useRef<HTMLDivElement>(null);
-  const ringsRef = useRef<HTMLDivElement>(null);
+  const stageCopyRef = useRef<HTMLDivElement>(null);
+  const inspectorRef = useRef<HTMLElement>(null);
   const craftRef = useRef<HTMLDivElement>(null);
+  const coreRef = useRef<HTMLButtonElement>(null);
+  const travelButtonRef = useRef<HTMLButtonElement>(null);
+  const arrivalPrimaryRef = useRef<HTMLAnchorElement>(null);
+  const arrivalReturnRef = useRef<HTMLButtonElement>(null);
   const navigatorRef = useRef<HTMLElement>(null);
   const navigatorInputRef = useRef<HTMLInputElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
+  const focusBeforeTravelRef = useRef<HTMLElement | null>(null);
+  const previousTravelPhaseRef = useRef<TravelPhase>('idle');
+
   const nodeRefs = useRef<Partial<Record<Destination['id'], HTMLButtonElement | null>>>({});
   const linkRefs = useRef<Partial<Record<Destination['id'], SVGLineElement | null>>>({});
+  const nodeFrontRef = useRef<Partial<Record<Destination['id'], boolean>>>({});
+  const selectedBackSinceRef = useRef<number | null>(null);
+
   const pointerRef = useRef({ x: 0, y: 0, inside: false });
+  const touchPointersRef = useRef(new Map<number, TouchPoint>());
+  const pinchRef = useRef({ active: false, distance: 0, startZoom: 1 });
   const impulseRef = useRef(0);
   const zoomRef = useRef({ current: 1, target: 1 });
   const autoYawRef = useRef(0);
+  const autoResumeAtRef = useRef(0);
   const craftAngleRef = useRef(-0.8);
   const timersRef = useRef<number[]>([]);
+  const safeRectsRef = useRef<ScreenRect[]>([]);
+  const reducedMotionRef = useRef(false);
+  const perfDowngradedRef = useRef(false);
+
   const uiRef = useRef<UiState>({
     selectedId: 'orbit',
     travelPhase: 'idle',
@@ -148,6 +150,7 @@ export function OrbitWorld() {
     incomingFrom: null,
     navigatorOpen: false,
   });
+
   const rotationRef = useRef<RotationState>({
     yaw: 0,
     pitch: 0,
@@ -174,15 +177,65 @@ export function OrbitWorld() {
   const [navigatorOpen, setNavigatorOpen] = useState(false);
   const [navigatorQuery, setNavigatorQuery] = useState('');
   const [incomingFrom, setIncomingFrom] = useState<Destination['id'] | null>(null);
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [renderProfile, setRenderProfile] = useState<RenderProfile>('balanced');
 
-  const renderer = useMemo(() => createCloudRenderer(false, { density: 0.92, size: 1.02 }), []);
+  const renderer = useMemo(() => {
+    const density =
+      renderProfile === 'high' ? 0.92 :
+      renderProfile === 'balanced' ? 0.72 :
+      0.52;
+
+    return createCloudRenderer(false, { density, size: 1.02 });
+  }, [renderProfile]);
+
   const selected = selectedId === 'orbit' ? null : destinationIndex.get(selectedId) ?? null;
   const travelingTo = travelId ? destinationIndex.get(travelId) ?? null : null;
   const isTraveling = travelPhase === 'launching' || travelPhase === 'returning';
+  const interactionLocked =
+    travelPhase !== 'idle' ||
+    incomingFrom !== null ||
+    navigatorOpen;
 
   useEffect(() => {
     uiRef.current = { selectedId, travelPhase, travelId, incomingFrom, navigatorOpen };
   }, [incomingFrom, navigatorOpen, selectedId, travelId, travelPhase]);
+
+  useEffect(() => {
+    const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+    const coarseQuery = window.matchMedia('(pointer: coarse)');
+
+    const updateRuntimeProfile = () => {
+      const reduceMotion = motionQuery.matches;
+      reducedMotionRef.current = reduceMotion;
+      setPrefersReducedMotion(reduceMotion);
+
+      const hardwareConcurrency = navigator.hardwareConcurrency || 4;
+      const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
+      const lowPower =
+        reduceMotion ||
+        coarseQuery.matches ||
+        hardwareConcurrency <= 4 ||
+        deviceMemory <= 4;
+
+      const highPower =
+        !reduceMotion &&
+        !coarseQuery.matches &&
+        hardwareConcurrency >= 10 &&
+        deviceMemory >= 8;
+
+      setRenderProfile(lowPower ? 'low' : highPower ? 'high' : 'balanced');
+    };
+
+    updateRuntimeProfile();
+    motionQuery.addEventListener('change', updateRuntimeProfile);
+    coarseQuery.addEventListener('change', updateRuntimeProfile);
+
+    return () => {
+      motionQuery.removeEventListener('change', updateRuntimeProfile);
+      coarseQuery.removeEventListener('change', updateRuntimeProfile);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {
@@ -191,8 +244,38 @@ export function OrbitWorld() {
   }, []);
 
   useEffect(() => {
+    const shell = shellRef.current;
+    if (!shell) return;
+
+    const updateRects = () => {
+      const header = document.querySelector<HTMLElement>('.orbit-header');
+      safeRectsRef.current = [
+        relativeRect(shell, header),
+        relativeRect(shell, stageCopyRef.current),
+        relativeRect(shell, inspectorRef.current),
+      ].filter((rect): rect is ScreenRect => rect !== null);
+    };
+
+    const observer = new ResizeObserver(updateRects);
+    if (stageCopyRef.current) observer.observe(stageCopyRef.current);
+    if (inspectorRef.current) observer.observe(inspectorRef.current);
+    observer.observe(shell);
+
+    updateRects();
+    return () => observer.disconnect();
+  }, []);
+
+  useEffect(() => {
     const incoming = readIncomingArrowSource(window.location.search);
     if (!incoming) return;
+
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    if (reduced) {
+      const url = new URL(window.location.href);
+      url.searchParams.delete('from');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      return;
+    }
 
     setIncomingFrom(incoming);
     pointerRef.current.inside = false;
@@ -215,7 +298,8 @@ export function OrbitWorld() {
   useEffect(() => {
     if (!navigatorOpen) return;
 
-    previousFocusRef.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    previousFocusRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusTimer = window.setTimeout(() => navigatorInputRef.current?.focus(), 0);
 
     return () => {
@@ -226,10 +310,31 @@ export function OrbitWorld() {
   }, [navigatorOpen]);
 
   useEffect(() => {
+    const previous = previousTravelPhaseRef.current;
+
+    if (travelPhase === 'preview' && previous !== 'preview') {
+      const timer = window.setTimeout(() => {
+        arrivalPrimaryRef.current?.focus();
+        if (!arrivalPrimaryRef.current) arrivalReturnRef.current?.focus();
+      }, reducedMotionRef.current ? 0 : 60);
+      return () => window.clearTimeout(timer);
+    }
+
+    if (travelPhase === 'idle' && previous === 'returning') {
+      const timer = window.setTimeout(() => coreRef.current?.focus(), 0);
+      previousTravelPhaseRef.current = travelPhase;
+      return () => window.clearTimeout(timer);
+    }
+
+    previousTravelPhaseRef.current = travelPhase;
+  }, [travelPhase]);
+
+  useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const ui = uiRef.current;
       const target = event.target as HTMLElement | null;
-      const isTyping = target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
+      const isTyping =
+        target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
 
       if (event.key === 'Escape' && ui.navigatorOpen) {
         event.preventDefault();
@@ -239,6 +344,18 @@ export function OrbitWorld() {
       }
 
       if (ui.incomingFrom || ui.travelPhase !== 'idle') return;
+
+      if (ui.navigatorOpen && /^[1-4]$/.test(event.key)) {
+        event.preventDefault();
+        const shortcut = Number(event.key);
+        const destination = destinations.find(item => item.shortcut === shortcut);
+        if (!destination) return;
+
+        setNavigatorOpen(false);
+        setNavigatorQuery('');
+        window.setTimeout(() => focusDestination(destination, 0.9), 0);
+        return;
+      }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -277,12 +394,15 @@ export function OrbitWorld() {
     if (!ctx) return;
 
     let frame = 0;
+    let running = true;
     let width = 1;
     let height = 1;
     let hover = 0;
     let impulse = 0;
     let travelMix = 0;
     let lastFrame = performance.now();
+    let sampleStarted = performance.now();
+    let sampleFrames = 0;
 
     const resize = () => {
       const bounds = shell.getBoundingClientRect();
@@ -296,6 +416,8 @@ export function OrbitWorld() {
     resize();
 
     const draw = (now: number) => {
+      if (!running || document.hidden) return;
+
       const dt = Math.min(0.05, Math.max(0, (now - lastFrame) / 1000));
       lastFrame = now;
 
@@ -303,6 +425,7 @@ export function OrbitWorld() {
       const pointer = pointerRef.current;
       const rotation = rotationRef.current;
       const ui = uiRef.current;
+      const reduced = reducedMotionRef.current;
       const locked =
         ui.travelPhase !== 'idle' ||
         ui.incomingFrom !== null ||
@@ -310,28 +433,44 @@ export function OrbitWorld() {
 
       if (!rotation.dragging && !locked) {
         rotation.targetYaw += rotation.velocityYaw;
-        rotation.targetPitch = clamp(rotation.targetPitch + rotation.velocityPitch, -0.72, 0.72);
+        rotation.targetPitch = clamp(
+          rotation.targetPitch + rotation.velocityPitch,
+          -0.72,
+          0.72,
+        );
         rotation.velocityYaw *= 0.945;
         rotation.velocityPitch *= 0.92;
       }
 
-      if (ui.selectedId === 'orbit' && !rotation.dragging && !locked) {
+      if (
+        ui.selectedId === 'orbit' &&
+        !rotation.dragging &&
+        !locked &&
+        !reduced &&
+        now >= autoResumeAtRef.current
+      ) {
         autoYawRef.current += dt * 0.052;
       }
 
-      craftAngleRef.current += dt * (locked ? 0 : 0.24);
+      if (!locked && !reduced) {
+        craftAngleRef.current += dt * 0.24;
+      }
 
-      rotation.yaw += (rotation.targetYaw - rotation.yaw) * 0.12;
-      rotation.pitch += (rotation.targetPitch - rotation.pitch) * 0.12;
+      rotation.yaw += (rotation.targetYaw - rotation.yaw) * (reduced ? 1 : 0.12);
+      rotation.pitch += (rotation.targetPitch - rotation.pitch) * (reduced ? 1 : 0.12);
 
       const zoom = zoomRef.current;
-      zoom.current += (zoom.target - zoom.current) * 0.11;
+      zoom.current += (zoom.target - zoom.current) * (reduced ? 1 : 0.11);
 
-      hover += ((pointer.inside && !locked && !rotation.dragging ? 1 : 0) - hover) * 0.075;
+      hover +=
+        ((pointer.inside && !locked && !rotation.dragging && !reduced ? 1 : 0) - hover) *
+        0.075;
       impulse += (impulseRef.current - impulse) * 0.14;
       impulseRef.current *= 0.91;
-      const travelTarget = ui.travelPhase === 'launching' || ui.travelPhase === 'preview' ? 1 : 0;
-      travelMix += (travelTarget - travelMix) * 0.055;
+
+      const travelTarget =
+        ui.travelPhase === 'launching' || ui.travelPhase === 'preview' ? 1 : 0;
+      travelMix += (travelTarget - travelMix) * (reduced ? 1 : 0.055);
 
       ctx.clearRect(0, 0, width, height);
 
@@ -345,8 +484,25 @@ export function OrbitWorld() {
         (1 + travelMix * 0.16);
 
       const worldYaw = autoYawRef.current + rotation.yaw;
-      const worldPitch = Math.sin(time * 0.14) * 0.028 + rotation.pitch;
-      const worldRoll = Math.sin(time * 0.09) * 0.016;
+      const worldPitch =
+        (reduced ? 0 : Math.sin(time * 0.14) * 0.028) +
+        rotation.pitch;
+      const worldRoll = reduced ? 0 : Math.sin(time * 0.09) * 0.016;
+
+      const sphereRadius =
+        Math.min(width * 0.228, height * 0.258, 292) *
+        worldScale;
+
+      drawOrbitSegments(
+        ctx,
+        'back',
+        worldYaw,
+        worldPitch,
+        worldRoll,
+        sphereRadius,
+        centerX,
+        centerY,
+      );
 
       renderer(ctx, centerX, centerY, width, time, true, {
         mx: normalizedX,
@@ -361,16 +517,21 @@ export function OrbitWorld() {
         yaw: worldYaw,
         pitch: worldPitch,
         roll: worldRoll,
+        reduceMotion: reduced,
       });
 
-      const sphereRadius = Math.min(width * 0.228, height * 0.258, 292) * worldScale;
-      const safeTopLeftX = Math.min(390, width * 0.38);
-      const safeBottomRightX = Math.min(390, width * 0.4);
+      drawOrbitSegments(
+        ctx,
+        'front',
+        worldYaw,
+        worldPitch,
+        worldRoll,
+        sphereRadius,
+        centerX,
+        centerY,
+      );
 
-      for (const destination of destinations) {
-        const node = nodeRefs.current[destination.id];
-        if (!node) continue;
-
+      const rawNodes = destinations.map(destination => {
         const projected = projectAnchor(
           destination.anchor,
           worldYaw,
@@ -381,38 +542,100 @@ export function OrbitWorld() {
           centerY,
         );
 
-        const isBack = projected.depth < 0.42;
-        const isSelected = ui.selectedId === destination.id;
-        const inTopLeftSafeZone = projected.x < safeTopLeftX && projected.y < 275;
-        const inBottomRightSafeZone =
-          projected.x > width - safeBottomRightX &&
-          projected.y > height - 250;
-        const hideLabel =
-          isBack ||
-          (!isSelected && (inTopLeftSafeZone || inBottomRightSafeZone));
+        let position = { x: projected.x, y: projected.y };
+        for (const safeRect of safeRectsRef.current) {
+          position = pushOutsideRect(
+            position.x,
+            position.y,
+            safeRect,
+            width < 680 ? 16 : 20,
+          );
+        }
+
+        return {
+          destination,
+          ...projected,
+          x: position.x,
+          y: position.y,
+        };
+      });
+
+      const projectedNodes = resolveScreenCollisions(
+        rawNodes,
+        width < 680 ? 82 : 112,
+        centerX,
+        centerY,
+      );
+
+      for (const projected of projectedNodes) {
+        const destination = projected.destination;
+        const node = nodeRefs.current[destination.id];
+        if (!node) continue;
+
+        const frontness = smoothstep(0.32, 0.56, projected.depth);
+        const currentFront =
+          nodeFrontRef.current[destination.id] ??
+          projected.depth >= 0.42;
+
+        const nextFront = currentFront
+          ? projected.depth > 0.32
+          : projected.depth >= 0.46;
+
+        nodeFrontRef.current[destination.id] = nextFront;
+
+        if (ui.selectedId === destination.id) {
+          if (!nextFront && projected.depth < 0.34) {
+            selectedBackSinceRef.current ??= now;
+            if (now - selectedBackSinceRef.current > 240) {
+              setSelectedId('orbit');
+              selectedBackSinceRef.current = null;
+            }
+          } else {
+            selectedBackSinceRef.current = null;
+          }
+        }
 
         node.style.setProperty('--node-x', `${projected.x}px`);
         node.style.setProperty('--node-y', `${projected.y}px`);
-        node.style.setProperty('--node-scale', (0.84 + projected.depth * 0.22).toFixed(3));
-        node.style.setProperty('--node-opacity', isBack ? '0.12' : (0.52 + projected.depth * 0.48).toFixed(3));
-        node.style.setProperty('--label-opacity', hideLabel ? '0' : '1');
-        node.style.zIndex = String(ui.travelId === destination.id ? 35 : 18 + Math.round(projected.depth * 7));
+        node.style.setProperty(
+          '--node-scale',
+          (0.84 + projected.depth * 0.22).toFixed(3),
+        );
+        node.style.setProperty(
+          '--node-opacity',
+          (0.035 + frontness * 0.965).toFixed(3),
+        );
+        node.style.setProperty(
+          '--label-opacity',
+          smoothstep(0.4, 0.57, projected.depth).toFixed(3),
+        );
+        node.style.zIndex = String(
+          ui.travelId === destination.id
+            ? 35
+            : 18 + Math.round(projected.depth * 7),
+        );
         node.dataset.side = projected.x < centerX ? 'left' : 'right';
-        node.dataset.backface = isBack ? 'true' : 'false';
-        node.tabIndex = locked || isBack ? -1 : 0;
-        node.style.pointerEvents = locked || isBack ? 'none' : 'auto';
+        node.dataset.backface = nextFront ? 'false' : 'true';
+        node.tabIndex = locked || !nextFront ? -1 : 0;
+        node.style.pointerEvents = locked || !nextFront ? 'none' : 'auto';
 
         const link = linkRefs.current[destination.id];
         if (link) {
           const dx = projected.x - centerX;
           const dy = projected.y - centerY;
-          link.setAttribute('x1', String(centerX + dx * 0.18));
-          link.setAttribute('y1', String(centerY + dy * 0.18));
-          link.setAttribute('x2', String(centerX + dx * 0.86));
-          link.setAttribute('y2', String(centerY + dy * 0.86));
-          link.style.opacity = String(
-            isBack ? 0.025 : isSelected ? 0.58 : 0.08 + projected.depth * 0.12,
-          );
+          link.setAttribute('x1', String(centerX + dx * 0.2));
+          link.setAttribute('y1', String(centerY + dy * 0.2));
+          link.setAttribute('x2', String(centerX + dx * 0.84));
+          link.setAttribute('y2', String(centerY + dy * 0.84));
+
+          const linkVisible = projected.z > 0.02;
+          link.style.opacity = linkVisible
+            ? String(
+                ui.selectedId === destination.id
+                  ? 0.58
+                  : 0.06 + frontness * 0.13,
+              )
+            : '0';
         }
       }
 
@@ -427,7 +650,8 @@ export function OrbitWorld() {
         Math.sin((orbitAngle + 0.025) * 0.7) * 0.23,
         Math.sin(orbitAngle + 0.025) * 1.32,
       ];
-      const craftPoint = projectAnchor(
+
+      const craftPoint = projectPoint(
         craftAnchor,
         worldYaw,
         worldPitch,
@@ -436,7 +660,7 @@ export function OrbitWorld() {
         centerX,
         centerY,
       );
-      const nextCraftPoint = projectAnchor(
+      const nextCraftPoint = projectPoint(
         nextCraftAnchor,
         worldYaw,
         worldPitch,
@@ -446,37 +670,80 @@ export function OrbitWorld() {
         centerY,
       );
       const craftRotation =
-        Math.atan2(nextCraftPoint.y - craftPoint.y, nextCraftPoint.x - craftPoint.x) *
+        Math.atan2(
+          nextCraftPoint.y - craftPoint.y,
+          nextCraftPoint.x - craftPoint.x,
+        ) *
         (180 / Math.PI);
+
+      const craftDistance = Math.hypot(
+        craftPoint.x - centerX,
+        craftPoint.y - centerY,
+      );
+      const behindDisc =
+        craftPoint.z < 0 &&
+        craftDistance < sphereRadius * 1.015;
+      const craftOcclusion = behindDisc
+        ? smoothstep(-0.02, 0.12, craftPoint.z)
+        : 1;
 
       if (craftRef.current) {
         craftRef.current.style.setProperty('--craft-x', `${craftPoint.x}px`);
         craftRef.current.style.setProperty('--craft-y', `${craftPoint.y}px`);
-        craftRef.current.style.setProperty('--craft-rotation', `${craftRotation}deg`);
-        craftRef.current.style.setProperty('--craft-depth', craftPoint.depth.toFixed(3));
-        craftRef.current.style.setProperty('--craft-opacity', (0.38 + craftPoint.depth * 0.62).toFixed(3));
+        craftRef.current.style.setProperty(
+          '--craft-rotation',
+          `${craftRotation}deg`,
+        );
+        craftRef.current.style.setProperty(
+          '--craft-depth',
+          craftPoint.depth.toFixed(3),
+        );
+        craftRef.current.style.setProperty(
+          '--craft-opacity',
+          ((0.38 + craftPoint.depth * 0.62) * craftOcclusion).toFixed(3),
+        );
       }
 
-      if (ringsRef.current) {
-        ringsRef.current.style.setProperty('--ring-pitch', `${worldPitch * (180 / Math.PI)}deg`);
-        ringsRef.current.style.setProperty('--ring-yaw', `${(worldYaw % TAU) * (180 / Math.PI)}deg`);
+      sampleFrames += 1;
+      if (now - sampleStarted >= 2400) {
+        const fps = (sampleFrames * 1000) / (now - sampleStarted);
+        sampleStarted = now;
+        sampleFrames = 0;
+
+        if (
+          fps < 43 &&
+          renderProfile !== 'low' &&
+          !perfDowngradedRef.current
+        ) {
+          perfDowngradedRef.current = true;
+          setRenderProfile('low');
+        }
       }
 
       frame = window.requestAnimationFrame(draw);
     };
 
-    frame = window.requestAnimationFrame(draw);
+    const start = () => {
+      if (!running || document.hidden) return;
+      lastFrame = performance.now();
+      frame = window.requestAnimationFrame(draw);
+    };
+
+    const handleVisibilityChange = () => {
+      window.cancelAnimationFrame(frame);
+      if (!document.hidden) start();
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    start();
 
     return () => {
+      running = false;
       observer.disconnect();
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.cancelAnimationFrame(frame);
     };
-  }, [renderer]);
-
-  const interactionLocked =
-    travelPhase !== 'idle' ||
-    incomingFrom !== null ||
-    navigatorOpen;
+  }, [renderer, renderProfile]);
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (interactionLocked) return;
@@ -487,6 +754,40 @@ export function OrbitWorld() {
       y: event.clientY - bounds.top,
       inside: true,
     };
+
+    if (event.pointerType === 'touch') {
+      const touches = touchPointersRef.current;
+      if (touches.has(event.pointerId)) {
+        touches.set(event.pointerId, { x: event.clientX, y: event.clientY });
+      }
+
+      if (touches.size >= 2) {
+        const [a, b] = Array.from(touches.values());
+        if (!a || !b) return;
+
+        const distance = Math.hypot(b.x - a.x, b.y - a.y);
+        if (!pinchRef.current.active) {
+          pinchRef.current = {
+            active: true,
+            distance,
+            startZoom: zoomRef.current.target,
+          };
+        }
+
+        if (pinchRef.current.distance > 1) {
+          zoomRef.current.target = clamp(
+            pinchRef.current.startZoom *
+              (distance / pinchRef.current.distance),
+            0.82,
+            1.22,
+          );
+        }
+
+        rotationRef.current.dragging = false;
+        setDragging(false);
+        return;
+      }
+    }
 
     const rotation = rotationRef.current;
     if (!rotation.dragging || rotation.pointerId !== event.pointerId) return;
@@ -499,7 +800,11 @@ export function OrbitWorld() {
     const yawDelta = dx * 0.0054;
     const pitchDelta = dy * 0.0045;
     rotation.targetYaw += yawDelta;
-    rotation.targetPitch = clamp(rotation.targetPitch + pitchDelta, -0.72, 0.72);
+    rotation.targetPitch = clamp(
+      rotation.targetPitch + pitchDelta,
+      -0.72,
+      0.72,
+    );
     rotation.velocityYaw = yawDelta * 0.42;
     rotation.velocityPitch = pitchDelta * 0.32;
   };
@@ -507,6 +812,28 @@ export function OrbitWorld() {
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (interactionLocked || event.button !== 0) return;
     if ((event.target as HTMLElement).closest('button, input, a, [role="dialog"]')) return;
+
+    if (event.pointerType === 'touch') {
+      touchPointersRef.current.set(event.pointerId, {
+        x: event.clientX,
+        y: event.clientY,
+      });
+      event.currentTarget.setPointerCapture(event.pointerId);
+
+      if (touchPointersRef.current.size >= 2) {
+        const [a, b] = Array.from(touchPointersRef.current.values());
+        if (a && b) {
+          pinchRef.current = {
+            active: true,
+            distance: Math.hypot(b.x - a.x, b.y - a.y),
+            startZoom: zoomRef.current.target,
+          };
+        }
+        rotationRef.current.dragging = false;
+        setDragging(false);
+        return;
+      }
+    }
 
     const rotation = rotationRef.current;
     rotation.dragging = true;
@@ -516,16 +843,41 @@ export function OrbitWorld() {
     rotation.velocityYaw = 0;
     rotation.velocityPitch = 0;
     setDragging(true);
-    event.currentTarget.setPointerCapture(event.pointerId);
+
+    if (!event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.setPointerCapture(event.pointerId);
+    }
   };
 
   const endDrag = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const rotation = rotationRef.current;
-    if (!rotation.dragging || rotation.pointerId !== event.pointerId) return;
+    if (event.pointerType === 'touch') {
+      touchPointersRef.current.delete(event.pointerId);
 
-    rotation.dragging = false;
-    rotation.pointerId = null;
-    setDragging(false);
+      if (touchPointersRef.current.size < 2) {
+        pinchRef.current.active = false;
+      }
+
+      if (touchPointersRef.current.size === 1) {
+        const [[pointerId, remaining]] = Array.from(
+          touchPointersRef.current.entries(),
+        );
+        if (remaining) {
+          const rotation = rotationRef.current;
+          rotation.dragging = true;
+          rotation.pointerId = pointerId;
+          rotation.lastX = remaining.x;
+          rotation.lastY = remaining.y;
+          setDragging(true);
+        }
+      }
+    }
+
+    const rotation = rotationRef.current;
+    if (rotation.pointerId === event.pointerId) {
+      rotation.dragging = false;
+      rotation.pointerId = null;
+      setDragging(false);
+    }
 
     if (event.currentTarget.hasPointerCapture(event.pointerId)) {
       event.currentTarget.releasePointerCapture(event.pointerId);
@@ -562,7 +914,10 @@ export function OrbitWorld() {
     const sideOffset = x >= 0 ? 0.38 : -0.38;
     const baseYaw = Math.atan2(-x, z);
     const currentWorldYaw = autoYawRef.current + rotationRef.current.targetYaw;
-    const desiredWorldYaw = nearestEquivalentAngle(baseYaw + sideOffset, currentWorldYaw);
+    const desiredWorldYaw = nearestEquivalentAngle(
+      baseYaw + sideOffset,
+      currentWorldYaw,
+    );
     const forwardDepth = horizontal * Math.cos(sideOffset);
     const basePitch = Math.atan2(y, Math.max(0.001, forwardDepth));
     const desiredPitch = clamp(basePitch + 0.13, -0.58, 0.58);
@@ -572,6 +927,7 @@ export function OrbitWorld() {
     rotation.targetPitch = desiredPitch;
     rotation.velocityYaw = 0;
     rotation.velocityPitch = 0;
+    autoResumeAtRef.current = performance.now() + 900;
 
     setSelectedId(destination.id);
     impulseRef.current = impulse;
@@ -588,6 +944,7 @@ export function OrbitWorld() {
 
     const shellRect = shell.getBoundingClientRect();
     const rect = element.getBoundingClientRect();
+
     return {
       x: rect.left + rect.width / 2 - (shellRect.left + shellRect.width / 2),
       y: rect.top + rect.height / 2 - (shellRect.top + shellRect.height / 2),
@@ -596,6 +953,9 @@ export function OrbitWorld() {
 
   const launchDestination = () => {
     if (!selected || interactionLocked) return;
+
+    focusBeforeTravelRef.current =
+      document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const start = relativePoint(craftRef.current);
     const target = relativePoint(nodeRefs.current[selected.id] ?? null);
@@ -612,10 +972,13 @@ export function OrbitWorld() {
     setTravelPhase('launching');
     impulseRef.current = 1.35;
 
-    timersRef.current.push(window.setTimeout(() => {
-      setTravelPhase('preview');
-      impulseRef.current = 0.8;
-    }, 1450));
+    const duration = reducedMotionRef.current ? 80 : 1450;
+    timersRef.current.push(
+      window.setTimeout(() => {
+        setTravelPhase('preview');
+        impulseRef.current = 0.8;
+      }, duration),
+    );
   };
 
   const returnToOrbit = () => {
@@ -625,27 +988,34 @@ export function OrbitWorld() {
     setTravelPhase('returning');
     impulseRef.current = 1;
 
-    timersRef.current.push(window.setTimeout(() => {
-      setTravelPhase('idle');
-      setTravelId(null);
-      setSelectedId('orbit');
-      setFlightPath({ startX: 0, startY: 0, targetX: 0, targetY: 0 });
-      impulseRef.current = 0.65;
-    }, 1050));
+    const duration = reducedMotionRef.current ? 80 : 1050;
+    timersRef.current.push(
+      window.setTimeout(() => {
+        setTravelPhase('idle');
+        setTravelId(null);
+        setSelectedId('orbit');
+        setFlightPath({ startX: 0, startY: 0, targetX: 0, targetY: 0 });
+        impulseRef.current = 0.65;
+      }, duration),
+    );
   };
 
   const recenterWorld = () => {
     if (incomingFrom || travelPhase !== 'idle') return;
 
     const rotation = rotationRef.current;
+    rotation.yaw += autoYawRef.current;
+    rotation.targetYaw += autoYawRef.current;
     autoYawRef.current = 0;
-    rotation.yaw = 0;
-    rotation.pitch = 0;
-    rotation.targetYaw = 0;
+
+    rotation.targetYaw = nearestEquivalentAngle(0, rotation.targetYaw);
     rotation.targetPitch = 0;
     rotation.velocityYaw = 0;
     rotation.velocityPitch = 0;
     zoomRef.current.target = 1;
+    autoResumeAtRef.current =
+      performance.now() + (reducedMotionRef.current ? 0 : 850);
+
     setSelectedId('orbit');
     impulseRef.current = 0.7;
   };
@@ -705,6 +1075,8 @@ export function OrbitWorld() {
         dragging ? 'is-dragging' : '',
         incomingFrom ? 'incoming-active' : '',
         navigatorOpen ? 'has-navigator' : '',
+        prefersReducedMotion ? 'reduce-motion' : '',
+        `render-${renderProfile}`,
       ].filter(Boolean).join(' ')}
       data-travel-destination={travelId ?? undefined}
       data-incoming-from={incomingFrom ?? undefined}
@@ -717,8 +1089,12 @@ export function OrbitWorld() {
       onPointerLeave={resetPointer}
       onWheel={handleWheel}
     >
-      <div className="world-scene" aria-hidden={navigatorOpen ? true : undefined} inert={navigatorOpen ? true : undefined}>
-        <div className="stage-copy">
+      <div
+        className="world-scene"
+        aria-hidden={navigatorOpen ? true : undefined}
+        inert={navigatorOpen ? true : undefined}
+      >
+        <div ref={stageCopyRef} className="stage-copy">
           <p className="eyebrow">CENTRAL WORLD</p>
           <h1>Everything starts here.</h1>
           <p className="stage-description">
@@ -727,12 +1103,6 @@ export function OrbitWorld() {
         </div>
 
         <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
-
-        <div ref={ringsRef} className="orbit-rings" aria-hidden="true">
-          <span className="ring ring-a" />
-          <span className="ring ring-b" />
-          <span className="ring ring-c" />
-        </div>
 
         <svg className="orbit-links" aria-hidden="true">
           {destinations.map(destination => (
@@ -774,6 +1144,7 @@ export function OrbitWorld() {
         )}
 
         <button
+          ref={coreRef}
           type="button"
           className={`orbit-core-label ${selectedId === 'orbit' ? 'is-active' : ''}`}
           disabled={interactionLocked}
@@ -798,6 +1169,7 @@ export function OrbitWorld() {
               ].filter(Boolean).join(' ')}
               onClick={() => focusDestination(destination)}
               aria-pressed={selectedId === destination.id}
+              aria-label={`${destination.name}, ${destination.code}. ${destination.detail}`}
             >
               <span className="node-pulse" />
               <span className="node-landmark" aria-hidden="true">
@@ -812,8 +1184,10 @@ export function OrbitWorld() {
         </div>
 
         <aside
+          ref={inspectorRef}
           className={`world-inspector ${selected ? 'has-selection' : ''}`}
           aria-hidden={travelPhase !== 'idle' || Boolean(incomingFrom)}
+          inert={travelPhase !== 'idle' || Boolean(incomingFrom) ? true : undefined}
         >
           <div className="inspector-topline">
             <span>{selected ? selected.code : 'ORBIT'}</span>
@@ -863,7 +1237,12 @@ export function OrbitWorld() {
 
           <div className="inspector-actions">
             {selected ? (
-              <button type="button" className="focus-button travel-button" onClick={launchDestination}>
+              <button
+                ref={travelButtonRef}
+                type="button"
+                className="focus-button travel-button"
+                onClick={launchDestination}
+              >
                 Travel to {selected.name}
                 <ArrowUpRightIcon size={14} />
               </button>
@@ -886,7 +1265,12 @@ export function OrbitWorld() {
         </aside>
 
         {travelingTo && (
-          <section className="destination-preview" aria-live="polite" aria-hidden={travelPhase !== 'preview'}>
+          <section
+            className="destination-preview"
+            aria-live="polite"
+            aria-hidden={travelPhase !== 'preview'}
+            inert={travelPhase !== 'preview' ? true : undefined}
+          >
             <div className="arrival-landmark" aria-hidden="true">
               <DestinationIcon id={travelingTo.id} size={42} />
             </div>
@@ -896,7 +1280,11 @@ export function OrbitWorld() {
 
             <div className="arrival-actions">
               {travelingTo.href ? (
-                <a className="arrival-primary is-live" href={travelingTo.href}>
+                <a
+                  ref={arrivalPrimaryRef}
+                  className="arrival-primary is-live"
+                  href={travelingTo.href}
+                >
                   Open {travelingTo.name}
                   <ArrowUpRightIcon size={14} />
                 </a>
@@ -905,7 +1293,12 @@ export function OrbitWorld() {
                   Route not connected
                 </button>
               )}
-              <button type="button" className="arrival-return" onClick={returnToOrbit}>
+              <button
+                ref={arrivalReturnRef}
+                type="button"
+                className="arrival-return"
+                onClick={returnToOrbit}
+              >
                 <ArrowLeftIcon size={14} />
                 Back to Orbit
               </button>
