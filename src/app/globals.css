@@ -214,7 +214,7 @@ input:focus-visible {
 
 .stage-copy {
   position: absolute;
-  z-index: 9;
+  z-index: 32;
   left: 32px;
   top: 112px;
   width: min(310px, calc(100vw - 64px));
