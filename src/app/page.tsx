@@ -1,7 +1,11 @@
 import { OrbitWorld } from '@/components/orbit-world';
+import { ARROW_DESTINATIONS } from '@/lib/arrow-map';
 import { StartupSequence } from '@/components/startup-sequence';
 
 export default function Home() {
+  const destinationCount = String(ARROW_DESTINATIONS.length).padStart(2, '0');
+  const liveRouteCount = String(ARROW_DESTINATIONS.filter(destination => destination.href).length).padStart(2, '0');
+
   return (
     <>
       <StartupSequence />
@@ -26,8 +30,8 @@ export default function Home() {
 
         <section className="orbit-stage" aria-label="Orbit dashboard">
           <div className="orbit-readout" aria-label="ARROW world status">
-            <span><strong>04</strong> destinations</span>
-            <span><strong>01</strong> live route</span>
+            <span><strong>{destinationCount}</strong> destinations</span>
+            <span><strong>{liveRouteCount}</strong> live route</span>
             <span><i /> world online</span>
           </div>
 
