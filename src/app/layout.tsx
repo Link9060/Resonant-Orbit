@@ -16,6 +16,10 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="stylesheet" href="/Resonant-Orbit/arrow-shell.css?v=20260924-50" />
+        <script defer src="/Resonant-Orbit/arrow-shell.js?v=20260924-50" />
+      </head>
       <body>{children}</body>
     </html>
   );
