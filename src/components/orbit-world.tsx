@@ -334,7 +334,7 @@ export function OrbitWorld() {
   }, [renderer, selectedId, travelId, travelPhase]);
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (travelPhase !== 'idle') return;
+    if (travelPhase !== 'idle' || navigatorOpen) return;
 
     const bounds = event.currentTarget.getBoundingClientRect();
     pointerRef.current = {
@@ -360,7 +360,7 @@ export function OrbitWorld() {
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (travelPhase !== 'idle' || event.button !== 0) return;
+    if (travelPhase !== 'idle' || navigatorOpen || event.button !== 0) return;
     if ((event.target as HTMLElement).closest('button')) return;
 
     const rotation = rotationRef.current;
@@ -574,7 +574,10 @@ export function OrbitWorld() {
         <button
           type="button"
           className="navigator-trigger"
-          onClick={() => setNavigatorOpen(true)}
+          onClick={() => {
+            pointerRef.current.inside = false;
+            setNavigatorOpen(true);
+          }}
           disabled={travelPhase !== 'idle'}
         >
           navigator <kbd>⌘K</kbd>
