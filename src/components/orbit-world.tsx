@@ -319,26 +319,6 @@ export function OrbitWorld() {
     const previous = previousTravelPhaseRef.current;
     previousTravelPhaseRef.current = travelPhase;
 
-    if (travelPhase === 'preview' && previous !== 'preview') {
-      let frameOne = 0;
-      let frameTwo = 0;
-
-      frameOne = window.requestAnimationFrame(() => {
-        frameTwo = window.requestAnimationFrame(() => {
-          const target =
-            arrivalPrimaryRef.current ??
-            arrivalReturnRef.current;
-
-          target?.focus({ preventScroll: true });
-        });
-      });
-
-      return () => {
-        window.cancelAnimationFrame(frameOne);
-        window.cancelAnimationFrame(frameTwo);
-      };
-    }
-
     if (travelPhase === 'idle' && previous === 'returning') {
       const frame = window.requestAnimationFrame(() => {
         coreRef.current?.focus({ preventScroll: true });
@@ -1288,7 +1268,6 @@ export function OrbitWorld() {
             className="destination-preview"
             aria-live="polite"
             aria-hidden={travelPhase !== 'preview'}
-            inert={travelPhase !== 'preview' ? true : undefined}
           >
             <div className="arrival-landmark" aria-hidden="true">
               <DestinationIcon id={travelingTo.id} size={42} />
@@ -1298,29 +1277,35 @@ export function OrbitWorld() {
             <p className="arrival-line">{travelingTo.arrivalLine}</p>
 
             <div className="arrival-actions">
-              {travelingTo.href ? (
-                <a
-                  ref={arrivalPrimaryRef}
-                  className="arrival-primary is-live"
-                  href={travelingTo.href}
-                >
-                  Open {travelingTo.name}
-                  <ArrowUpRightIcon size={14} />
-                </a>
-              ) : (
-                <button type="button" className="arrival-primary" disabled>
-                  Route not connected
-                </button>
+              {travelPhase === 'preview' && (
+                <>
+                  {travelingTo.href ? (
+                    <a
+                      ref={arrivalPrimaryRef}
+                      autoFocus
+                      className="arrival-primary is-live"
+                      href={travelingTo.href}
+                    >
+                      Open {travelingTo.name}
+                      <ArrowUpRightIcon size={14} />
+                    </a>
+                  ) : (
+                    <button type="button" className="arrival-primary" disabled>
+                      Route not connected
+                    </button>
+                  )}
+                  <button
+                    ref={arrivalReturnRef}
+                    autoFocus={!travelingTo.href}
+                    type="button"
+                    className="arrival-return"
+                    onClick={returnToOrbit}
+                  >
+                    <ArrowLeftIcon size={14} />
+                    Back to Orbit
+                  </button>
+                </>
               )}
-              <button
-                ref={arrivalReturnRef}
-                type="button"
-                className="arrival-return"
-                onClick={returnToOrbit}
-              >
-                <ArrowLeftIcon size={14} />
-                Back to Orbit
-              </button>
             </div>
           </section>
         )}
