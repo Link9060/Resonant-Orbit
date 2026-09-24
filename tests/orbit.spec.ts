@@ -30,7 +30,7 @@ test('travel moves focus into the destination arrival screen', async ({ page }) 
 
   await travel.click();
 
-  const openRelay = page.getByRole('link', { name: 'Open Relay' });
+  const openRelay = page.getByRole('button', { name: 'Open Relay' });
   await expect(openRelay).toBeVisible();
   await expect(openRelay).toBeFocused();
 });
