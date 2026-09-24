@@ -211,18 +211,24 @@ export function OrbitWorld() {
       setPrefersReducedMotion(reduceMotion);
 
       const hardwareConcurrency = navigator.hardwareConcurrency || 4;
-      const deviceMemory = (navigator as Navigator & { deviceMemory?: number }).deviceMemory ?? 4;
+      const deviceMemory =
+        (navigator as Navigator & { deviceMemory?: number }).deviceMemory;
+      const lowMemory =
+        typeof deviceMemory === 'number' && deviceMemory <= 4;
+      const highMemory =
+        typeof deviceMemory !== 'number' || deviceMemory >= 8;
+
       const lowPower =
         reduceMotion ||
         coarseQuery.matches ||
         hardwareConcurrency <= 4 ||
-        deviceMemory <= 4;
+        lowMemory;
 
       const highPower =
         !reduceMotion &&
         !coarseQuery.matches &&
         hardwareConcurrency >= 10 &&
-        deviceMemory >= 8;
+        highMemory;
 
       setRenderProfile(lowPower ? 'low' : highPower ? 'high' : 'balanced');
     };
