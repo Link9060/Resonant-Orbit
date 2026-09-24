@@ -2559,3 +2559,43 @@ button:focus-visible {
     bottom: 178px;
   }
 }
+
+
+/* --- World zoom --------------------------------------------------------- */
+
+.zoom-controls {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.11);
+}
+
+.world-controls .zoom-controls button {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.035);
+  color: rgba(255, 255, 255, 0.52);
+  font-size: 12px;
+  line-height: 1;
+}
+
+.world-controls .zoom-controls button:hover {
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.94);
+}
+
+.world-shell.is-dragging .world-controls {
+  opacity: 0.72;
+}
+
+@media (max-width: 680px) {
+  .zoom-controls {
+    display: none;
+  }
+}
