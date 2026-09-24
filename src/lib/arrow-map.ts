@@ -22,6 +22,7 @@ export const ARROW_DESTINATIONS: readonly ArrowDestination[] = [
     detail: 'Compass landmark',
     arrivalLine: 'Place becomes context.',
     shortcut: 1,
+    href: 'https://link9060.github.io/Resonant-Field/',
     anchor: [-0.82, -0.42, 0.38],
   },
   {
