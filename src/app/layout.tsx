@@ -22,8 +22,8 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260924-50`} />
-        <script defer src={`${arrowShellBase}/arrow-shell.js?v=20260924-50`} />
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260924-70`} />
+        <script defer src={`${arrowShellBase}/arrow-shell.js?v=20260924-70`} />
       </head>
       <body>{children}</body>
     </html>
