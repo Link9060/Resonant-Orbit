@@ -1,4 +1,5 @@
 (() => {
+  if (window.ArrowOS) { window.ArrowOS.mountAll(); return; }
   const STORAGE = {
     notes: 'arrow_os_notes_v1',
     tasks: 'arrow_os_tasks_v1',
@@ -47,6 +48,8 @@
     focusRemaining: 25 * 60,
     focusRunning: false,
     focusUpdatedAt: 0,
+    arrivalHandled: false,
+    departing: false,
   };
 
   function id() {
@@ -112,10 +115,9 @@
     const currentModule = [...state.instances][0]?.module;
     if (currentModule !== 'orbit') {
       root.classList.toggle('dark', resolved === 'dark');
-      root.dataset.theme = resolved;
-      root.setAttribute('data-theme', resolved);
+      if (root.dataset.theme !== resolved) root.dataset.theme = resolved;
     }
-    root.dataset.arrowTheme = resolved;
+    if (root.dataset.arrowTheme !== resolved) root.dataset.arrowTheme = resolved;
 
     window.dispatchEvent(new CustomEvent('arrow:themechange', {
       detail: { choice, resolved },
@@ -123,7 +125,7 @@
 
     updateHostTheme();
     state.instances.forEach(updateInstanceState);
-    if (state.activePanel === 'appearance') renderPanel('appearance');
+    if (state.activePanel === 'appearance') updateAppearanceState();
   }
 
   function getExperienceChoice() {
@@ -150,7 +152,7 @@
     window.dispatchEvent(new CustomEvent('relay-experience-change'));
     window.dispatchEvent(new CustomEvent('arrow:experiencechange', { detail: { experience: normalized } }));
 
-    if (state.activePanel === 'appearance') renderPanel('appearance');
+    if (state.activePanel === 'appearance') updateAppearanceState();
   }
 
   function applyAccent(accent, persist = false) {
@@ -167,7 +169,7 @@
     window.dispatchEvent(new CustomEvent('relay-experience-change'));
     window.dispatchEvent(new CustomEvent('arrow:accentchange', { detail: { accent: normalized } }));
 
-    if (state.activePanel === 'appearance') renderPanel('appearance');
+    if (state.activePanel === 'appearance') updateAppearanceState();
   }
 
   function getMotionChoice() {
@@ -188,7 +190,7 @@
     window.dispatchEvent(new CustomEvent('arrow:motionchange', {
       detail: { choice, reduced: motionReduced() },
     }));
-    if (state.activePanel === 'appearance') renderPanel('appearance');
+    if (state.activePanel === 'appearance') updateAppearanceState();
   }
 
   function hostIsDark() {
@@ -209,9 +211,9 @@
   function updateHostTheme() {
     const hostTheme = hostIsDark() ? 'dark' : 'light';
     state.instances.forEach(instance => {
-      instance.root.dataset.hostTheme = hostTheme;
+      if (instance.root.dataset.hostTheme !== hostTheme) instance.root.dataset.hostTheme = hostTheme;
     });
-    if (state.panelEl) state.panelEl.dataset.hostTheme = hostTheme;
+    if (state.panelEl && state.panelEl.dataset.hostTheme !== hostTheme) state.panelEl.dataset.hostTheme = hostTheme;
   }
 
   function icon(name) {
@@ -396,6 +398,7 @@
     const panel = ensurePanel();
     const rect = anchor?.getBoundingClientRect();
     const mobile = innerWidth <= 680;
+    const availableHeight = window.visualViewport?.height || innerHeight;
 
     if (mobile) {
       panel.style.left = '12px';
@@ -409,6 +412,9 @@
       panel.style.top = Math.max(58, (rect?.bottom || 50) + 8) + 'px';
       panel.style.width = 'min(430px, calc(100vw - 24px))';
     }
+    const top = Math.min(parseFloat(panel.style.top), Math.max(12, availableHeight - 160));
+    panel.style.top = top + 'px';
+    panel.style.maxHeight = Math.max(80, availableHeight - top - 12) + 'px';
   }
 
   function openPanel(name, module, anchor) {
@@ -451,7 +457,10 @@
     const target = state.lastFocused;
     state.lastFocused = null;
     state.panelAnchor = null;
-    if (restoreFocus) target?.focus?.({ preventScroll: true });
+    if (restoreFocus) {
+      const instance = [...state.instances].find(item => item.root.contains(target));
+      instance?.trigger.focus({ preventScroll: true });
+    }
   }
 
   function handlePanelKeydown(event) {
@@ -472,7 +481,7 @@
     if (name === 'calendar') renderCalendar();
     if (name === 'links') renderLinks();
     if (name === 'focus') renderFocus();
-    if (name === 'appearance') renderAppearance();
+    if (name === 'appearance') { renderAppearance(); updateAppearanceState(); }
     if (name === 'settings') renderSettings();
   }
 
@@ -555,7 +564,7 @@
       '<div class="arrow-os-list arrow-os-events">' +
         (events.length ? events.map(item =>
           '<div class="arrow-os-list-row" data-id="' + escapeAttr(item.id) + '">' +
-            '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + formatEventDate(item.date, item.time) + '</span></div>' +
+            '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(formatEventDate(item.date, item.time)) + '</span></div>' +
             '<button type="button" class="arrow-os-row-delete" aria-label="Delete event">' + icon('trash') + '</button>' +
           '</div>'
         ).join('') : panelEmpty('No ARROW events yet.')) +
@@ -638,6 +647,11 @@
   }
 
   function saveFocusState() {
+    if (state.focusRunning) {
+      const elapsed = Math.max(0, Math.floor((Date.now() - state.focusUpdatedAt) / 1000));
+      state.focusRemaining = Math.max(0, state.focusRemaining - elapsed);
+      state.focusUpdatedAt += elapsed * 1000;
+    }
     writeJson(STORAGE.focusState, {
       remaining: Math.max(0, Math.floor(state.focusRemaining)),
       running: Boolean(state.focusRunning),
@@ -684,11 +698,12 @@
     state.focusTimer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - state.focusUpdatedAt) / 1000);
       if (elapsed <= 0) return;
-      state.focusUpdatedAt = Date.now();
+      state.focusUpdatedAt += elapsed * 1000;
       state.focusRemaining = Math.max(0, state.focusRemaining - elapsed);
       updateFocusDisplay();
       if (state.focusRemaining <= 0) {
         stopFocusTimer(true);
+        if (state.activePanel === 'focus') renderFocus();
         const previousTitle = document.title;
         document.title = 'Focus complete · ARROW';
         setTimeout(() => {
@@ -709,6 +724,10 @@
   }
 
   function stopFocusTimer(save = true) {
+    if (save && state.focusRunning) {
+      const elapsed = Math.max(0, Math.floor((Date.now() - state.focusUpdatedAt) / 1000));
+      state.focusRemaining = Math.max(0, state.focusRemaining - elapsed);
+    }
     state.focusRunning = false;
     clearInterval(state.focusTimer);
     state.focusTimer = null;
@@ -760,6 +779,21 @@
         const value = Number(button.dataset.focusMinutes);
         writeString(STORAGE.focusMinutes, String(value));
         resetFocus(value);
+      });
+    });
+  }
+
+  function updateAppearanceState() {
+    if (!state.panelBody) return;
+    const choices = {
+      theme: getThemeChoice(), motion: getMotionChoice(),
+      experience: getExperienceChoice(), accent: readString(STORAGE.accent, 'mono'),
+    };
+    Object.entries(choices).forEach(([kind, value]) => {
+      state.panelBody.querySelectorAll('[data-' + kind + '-choice]').forEach(button => {
+        const selected = button.getAttribute('data-' + kind + '-choice') === value;
+        button.classList.toggle('is-active', selected);
+        button.setAttribute('aria-pressed', String(selected));
       });
     });
   }
@@ -817,9 +851,10 @@
   }
 
   function renderSettings() {
-    const tasks = readJson(STORAGE.tasks, []);
-    const events = readJson(STORAGE.events, []);
-    const links = readJson(STORAGE.links, []);
+    const asArray = value => Array.isArray(value) ? value : [];
+    const tasks = asArray(readJson(STORAGE.tasks, []));
+    const events = asArray(readJson(STORAGE.events, []));
+    const links = asArray(readJson(STORAGE.links, []));
     const notesLength = readString(STORAGE.notes, '').length;
 
     state.panelBody.innerHTML =
@@ -843,6 +878,8 @@
       });
       applyTheme('system', false);
       applyMotion('system', false);
+      applyExperienceChoice('balanced', false);
+      applyAccent('mono', false);
       stopFocusTimer(false);
       state.focusRemaining = 25 * 60;
       state.focusUpdatedAt = 0;
@@ -871,7 +908,11 @@
     try {
       if (file.size > 1024 * 1024) throw new Error('ARROW import files must be smaller than 1 MB.');
       const payload = JSON.parse(await file.text());
-      if (!payload?.data || typeof payload.data !== 'object') throw new Error('Invalid ARROW export.');
+      if (payload?.version !== 1 || !payload.data || typeof payload.data !== 'object' || Array.isArray(payload.data)) throw new Error('Invalid ARROW export.');
+      for (const name of ['tasks', 'events', 'links']) {
+        const raw = payload.data[name];
+        if (raw && (typeof raw !== 'string' || !Array.isArray(JSON.parse(raw)))) throw new Error('Invalid ARROW ' + name + ' data.');
+      }
       Object.entries(STORAGE).forEach(([name, key]) => {
         if (typeof payload.data[name] === 'string') localStorage.setItem(key, payload.data[name]);
       });
@@ -935,6 +976,8 @@
   }
 
   function launchToOrbit(module) {
+    if (state.departing) return;
+    state.departing = true;
     if (motionReduced()) {
       const url = new URL(ORBIT_URL);
       url.searchParams.set('from', module);
@@ -959,7 +1002,8 @@
   }
 
   function receiveFromOrbit(module) {
-    if (module === 'orbit') return;
+    if (module === 'orbit' || state.arrivalHandled) return;
+    state.arrivalHandled = true;
     const url = new URL(location.href);
     if (url.searchParams.get('from') !== 'orbit') return;
 
@@ -999,10 +1043,11 @@
 
   function mountAll() {
     pruneInstances();
+    const previousCount = state.instances.size;
     document.querySelectorAll('[data-arrow-os-shell]').forEach(createInstance);
     const first = [...state.instances][0];
 
-    if (first && readString(STORAGE.theme, '')) {
+    if (first && state.instances.size > previousCount && readString(STORAGE.theme, '')) {
       applyTheme(getThemeChoice(), false);
     }
 
@@ -1037,9 +1082,11 @@
     });
   });
 
-  window.addEventListener('resize', () => {
-    if (state.activePanel && state.panelAnchor) positionPanel(state.panelAnchor);
-  });
+  const repositionPanel = () => {
+    if (state.activePanel) positionPanel(state.panelAnchor);
+  };
+  window.addEventListener('resize', repositionPanel);
+  window.visualViewport?.addEventListener('resize', repositionPanel);
 
   window.addEventListener('storage', event => {
     if (!Object.values(STORAGE).includes(event.key)) return;
@@ -1051,7 +1098,8 @@
       stopFocusTimer(false);
       restoreFocusState();
     }
-    if (state.activePanel) renderPanel(state.activePanel);
+    const panelKeys = { notes: [STORAGE.notes], tasks: [STORAGE.tasks], calendar: [STORAGE.events], links: [STORAGE.links], focus: [STORAGE.focusState, STORAGE.focusMinutes], settings: Object.values(STORAGE) };
+    if (panelKeys[state.activePanel]?.includes(event.key)) renderPanel(state.activePanel);
   });
 
   matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', () => {
@@ -1071,11 +1119,19 @@
   if (readString(STORAGE.accent, '')) applyAccent(readString(STORAGE.accent, 'mono'), false);
   applyMotion(getMotionChoice(), false);
   restoreFocusState();
-  window.addEventListener('beforeunload', saveFocusState);
+  // State is persisted on timer actions. An old background tab must not overwrite it on exit.
 
   const startMounting = () => {
     requestAnimationFrame(mountAll);
-    const observer = new MutationObserver(() => mountAll());
+    // Ignore panel rendering, chat tokens, counters and other unrelated DOM updates.
+    let mountFrame = 0;
+    const isMount = node => node.nodeType === 1 &&
+      (node.matches('[data-arrow-os-shell]') || node.querySelector('[data-arrow-os-shell]'));
+    const observer = new MutationObserver(records => {
+      if (!records.some(record => [...record.addedNodes, ...record.removedNodes].some(isMount))) return;
+      if (mountFrame) return;
+      mountFrame = requestAnimationFrame(() => { mountFrame = 0; mountAll(); });
+    });
     observer.observe(document.body, { childList: true, subtree: true });
   };
 

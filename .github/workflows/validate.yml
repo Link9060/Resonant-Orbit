@@ -29,6 +29,9 @@ jobs:
           grep -q 'data-arrow-os-shell' src/app/page.tsx
           grep -q 'arrow-shell.js' src/app/layout.tsx
 
+      - name: Shared ARROW regression tests
+        run: npm run test:shell
+
       - name: Typecheck
         run: npm run typecheck
 

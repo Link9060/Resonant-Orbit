@@ -36,6 +36,9 @@ jobs:
       - name: Install
         run: npm install --no-audit --no-fund
 
+      - name: Shared ARROW regression tests
+        run: npm run test:shell
+
       - name: Typecheck
         run: npm run typecheck
 

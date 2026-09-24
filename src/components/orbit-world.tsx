@@ -228,7 +228,8 @@ export function OrbitWorld() {
     const coarseQuery = window.matchMedia('(pointer: coarse)');
 
     const updateRuntimeProfile = () => {
-      const reduceMotion = motionQuery.matches;
+      const choice = document.documentElement.dataset.arrowMotion;
+      const reduceMotion = choice ? choice === 'reduce' : motionQuery.matches;
       reducedMotionRef.current = reduceMotion;
       setPrefersReducedMotion(reduceMotion);
 
@@ -260,10 +261,12 @@ export function OrbitWorld() {
 
     updateRuntimeProfile();
     motionQuery.addEventListener('change', updateRuntimeProfile);
+    window.addEventListener('arrow:motionchange', updateRuntimeProfile);
     coarseQuery.addEventListener('change', updateRuntimeProfile);
 
     return () => {
       motionQuery.removeEventListener('change', updateRuntimeProfile);
+      window.removeEventListener('arrow:motionchange', updateRuntimeProfile);
       coarseQuery.removeEventListener('change', updateRuntimeProfile);
     };
   }, []);

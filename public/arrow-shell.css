@@ -206,6 +206,8 @@
   --arrow-os-fg: 250 250 251;
   position: fixed;
   z-index: 2147483000;
+  display: flex;
+  flex-direction: column;
   max-height: min(72dvh, 640px);
   overflow: hidden;
   border: 1px solid rgb(var(--arrow-os-fg) / .12);
@@ -962,3 +964,7 @@ html[data-arrow-experience="glass"] .arrow-os-panel {
   backdrop-filter: blur(30px) saturate(1.22);
   -webkit-backdrop-filter: blur(30px) saturate(1.22);
 }
+
+/* Allow the content to shrink inside a short viewport instead of being clipped. */
+.arrow-os-panel-head { flex-shrink: 0; }
+.arrow-os-panel-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
