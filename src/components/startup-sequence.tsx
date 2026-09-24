@@ -197,6 +197,16 @@ export function StartupSequence() {
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
+      const source = new URLSearchParams(window.location.search).get('from');
+      const isIncomingHandoff = source === 'relay' || source === 'ravin' || source === 'atlas' || source === 'w';
+
+      if (isIncomingHandoff) {
+        sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
+        setReady(true);
+        setVisible(false);
+        return;
+      }
+
       setReady(true);
       setVisible(sessionStorage.getItem(STARTUP_SESSION_KEY) !== '1');
     }, 0);
