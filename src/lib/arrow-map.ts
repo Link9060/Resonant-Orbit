@@ -8,6 +8,7 @@ export type ArrowDestination = {
   description: string;
   detail: string;
   arrivalLine: string;
+  shortcut: 1 | 2 | 3 | 4;
   href?: string;
   anchor: readonly [number, number, number];
 };
@@ -20,6 +21,7 @@ export const ARROW_DESTINATIONS: readonly ArrowDestination[] = [
     description: 'Maps, place, movement, and spatial context.',
     detail: 'Compass landmark',
     arrivalLine: 'Place becomes context.',
+    shortcut: 1,
     anchor: [-0.82, -0.42, 0.38],
   },
   {
@@ -29,6 +31,7 @@ export const ARROW_DESTINATIONS: readonly ArrowDestination[] = [
     description: 'Reasoning, memory, conversation, and the ARROW intelligence layer.',
     detail: 'Core landmark',
     arrivalLine: 'Intelligence, connected to everything.',
+    shortcut: 2,
     anchor: [0.48, -0.7, 0.52],
   },
   {
@@ -38,6 +41,7 @@ export const ARROW_DESTINATIONS: readonly ArrowDestination[] = [
     description: 'Messaging, planning, coordination, and the social layer.',
     detail: 'Broadcast landmark',
     arrivalLine: 'Communication without breaking flow.',
+    shortcut: 3,
     href: 'https://link9060.github.io/Resonant-Relay/',
     anchor: [0.76, 0.5, 0.34],
   },
@@ -48,6 +52,7 @@ export const ARROW_DESTINATIONS: readonly ArrowDestination[] = [
     description: 'Reserved space for the next ARROW destination.',
     detail: 'Uncharted',
     arrivalLine: 'This destination has not been charted yet.',
+    shortcut: 4,
     anchor: [-0.62, 0.56, -0.55],
   },
 ];
