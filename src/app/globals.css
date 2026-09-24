@@ -323,8 +323,8 @@ button:focus-visible {
   top: 50%;
   width: min(56vw, 600px);
   aspect-ratio: 1;
-  margin: calc(min(56vw, 600px) / -2);
   border-radius: 50%;
+  transform: translate(-50%, -50%);
   pointer-events: none;
   animation: orbit-craft-loop 22s linear infinite;
 }
@@ -901,8 +901,11 @@ button:focus-visible {
 }
 
 @keyframes orbit-craft-loop {
+  from {
+    transform: translate(-50%, -50%) rotate(0deg);
+  }
   to {
-    transform: rotate(360deg);
+    transform: translate(-50%, -50%) rotate(360deg);
   }
 }
 
@@ -1011,7 +1014,6 @@ button:focus-visible {
 
   .craft-orbit {
     width: 82vw;
-    margin: -41vw;
   }
 
   .destination-node {
