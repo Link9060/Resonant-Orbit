@@ -141,6 +141,78 @@ export function pushOutsideRect(
   }
 }
 
+export type ScreenBounds = {
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+};
+
+function pointOutsideRect(x: number, y: number, rect: ScreenRect) {
+  return x < rect.left || x > rect.right || y < rect.top || y > rect.bottom;
+}
+
+export function resolveSafeScreenPosition(
+  x: number,
+  y: number,
+  rects: readonly ScreenRect[],
+  bounds: ScreenBounds,
+  padding = 24,
+  passes = 3,
+) {
+  let point = {
+    x: clamp(x, bounds.left, bounds.right),
+    y: clamp(y, bounds.top, bounds.bottom),
+  };
+
+  for (let pass = 0; pass < passes; pass += 1) {
+    let changed = false;
+
+    for (const rect of rects) {
+      const expanded: ScreenRect = {
+        left: rect.left - padding,
+        top: rect.top - padding,
+        right: rect.right + padding,
+        bottom: rect.bottom + padding,
+      };
+
+      if (pointOutsideRect(point.x, point.y, expanded)) continue;
+
+      const candidates = [
+        { x: expanded.left - 1, y: point.y },
+        { x: expanded.right + 1, y: point.y },
+        { x: point.x, y: expanded.top - 1 },
+        { x: point.x, y: expanded.bottom + 1 },
+      ]
+        .map(candidate => ({
+          x: clamp(candidate.x, bounds.left, bounds.right),
+          y: clamp(candidate.y, bounds.top, bounds.bottom),
+        }))
+        .filter(candidate => pointOutsideRect(candidate.x, candidate.y, expanded))
+        .sort((a, b) => {
+          const aDistance = Math.hypot(a.x - point.x, a.y - point.y);
+          const bDistance = Math.hypot(b.x - point.x, b.y - point.y);
+          return aDistance - bDistance;
+        });
+
+      const next = candidates[0];
+      if (!next) continue;
+
+      point = next;
+      changed = true;
+    }
+
+    point = {
+      x: clamp(point.x, bounds.left, bounds.right),
+      y: clamp(point.y, bounds.top, bounds.bottom),
+    };
+
+    if (!changed) break;
+  }
+
+  return point;
+}
+
 export function resolveScreenCollisions<T extends { x: number; y: number; depth: number }>(
   items: T[],
   minDistance: number,
