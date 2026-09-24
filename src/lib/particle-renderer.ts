@@ -17,6 +17,9 @@ export type CloudMotion = {
   alpha?: number;
   yawOffset?: number;
   pitchOffset?: number;
+  yaw?: number;
+  pitch?: number;
+  roll?: number;
 };
 
 type SpherePoint = {
@@ -165,9 +168,9 @@ export function createCloudRenderer(compact = false, options: ParticleOptions = 
     const transform = ctx.getTransform();
     const viewportHeight = ctx.canvas.height / Math.max(1, transform.d);
     const radius = getRadius(width, viewportHeight, scale);
-    const yaw = time * (0.052 + loadingMix * 0.045) + (motion.yawOffset ?? 0) + mx * hover * 0.18;
-    const pitch = Math.sin(time * 0.14) * 0.028 + (motion.pitchOffset ?? 0) - my * hover * 0.12;
-    const roll = Math.sin(time * 0.09) * 0.016 + mx * hover * 0.05;
+    const yaw = motion.yaw ?? (time * (0.052 + loadingMix * 0.045) + (motion.yawOffset ?? 0) + mx * hover * 0.18);
+    const pitch = motion.pitch ?? (Math.sin(time * 0.14) * 0.028 + (motion.pitchOffset ?? 0) - my * hover * 0.12);
+    const roll = motion.roll ?? (Math.sin(time * 0.09) * 0.016 + mx * hover * 0.05);
 
     const cyaw = Math.cos(yaw);
     const syaw = Math.sin(yaw);
