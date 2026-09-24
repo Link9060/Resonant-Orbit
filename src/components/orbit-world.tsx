@@ -144,6 +144,8 @@ export function OrbitWorld() {
   const [travelId, setTravelId] = useState<Destination['id'] | null>(null);
   const [travelVector, setTravelVector] = useState({ x: 0, y: 0 });
   const [dragging, setDragging] = useState(false);
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const [navigatorQuery, setNavigatorQuery] = useState('');
 
   const renderer = useMemo(() => createCloudRenderer(false, { density: 0.92, size: 1.02 }), []);
   const selected = selectedId === 'orbit' ? null : destinationIndex.get(selectedId) ?? null;
@@ -155,6 +157,53 @@ export function OrbitWorld() {
       timersRef.current.forEach(timer => window.clearTimeout(timer));
     };
   }, []);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const target = event.target as HTMLElement | null;
+      const isTyping = target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
+
+      if (event.key === 'Escape') {
+        setNavigatorOpen(false);
+        setNavigatorQuery('');
+        return;
+      }
+
+      if (travelPhase !== 'idle') return;
+
+      if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+        event.preventDefault();
+        setNavigatorOpen(open => !open);
+        return;
+      }
+
+      if (!isTyping && event.key === '/') {
+        event.preventDefault();
+        setNavigatorOpen(true);
+        return;
+      }
+
+      if (!isTyping && /^[1-4]$/.test(event.key)) {
+        const destination = destinations[Number(event.key) - 1];
+        if (!destination) return;
+        setSelectedId(destination.id);
+        impulseRef.current = 0.8;
+      }
+
+      if (!isTyping && event.key.toLowerCase() === 'o') {
+        const rotation = rotationRef.current;
+        rotation.targetYaw = 0;
+        rotation.targetPitch = 0;
+        rotation.velocityYaw = 0;
+        rotation.velocityPitch = 0;
+        setSelectedId('orbit');
+        impulseRef.current = 0.7;
+      }
+    };
+
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [travelPhase]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -389,6 +438,22 @@ export function OrbitWorld() {
     impulseRef.current = 0.7;
   };
 
+  const filteredDestinations = destinations.filter(destination => {
+    const query = navigatorQuery.trim().toLowerCase();
+    if (!query) return true;
+    return [destination.name, destination.code, destination.description]
+      .join(' ')
+      .toLowerCase()
+      .includes(query);
+  });
+
+  const chooseFromNavigator = (destination: Destination) => {
+    setSelectedId(destination.id);
+    setNavigatorOpen(false);
+    setNavigatorQuery('');
+    impulseRef.current = 0.9;
+  };
+
   const travelStyle = {
     '--travel-x': `${travelVector.x}px`,
     '--travel-y': `${travelVector.y}px`,
@@ -475,7 +540,90 @@ export function OrbitWorld() {
         <button type="button" onClick={recenterWorld} disabled={travelPhase !== 'idle'}>
           recenter
         </button>
+        <button
+          type="button"
+          className="navigator-trigger"
+          onClick={() => setNavigatorOpen(true)}
+          disabled={travelPhase !== 'idle'}
+        >
+          navigator <kbd>⌘K</kbd>
+        </button>
       </div>
+
+      {navigatorOpen && travelPhase === 'idle' && (
+        <div
+          className="orbit-navigator-backdrop"
+          role="presentation"
+          onPointerDown={event => {
+            if (event.target === event.currentTarget) {
+              setNavigatorOpen(false);
+              setNavigatorQuery('');
+            }
+          }}
+        >
+          <section className="orbit-navigator" role="dialog" aria-modal="true" aria-label="Orbit navigator">
+            <div className="navigator-heading">
+              <div>
+                <p>ARROW NAVIGATOR</p>
+                <h2>Where to?</h2>
+              </div>
+              <button
+                type="button"
+                className="navigator-close"
+                onClick={() => {
+                  setNavigatorOpen(false);
+                  setNavigatorQuery('');
+                }}
+                aria-label="Close navigator"
+              >
+                esc
+              </button>
+            </div>
+
+            <label className="navigator-search">
+              <span className="navigator-search-mark" aria-hidden="true">⌕</span>
+              <input
+                autoFocus
+                value={navigatorQuery}
+                onChange={event => setNavigatorQuery(event.target.value)}
+                placeholder="Search ARROW"
+                aria-label="Search ARROW destinations"
+              />
+              <kbd>/</kbd>
+            </label>
+
+            <div className="navigator-results">
+              {filteredDestinations.map((destination, index) => (
+                <button
+                  type="button"
+                  key={destination.id}
+                  className="navigator-result"
+                  onClick={() => chooseFromNavigator(destination)}
+                >
+                  <span className="navigator-index">0{index + 1}</span>
+                  <span className="navigator-result-copy">
+                    <strong>{destination.name}</strong>
+                    <span>{destination.code}</span>
+                  </span>
+                  <span className="navigator-result-description">{destination.description}</span>
+                  <span className="navigator-go" aria-hidden="true"><span /></span>
+                </button>
+              ))}
+
+              {filteredDestinations.length === 0 && (
+                <div className="navigator-empty">
+                  No destination matches “{navigatorQuery}”.
+                </div>
+              )}
+            </div>
+
+            <footer className="navigator-footer">
+              <span><kbd>1–4</kbd> quick focus</span>
+              <span><kbd>O</kbd> recenter Orbit</span>
+            </footer>
+          </section>
+        </div>
+      )}
 
       <aside className={`world-inspector ${selected ? 'has-selection' : ''}`} aria-hidden={travelPhase !== 'idle'}>
         <div className="inspector-topline">
