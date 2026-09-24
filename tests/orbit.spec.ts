@@ -117,9 +117,21 @@ test('Escape returns from a destination preview using the normal return path', a
 test('staged destinations are labeled as previews rather than connected travel', async ({ page }) => {
   await openOrbit(page);
 
-  await page.keyboard.press('1');
-  await expect(page.getByRole('button', { name: 'Preview Atlas' })).toBeVisible();
+  await page.keyboard.press('4');
+  await expect(page.getByRole('button', { name: 'Preview W' })).toBeVisible();
   await expect(page.getByText('preview only · route staged')).toBeVisible();
+});
+
+test('Atlas and RAVIN are connected ARROW destinations', async ({ page }) => {
+  await openOrbit(page);
+
+  await page.keyboard.press('1');
+  await expect(page.getByRole('button', { name: 'Travel to Atlas' })).toBeVisible();
+  await expect(page.getByText('route connected')).toBeVisible();
+
+  await page.keyboard.press('2');
+  await expect(page.getByRole('button', { name: 'Travel to RAVIN' })).toBeVisible();
+  await expect(page.getByText('route connected')).toBeVisible();
 });
 
 test('mobile quick routes clear the centered intro copy', async ({ page }) => {
