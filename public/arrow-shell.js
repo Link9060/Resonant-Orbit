@@ -42,6 +42,7 @@
     panelBody: null,
     panelTitle: null,
     lastFocused: null,
+    panelAnchor: null,
     focusTimer: null,
     focusRemaining: 25 * 60,
     focusRunning: false,
@@ -234,7 +235,7 @@
   }
 
   function controlButton(name, label, extra = '') {
-    return '<button type="button" class="arrow-os-control" data-arrow-panel="' + name + '" aria-label="' + label + '" title="' + label + '" ' + extra + '>' +
+    return '<button type="button" class="arrow-os-control" data-arrow-panel="' + name + '" aria-label="' + label + '" title="' + label + '" aria-haspopup="dialog" aria-expanded="false" ' + extra + '>' +
       icon(name) + '<span>' + label + '</span></button>';
   }
 
@@ -249,7 +250,7 @@
     root.dataset.open = 'false';
     root.dataset.pinned = 'false';
     root.innerHTML =
-      '<div class="arrow-os-island">' +
+      '<div class="arrow-os-island" role="navigation" aria-label="ARROW system controls">' +
         '<div class="arrow-os-content" aria-hidden="true">' +
           '<span class="arrow-os-module">' + module.toUpperCase() + '</span>' +
           '<button type="button" class="arrow-os-control arrow-os-orbit" aria-label="Orbit" title="Orbit">' + icon('orbit') + '<span>Orbit</span></button>' +
@@ -302,6 +303,15 @@
     });
 
     instance.trigger.addEventListener('click', () => {
+      if (state.activePanel) {
+        closePanel(false);
+        instance.pinned = false;
+        root.dataset.pinned = 'false';
+        setOpen(instance, false);
+        instance.trigger.focus({ preventScroll: true });
+        return;
+      }
+
       instance.pinned = !instance.pinned;
       root.dataset.pinned = String(instance.pinned);
       setOpen(instance, instance.pinned || root.dataset.open !== 'true');
@@ -328,10 +338,12 @@
       button.addEventListener('click', () => {
         const name = button.dataset.arrowPanel;
         state.lastFocused = button;
+        state.panelAnchor = instance.trigger;
         openPanel(name, module, button);
       });
     });
 
+    setOpen(instance, false);
     updateInstanceState(instance);
     updateHostTheme();
   }
@@ -341,13 +353,15 @@
     instance.trigger.setAttribute('aria-expanded', String(open));
     instance.trigger.setAttribute('aria-label', open ? 'Close ARROW controls' : 'Open ARROW controls');
     instance.content.setAttribute('aria-hidden', String(!open));
+    instance.content.inert = !open;
   }
 
   function updateInstanceState(instance) {
     instance.root.querySelectorAll('[data-arrow-panel]').forEach(button => {
       const active = button.dataset.arrowPanel === state.activePanel;
       button.classList.toggle('is-active', active);
-      button.setAttribute('aria-pressed', String(active));
+      button.setAttribute('aria-expanded', String(active));
+      button.setAttribute('aria-controls', 'arrow-os-system-panel');
     });
   }
 
@@ -356,6 +370,7 @@
 
     const panel = document.createElement('section');
     panel.className = 'arrow-os-panel';
+    panel.id = 'arrow-os-system-panel';
     panel.hidden = true;
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'false');
@@ -407,7 +422,7 @@
     panel.dataset.panel = name;
     panel.hidden = false;
     panel.dataset.open = 'true';
-    positionPanel(anchor || document.querySelector('.arrow-os-trigger'));
+    positionPanel(state.panelAnchor || anchor || document.querySelector('.arrow-os-trigger'));
     updateHostTheme();
     renderPanel(name);
 
@@ -421,7 +436,7 @@
     });
   }
 
-  function closePanel() {
+  function closePanel(restoreFocus = true) {
     if (!state.panelEl || state.panelEl.hidden) return;
     state.panelEl.dataset.open = 'false';
     state.panelEl.hidden = true;
@@ -435,7 +450,8 @@
     });
     const target = state.lastFocused;
     state.lastFocused = null;
-    target?.focus?.({ preventScroll: true });
+    state.panelAnchor = null;
+    if (restoreFocus) target?.focus?.({ preventScroll: true });
   }
 
   function handlePanelKeydown(event) {
@@ -993,7 +1009,7 @@
     const insidePanel = state.panelEl?.contains(event.target);
     if (insideRoot || insidePanel) return;
 
-    closePanel();
+    closePanel(false);
     state.instances.forEach(instance => {
       instance.pinned = false;
       instance.root.dataset.pinned = 'false';
@@ -1016,7 +1032,7 @@
   });
 
   window.addEventListener('resize', () => {
-    if (state.activePanel && state.lastFocused) positionPanel(state.lastFocused);
+    if (state.activePanel && state.panelAnchor) positionPanel(state.panelAnchor);
   });
 
   window.addEventListener('storage', event => {
