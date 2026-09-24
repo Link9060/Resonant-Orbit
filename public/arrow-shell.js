@@ -494,7 +494,10 @@
   }
 
   function renderTasks() {
-    const tasks = readJson(STORAGE.tasks, []);
+    const rawTasks = readJson(STORAGE.tasks, []);
+    const tasks = Array.isArray(rawTasks)
+      ? rawTasks.filter(task => task && typeof task.id === 'string' && typeof task.text === 'string').slice(0, 500)
+      : [];
     state.panelBody.innerHTML =
       '<form class="arrow-os-inline-form arrow-os-task-form">' +
         '<input type="text" maxlength="120" placeholder="Add a task..." aria-label="Task name" required />' +
@@ -502,7 +505,7 @@
       '</form>' +
       '<div class="arrow-os-list">' +
         (tasks.length ? tasks.map(task =>
-          '<div class="arrow-os-list-row ' + (task.done ? 'is-done' : '') + '" data-id="' + task.id + '">' +
+          '<div class="arrow-os-list-row ' + (task.done ? 'is-done' : '') + '" data-id="' + escapeAttr(task.id) + '">' +
             '<label><input type="checkbox" ' + (task.done ? 'checked' : '') + ' /><span>' + escapeHtml(task.text) + '</span></label>' +
             '<button type="button" class="arrow-os-row-delete" aria-label="Delete task">' + icon('trash') + '</button>' +
           '</div>'
@@ -535,7 +538,11 @@
   }
 
   function renderCalendar() {
-    const events = readJson(STORAGE.events, []).sort((a, b) => String(a.date + a.time).localeCompare(String(b.date + b.time)));
+    const rawEvents = readJson(STORAGE.events, []);
+    const events = (Array.isArray(rawEvents)
+      ? rawEvents.filter(item => item && typeof item.id === 'string' && typeof item.title === 'string' && typeof item.date === 'string').slice(0, 500)
+      : [])
+      .sort((a, b) => String(a.date + (a.time || '')).localeCompare(String(b.date + (b.time || ''))));
     state.panelBody.innerHTML =
       '<form class="arrow-os-calendar-form">' +
         '<input type="text" maxlength="100" placeholder="Event title" aria-label="Event title" required />' +
@@ -547,7 +554,7 @@
       '</form>' +
       '<div class="arrow-os-list arrow-os-events">' +
         (events.length ? events.map(item =>
-          '<div class="arrow-os-list-row" data-id="' + item.id + '">' +
+          '<div class="arrow-os-list-row" data-id="' + escapeAttr(item.id) + '">' +
             '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + formatEventDate(item.date, item.time) + '</span></div>' +
             '<button type="button" class="arrow-os-row-delete" aria-label="Delete event">' + icon('trash') + '</button>' +
           '</div>'
@@ -577,7 +584,14 @@
   }
 
   function renderLinks() {
-    const links = readJson(STORAGE.links, []);
+    const rawLinks = readJson(STORAGE.links, []);
+    const links = Array.isArray(rawLinks)
+      ? rawLinks
+          .filter(item => item && typeof item.id === 'string' && typeof item.label === 'string' && typeof item.url === 'string')
+          .map(item => ({ ...item, url: normalizeUrl(item.url) }))
+          .filter(item => item.url)
+          .slice(0, 500)
+      : [];
     state.panelBody.innerHTML =
       '<form class="arrow-os-link-form">' +
         '<input type="text" maxlength="70" placeholder="Name" aria-label="Link name" required />' +
@@ -586,7 +600,7 @@
       '</form>' +
       '<div class="arrow-os-list arrow-os-links">' +
         (links.length ? links.map(item =>
-          '<div class="arrow-os-list-row" data-id="' + item.id + '">' +
+          '<div class="arrow-os-list-row" data-id="' + escapeAttr(item.id) + '">' +
             '<a href="' + escapeAttr(item.url) + '" target="_blank" rel="noopener noreferrer"><strong>' + escapeHtml(item.label) + '</strong><span>' + escapeHtml(shortHost(item.url)) + '</span></a>' +
             '<button type="button" class="arrow-os-row-delete" aria-label="Delete link">' + icon('trash') + '</button>' +
           '</div>'
