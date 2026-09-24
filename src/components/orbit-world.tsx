@@ -1,5 +1,6 @@
 'use client';
 
+import { ARROW_DESTINATIONS, ARROW_DESTINATION_BY_ID, readIncomingArrowSource, type ArrowDestination, type OrbitSelectionId } from '@/lib/arrow-map';
 import { createCloudRenderer, fitCanvas } from '@/lib/particle-renderer';
 import {
   useEffect,
@@ -10,19 +11,12 @@ import {
   type PointerEvent as ReactPointerEvent,
 } from 'react';
 
-type DestinationId = 'orbit' | 'atlas' | 'ravin' | 'relay' | 'w';
+type Destination = ArrowDestination;
+type DestinationId = OrbitSelectionId;
 type TravelPhase = 'idle' | 'launching' | 'preview' | 'returning';
 
-type Destination = {
-  id: Exclude<DestinationId, 'orbit'>;
-  name: string;
-  code: string;
-  description: string;
-  detail: string;
-  arrivalLine: string;
-  href?: string;
-  anchor: readonly [number, number, number];
-};
+const destinations = ARROW_DESTINATIONS;
+const destinationIndex = ARROW_DESTINATION_BY_ID;
 
 type RotationState = {
   yaw: number;
@@ -163,10 +157,8 @@ export function OrbitWorld() {
   }, []);
 
   useEffect(() => {
-    const source = new URLSearchParams(window.location.search).get('from');
-    if (!source || !destinationIndex.has(source as Destination['id'])) return;
-
-    const incoming = source as Destination['id'];
+    const incoming = readIncomingArrowSource(window.location.search);
+    if (!incoming) return;
     setIncomingFrom(incoming);
     pointerRef.current.inside = false;
     impulseRef.current = 1.5;
