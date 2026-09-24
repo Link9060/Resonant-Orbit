@@ -117,7 +117,7 @@ export function OrbitWorld() {
   const craftRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<HTMLButtonElement>(null);
   const travelButtonRef = useRef<HTMLButtonElement>(null);
-  const arrivalPrimaryRef = useRef<HTMLAnchorElement>(null);
+  const arrivalPrimaryRef = useRef<HTMLButtonElement>(null);
   const arrivalReturnRef = useRef<HTMLButtonElement>(null);
   const navigatorRef = useRef<HTMLElement>(null);
   const navigatorInputRef = useRef<HTMLInputElement>(null);
@@ -1292,15 +1292,16 @@ export function OrbitWorld() {
               {travelPhase === 'preview' && (
                 <>
                   {travelingTo.href ? (
-                    <a
+                    <button
                       ref={arrivalPrimaryRef}
                       autoFocus
+                      type="button"
                       className="arrival-primary is-live"
-                      href={travelingTo.href}
+                      onClick={() => window.location.assign(travelingTo.href!)}
                     >
                       Open {travelingTo.name}
                       <ArrowUpRightIcon size={14} />
-                    </a>
+                    </button>
                   ) : (
                     <button type="button" className="arrival-primary" disabled>
                       Route not connected
