@@ -1349,7 +1349,7 @@ export function OrbitWorld() {
           </div>
         </aside>
 
-        {travelingTo && (
+        {travelingTo && travelPhase !== 'launching' && (
           <section
             ref={arrivalPanelRef}
             className="destination-preview"
@@ -1358,6 +1358,7 @@ export function OrbitWorld() {
             aria-live="polite"
             aria-hidden={travelPhase !== 'preview'}
             tabIndex={-1}
+            autoFocus={travelPhase === 'preview'}
           >
             <div className="arrival-landmark" aria-hidden="true">
               <DestinationIcon id={travelingTo.id} size={42} />
