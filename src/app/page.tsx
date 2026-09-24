@@ -2,6 +2,7 @@ import { OrbitWorld } from '@/components/orbit-world';
 import { ArrowMarkIcon } from '@/components/orbit-icons';
 import { ARROW_DESTINATIONS } from '@/lib/arrow-map';
 import { StartupSequence } from '@/components/startup-sequence';
+import { ArrowSystemIsland } from '@/components/arrow-system-island';
 
 export default function Home() {
   const destinationCount = ARROW_DESTINATIONS.length;
@@ -21,9 +22,12 @@ export default function Home() {
             <span className="product-name">Orbit</span>
           </div>
 
-          <div className="header-meta" aria-label="Orbit route summary">
-            <span>{destinationCount} nodes</span>
-            <span>{liveRouteCount} connected</span>
+          <div className="orbit-header-right">
+            <div className="header-meta" aria-label="Orbit route summary">
+              <span>{destinationCount} nodes</span>
+              <span>{liveRouteCount} connected</span>
+            </div>
+            <ArrowSystemIsland />
           </div>
         </header>
 
