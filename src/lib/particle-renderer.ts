@@ -20,6 +20,7 @@ export type CloudMotion = {
   yaw?: number;
   pitch?: number;
   roll?: number;
+  reduceMotion?: boolean;
 };
 
 type SpherePoint = {
@@ -164,6 +165,7 @@ export function createCloudRenderer(compact = false, options: ParticleOptions = 
     const scale = Math.max(0.025, motion.scale ?? 1);
     const opacity = clamp01(motion.alpha ?? 1);
     const loadingMix = smooth01(motion.loadingMix ?? 0);
+    const reduceMotion = motion.reduceMotion ?? false;
 
     const transform = ctx.getTransform();
     const viewportHeight = ctx.canvas.height / Math.max(1, transform.d);
@@ -187,8 +189,9 @@ export function createCloudRenderer(compact = false, options: ParticleOptions = 
 
     for (const point of points) {
       const structural = point.layer === 1 || point.layer === 2 || point.layer === 3;
-      const cloudDrift =
-        point.layer === 4
+      const cloudDrift = reduceMotion
+        ? 0
+        : point.layer === 4
           ? Math.sin(time * 0.72 + point.phase) * (0.009 + point.spark * 0.008)
           : Math.sin(time * 0.2 + point.phase) * 0.0018;
 
