@@ -211,20 +211,55 @@ test('reduced-motion incoming handoff clears the source query immediately', asyn
 });
 
 
-test('ARROW system island expands from the Orbit header', async ({ page }) => {
+test('canonical ARROW shell expands from the Orbit header', async ({ page }) => {
   await openOrbit(page);
 
-  const trigger = page.locator('.arrow-system-trigger');
+  const trigger = page.locator('.arrow-os-trigger');
   await expect(trigger).toBeVisible();
   await expect(trigger).toHaveAccessibleName('Open ARROW controls');
 
   await trigger.click();
   await expect(trigger).toHaveAttribute('aria-expanded', 'true');
   await expect(trigger).toHaveAccessibleName('Close ARROW controls');
-  await expect(page.getByRole('link', { name: 'Notes' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'Calendar' })).toBeVisible();
-  await expect(page.getByRole('link', { name: 'ARROW settings' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Notes' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Tasks' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Calendar' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Settings' })).toBeVisible();
 
   await page.keyboard.press('Escape');
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
+});
+
+test('ARROW Notes is a system panel, not a Relay route, and persists on reload', async ({ page }) => {
+  await openOrbit(page);
+
+  await page.locator('.arrow-os-trigger').click();
+  await page.getByRole('button', { name: 'Notes' }).click();
+
+  const dialog = page.getByRole('dialog', { name: 'Notes' });
+  const note = dialog.getByRole('textbox', { name: 'Quick note' });
+  await expect(dialog).toBeVisible();
+
+  await note.fill('Shared ARROW note');
+  await page.reload();
+
+  await page.locator('.arrow-os-trigger').click();
+  await page.getByRole('button', { name: 'Notes' }).click();
+  await expect(page.getByRole('dialog', { name: 'Notes' }).getByRole('textbox', { name: 'Quick note' })).toHaveValue('Shared ARROW note');
+});
+
+test('ARROW task and appearance controls remain local system panels', async ({ page }) => {
+  await openOrbit(page);
+
+  await page.locator('.arrow-os-trigger').click();
+  await page.getByRole('button', { name: 'Tasks' }).click();
+  await expect(page.getByRole('dialog', { name: 'Tasks' })).toBeVisible();
+  await expect(page).toHaveURL(/\/$/);
+
+  await page.keyboard.press('Escape');
+  await page.locator('.arrow-os-trigger').click();
+  await page.getByRole('button', { name: 'Appearance' }).click();
+  await expect(page.getByRole('dialog', { name: 'Appearance' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Balanced' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Dark' })).toBeVisible();
 });
