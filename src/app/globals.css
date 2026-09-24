@@ -2114,3 +2114,22 @@ button:focus-visible {
     gap: 6px;
   }
 }
+
+
+.arrival-primary.is-live {
+  cursor: pointer;
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(255, 255, 255, 0.09);
+  color: rgba(255, 255, 255, 0.92);
+  text-decoration: none;
+}
+
+.arrival-primary.is-live:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.42);
+  background: rgba(255, 255, 255, 0.14);
+}
+
+.arrival-primary.is-live span {
+  color: rgba(255, 255, 255, 0.54);
+}
