@@ -352,9 +352,10 @@
     panel.hidden = true;
     panel.setAttribute('role', 'dialog');
     panel.setAttribute('aria-modal', 'false');
+    panel.setAttribute('aria-labelledby', 'arrow-os-panel-title');
     panel.innerHTML =
       '<header class="arrow-os-panel-head">' +
-        '<div><span>ARROW SYSTEM</span><h2></h2></div>' +
+        '<div><span>ARROW SYSTEM</span><h2 id="arrow-os-panel-title"></h2></div>' +
         '<button type="button" class="arrow-os-panel-close" aria-label="Close ARROW panel">' + icon('close') + '</button>' +
       '</header>' +
       '<div class="arrow-os-panel-body"></div>';
