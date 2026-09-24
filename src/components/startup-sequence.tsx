@@ -69,6 +69,7 @@ function ParticleWordmark({
     let cancelled = false;
     let formationReported = false;
     let buildVersion = 0;
+    const sequenceStartedAt = performance.now();
 
     const buildAnimation = () => {
       buildVersion += 1;
@@ -78,6 +79,12 @@ function ParticleWordmark({
       const width = window.innerWidth;
       const height = window.innerHeight;
       const density = Math.min(window.devicePixelRatio || 1, 2);
+
+      let seed = 982451653;
+      const random = () => {
+        seed = (Math.imul(seed, 1664525) + 1013904223) | 0;
+        return (seed >>> 0) / 4294967296;
+      };
 
       canvas.width = Math.floor(width * density);
       canvas.height = Math.floor(height * density);
@@ -142,7 +149,7 @@ function ParticleWordmark({
       }
 
       for (let index = destinations.length - 1; index > 0; index -= 1) {
-        const swapIndex = Math.floor(Math.random() * (index + 1));
+        const swapIndex = Math.floor(random() * (index + 1));
         [destinations[index], destinations[swapIndex]] = [
           destinations[swapIndex]!,
           destinations[index]!,
@@ -153,26 +160,24 @@ function ParticleWordmark({
       const particles: Particle[] = destinations
         .slice(0, limit)
         .map((destination, index) => {
-          const angle = Math.random() * Math.PI * 2;
+          const angle = random() * Math.PI * 2;
           const distance =
-            52 + Math.random() * Math.min(210, width * 0.26);
+            52 + random() * Math.min(210, width * 0.26);
 
           return {
             targetX: destination.x,
             targetY: destination.y,
             burstX: width / 2 + Math.cos(angle) * distance,
             burstY: centerY + Math.sin(angle) * distance,
-            radius: 0.7 + Math.random() * 0.9,
-            delay: (index % 19) * 6 + Math.random() * 55,
+            radius: 0.7 + random() * 0.9,
+            delay: (index % 19) * 6 + random() * 55,
           };
         });
-
-      const startedAt = performance.now();
 
       const draw = (now: number) => {
         if (cancelled || version !== buildVersion) return;
 
-        const elapsed = now - startedAt;
+        const elapsed = now - sequenceStartedAt;
         context.clearRect(0, 0, width, height);
         context.fillStyle = '#ffffff';
 
@@ -266,6 +271,22 @@ export function StartupSequence() {
   const [formed, setFormed] = useState(false);
   const [finished, setFinished] = useState(false);
 
+  const focusOrbitCore = () => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        document.querySelector<HTMLButtonElement>('.orbit-core-label')?.focus({
+          preventScroll: true,
+        });
+      });
+    });
+  };
+
+  const dismissIntro = () => {
+    sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
+    setVisible(false);
+    focusOrbitCore();
+  };
+
   useEffect(() => {
     const motionQuery = window.matchMedia(
       '(prefers-reduced-motion: reduce)',
@@ -289,9 +310,8 @@ export function StartupSequence() {
     const timer = window.setTimeout(resolveVisibility, 0);
     const handleMotionChange = () => {
       if (motionQuery.matches) {
-        sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
         setFinished(true);
-        setVisible(false);
+        dismissIntro();
       }
     };
 
@@ -304,6 +324,35 @@ export function StartupSequence() {
   }, []);
 
   useEffect(() => {
+    if (!ready || !visible) return;
+
+    const app = document.querySelector<HTMLElement>('.orbit-app');
+    const previousAriaHidden = app?.getAttribute('aria-hidden');
+
+    app?.setAttribute('inert', '');
+    app?.setAttribute('aria-hidden', 'true');
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      event.preventDefault();
+      dismissIntro();
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      app?.removeAttribute('inert');
+
+      if (previousAriaHidden === null || previousAriaHidden === undefined) {
+        app?.removeAttribute('aria-hidden');
+      } else {
+        app?.setAttribute('aria-hidden', previousAriaHidden);
+      }
+    };
+  }, [ready, visible]);
+
+  useEffect(() => {
     if (!activated) return;
 
     const finishTimer = window.setTimeout(() => {
@@ -313,6 +362,7 @@ export function StartupSequence() {
 
     const removeTimer = window.setTimeout(() => {
       setVisible(false);
+      focusOrbitCore();
     }, 4200);
 
     return () => {
@@ -323,11 +373,6 @@ export function StartupSequence() {
 
   if (!ready || !visible) return null;
 
-  const skip = () => {
-    sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
-    setVisible(false);
-  };
-
   return (
     <div
       className={`startup-shell ${finished ? 'is-finished' : ''}`}
@@ -335,13 +380,14 @@ export function StartupSequence() {
       aria-modal="true"
       aria-label="Orbit introduction"
     >
-      <button type="button" onClick={skip} className="startup-skip">
+      <button type="button" onClick={dismissIntro} className="startup-skip">
         Skip intro
       </button>
 
       <button
         type="button"
         aria-label="Start Orbit intro"
+        autoFocus
         disabled={activated}
         onClick={() => setActivated(true)}
         className="startup-trigger"
