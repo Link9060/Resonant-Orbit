@@ -38,6 +38,7 @@ import {
 } from '@/components/orbit-icons';
 import {
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -115,6 +116,7 @@ export function OrbitWorld() {
   const inspectorRef = useRef<HTMLElement>(null);
   const craftRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<HTMLButtonElement>(null);
+  const arrivalPanelRef = useRef<HTMLElement>(null);
   const navigatorRef = useRef<HTMLElement>(null);
   const navigatorInputRef = useRef<HTMLInputElement>(null);
   const shortcutRailRef = useRef<HTMLElement>(null);
@@ -343,6 +345,11 @@ export function OrbitWorld() {
       previousFocusRef.current = null;
     };
   }, [navigatorOpen]);
+
+  useLayoutEffect(() => {
+    if (travelPhase !== 'preview') return;
+    arrivalPanelRef.current?.focus({ preventScroll: true });
+  }, [travelPhase]);
 
   useEffect(() => {
     const previous = previousTravelPhaseRef.current;
@@ -1411,13 +1418,13 @@ export function OrbitWorld() {
 
         {travelingTo && travelPhase !== 'launching' && (
           <section
+            ref={arrivalPanelRef}
             className="destination-preview"
             role="region"
             aria-label={`${travelingTo.name} arrival`}
             aria-live="polite"
             aria-hidden={travelPhase !== 'preview'}
             tabIndex={-1}
-            autoFocus={travelPhase === 'preview'}
           >
             <div className="arrival-landmark" aria-hidden="true">
               <DestinationIcon id={travelingTo.id} size={42} />
