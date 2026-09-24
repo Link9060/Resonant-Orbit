@@ -2183,3 +2183,85 @@ button:focus-visible {
     stroke-dashoffset: -16;
   }
 }
+
+
+/* --- Orbit system chrome ------------------------------------------------ */
+
+.profile-orb {
+  display: grid;
+  place-items: center;
+}
+
+.profile-dot {
+  position: relative;
+  width: 13px;
+  height: 13px;
+  border: 1px solid rgba(255, 255, 255, 0.52);
+  border-radius: 50%;
+}
+
+.profile-dot::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -5px;
+  width: 16px;
+  height: 7px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.42);
+  border-bottom: 0;
+  border-radius: 999px 999px 0 0;
+}
+
+.orbit-readout {
+  position: fixed;
+  z-index: 24;
+  left: 50%;
+  top: 19px;
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  min-height: 34px;
+  padding: 0 13px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(7, 7, 7, 0.42);
+  color: rgba(255, 255, 255, 0.34);
+  backdrop-filter: blur(14px);
+  font-size: 8px;
+  font-weight: 620;
+  letter-spacing: 0.11em;
+  text-transform: uppercase;
+}
+
+.orbit-readout span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  white-space: nowrap;
+}
+
+.orbit-readout span + span {
+  padding-left: 12px;
+  border-left: 1px solid rgba(255, 255, 255, 0.075);
+}
+
+.orbit-readout strong {
+  color: rgba(255, 255, 255, 0.76);
+  font-size: inherit;
+}
+
+.orbit-readout i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 9px rgba(255, 255, 255, 0.68);
+}
+
+@media (max-width: 900px) {
+  .orbit-readout {
+    display: none;
+  }
+}
