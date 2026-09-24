@@ -23,6 +23,12 @@ jobs:
       - name: Install
         run: npm install --no-audit --no-fund
 
+      - name: Validate shared ARROW shell
+        run: |
+          node --check public/arrow-shell.js
+          grep -q 'data-arrow-os-shell' src/app/page.tsx
+          grep -q 'arrow-shell.js' src/app/layout.tsx
+
       - name: Typecheck
         run: npm run typecheck
 
