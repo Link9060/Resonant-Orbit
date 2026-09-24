@@ -1,5 +1,6 @@
 'use client';
 
+import { ARROW_MARK_PATH } from '@/components/orbit-icons';
 import { readIncomingArrowSource } from '@/lib/arrow-map';
 import { useEffect, useRef, useState } from 'react';
 
@@ -27,15 +28,11 @@ function easeInOutCubic(value: number) {
 }
 
 function drawArrowMark(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+  const path = new Path2D(ARROW_MARK_PATH);
   ctx.save();
-  ctx.translate(x, y);
-  ctx.beginPath();
-  ctx.moveTo(-size * 0.42, -size * 0.24);
-  ctx.lineTo(size * 0.48, 0);
-  ctx.lineTo(-size * 0.42, size * 0.24);
-  ctx.lineTo(-size * 0.16, 0);
-  ctx.closePath();
-  ctx.fill();
+  ctx.translate(x - size / 2, y - size / 2);
+  ctx.scale(size / 24, size / 24);
+  ctx.fill(path);
   ctx.restore();
 }
 
