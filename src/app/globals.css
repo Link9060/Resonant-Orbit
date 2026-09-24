@@ -1089,3 +1089,619 @@ button:focus-visible {
     scroll-behavior: auto !important;
   }
 }
+
+
+/* --- ARROW travel / module handoff -------------------------------------- */
+
+.world-shell.travel-launching,
+.world-shell.travel-returning,
+.world-shell.travel-preview {
+  cursor: default;
+}
+
+.world-shell.travel-launching .stage-copy,
+.world-shell.travel-returning .stage-copy,
+.world-shell.travel-preview .stage-copy {
+  opacity: 0;
+}
+
+.world-canvas,
+.orbit-rings,
+.orbit-core-label,
+.destination-layer,
+.world-inspector {
+  transition:
+    opacity 420ms ease,
+    transform 760ms cubic-bezier(.16, 1, .3, 1),
+    filter 620ms ease;
+}
+
+.world-shell.travel-launching .world-canvas {
+  filter: blur(0.6px);
+}
+
+.world-shell.travel-launching .orbit-rings {
+  opacity: 0.24;
+  transform: translate(-50%, -50%) scale(1.16);
+}
+
+.world-shell.travel-launching .orbit-core-label {
+  opacity: 0.2;
+  transform: translate(-50%, -50%) scale(0.86);
+}
+
+.world-shell.travel-launching .destination-node:not(.is-travel-target) {
+  opacity: 0.08;
+  filter: blur(1.5px);
+}
+
+.world-shell.travel-launching .destination-node.is-travel-target {
+  z-index: 30;
+  transform: scale(1.18);
+}
+
+.world-shell.travel-launching .destination-node.is-travel-target .node-landmark {
+  border-color: rgba(255, 255, 255, 0.52);
+  box-shadow:
+    0 0 0 8px rgba(255, 255, 255, 0.025),
+    0 0 42px rgba(255, 255, 255, 0.13),
+    inset 0 1px rgba(255, 255, 255, 0.12);
+}
+
+.world-shell.travel-launching .world-inspector,
+.world-shell.travel-returning .world-inspector {
+  opacity: 0;
+  transform: translateY(16px) scale(0.985);
+  pointer-events: none;
+}
+
+.world-shell.travel-preview .world-canvas,
+.world-shell.travel-preview .orbit-rings,
+.world-shell.travel-preview .orbit-core-label,
+.world-shell.travel-preview .destination-layer,
+.world-shell.travel-preview .world-inspector {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.world-shell.travel-preview .world-canvas {
+  transform: scale(1.24);
+  filter: blur(4px);
+}
+
+.world-shell.travel-returning .world-canvas {
+  animation: orbit-return-world 1050ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.world-shell.travel-returning .orbit-rings {
+  animation: orbit-return-rings 1050ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.craft-orbit {
+  transition: opacity 220ms ease;
+}
+
+.world-shell:not(.travel-idle) .craft-orbit {
+  opacity: 0;
+  animation-play-state: paused;
+}
+
+.travel-flight-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 36;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.travel-path {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: max(70px, calc(hypot(var(--travel-x), var(--travel-y))));
+  height: 1px;
+  transform-origin: 0 50%;
+  opacity: 0;
+}
+
+.travel-craft {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 28px;
+  height: 28px;
+  margin: -14px;
+  z-index: 5;
+  filter:
+    drop-shadow(0 0 8px rgba(255, 255, 255, 0.8))
+    drop-shadow(0 0 22px rgba(255, 255, 255, 0.28));
+}
+
+.travel-craft span {
+  position: absolute;
+  inset: 7px 1px;
+  background: #fff;
+  clip-path: polygon(0 0, 100% 50%, 0 100%, 30% 50%);
+}
+
+.travel-launching .travel-craft {
+  animation: arrow-flight-out 1450ms cubic-bezier(.2, .72, .1, 1) both;
+}
+
+.travel-returning .travel-craft {
+  animation: arrow-flight-home 1050ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.travel-preview .travel-craft {
+  opacity: 0;
+  transform: translate(var(--travel-x), var(--travel-y)) scale(0.28);
+}
+
+.travel-wake {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 3px;
+  height: 3px;
+  margin: -1.5px;
+  border-radius: 50%;
+  background: #fff;
+  opacity: 0;
+  box-shadow: 0 0 11px rgba(255, 255, 255, 0.75);
+}
+
+.travel-launching .wake-one {
+  animation: travel-wake-one 1450ms ease-out both;
+}
+
+.travel-launching .wake-two {
+  animation: travel-wake-two 1450ms 70ms ease-out both;
+}
+
+.travel-launching .wake-three {
+  animation: travel-wake-three 1450ms 140ms ease-out both;
+}
+
+.travel-returning .wake-one {
+  animation: travel-wake-home 1050ms ease-out both;
+}
+
+.travel-returning .wake-two {
+  animation: travel-wake-home 1050ms 55ms ease-out both;
+}
+
+.travel-returning .wake-three {
+  animation: travel-wake-home 1050ms 110ms ease-out both;
+}
+
+.destination-preview {
+  position: absolute;
+  inset: 0;
+  z-index: 42;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 80px 24px 42px;
+  text-align: center;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transform: scale(1.035);
+  transition:
+    opacity 520ms ease,
+    transform 760ms cubic-bezier(.16, 1, .3, 1),
+    visibility 520ms ease;
+}
+
+.destination-preview::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: min(76vw, 740px);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle, rgba(255, 255, 255, 0.075), rgba(255, 255, 255, 0.018) 28%, transparent 67%);
+  filter: blur(10px);
+  pointer-events: none;
+}
+
+.travel-preview .destination-preview {
+  opacity: 1;
+  visibility: visible;
+  pointer-events: auto;
+  transform: scale(1);
+}
+
+.travel-returning .destination-preview {
+  opacity: 0;
+  visibility: visible;
+  transform: scale(1.06);
+}
+
+.arrival-landmark {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  width: 100px;
+  height: 100px;
+  place-items: center;
+  margin-bottom: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.025);
+  box-shadow:
+    0 0 0 16px rgba(255, 255, 255, 0.012),
+    0 0 90px rgba(255, 255, 255, 0.08),
+    inset 0 1px rgba(255, 255, 255, 0.08);
+  animation: arrival-breathe 4.4s ease-in-out infinite;
+}
+
+.arrival-landmark::before,
+.arrival-landmark::after {
+  content: "";
+  position: absolute;
+  inset: -18px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 50%;
+}
+
+.arrival-landmark::after {
+  inset: -36px;
+  opacity: 0.56;
+}
+
+.arrival-landmark .large.landmark-atlas {
+  width: 38px;
+  height: 38px;
+}
+
+.arrival-landmark .large.landmark-atlas::before {
+  height: 48px;
+}
+
+.arrival-landmark .large.landmark-atlas::after {
+  width: 48px;
+}
+
+.arrival-landmark .large.landmark-atlas i {
+  width: 14px;
+  height: 14px;
+}
+
+.arrival-landmark .large.landmark-ravin {
+  width: 40px;
+  height: 40px;
+}
+
+.arrival-landmark .large.landmark-ravin::before {
+  inset: 7px;
+  box-shadow: 0 0 24px rgba(255, 255, 255, 0.7);
+}
+
+.arrival-landmark .large.landmark-ravin i:nth-child(2) {
+  inset: -8px 13px;
+}
+
+.arrival-landmark .large.landmark-relay {
+  transform: scale(2.15);
+}
+
+.arrival-landmark .large.landmark-w {
+  font-size: 27px;
+}
+
+.arrival-code {
+  position: relative;
+  z-index: 1;
+  margin: 0 0 8px;
+  color: rgba(255, 255, 255, 0.38);
+  font-size: 9px;
+  font-weight: 650;
+  letter-spacing: 0.24em;
+}
+
+.destination-preview h2 {
+  position: relative;
+  z-index: 1;
+  margin: 0;
+  font-size: clamp(52px, 8vw, 100px);
+  font-weight: 360;
+  line-height: 0.9;
+  letter-spacing: -0.065em;
+}
+
+.arrival-line {
+  position: relative;
+  z-index: 1;
+  margin: 18px 0 0;
+  color: rgba(255, 255, 255, 0.56);
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.arrival-actions {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 34px;
+}
+
+.arrival-primary,
+.arrival-return {
+  min-height: 38px;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 10px;
+  transition:
+    transform 180ms ease,
+    border-color 180ms ease,
+    background 180ms ease,
+    color 180ms ease;
+}
+
+.arrival-primary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.025);
+  color: rgba(255, 255, 255, 0.34);
+  cursor: not-allowed;
+}
+
+.arrival-primary span {
+  padding-left: 8px;
+  border-left: 1px solid rgba(255, 255, 255, 0.11);
+  font-size: 8px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.arrival-return {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 15px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.07);
+}
+
+.arrival-return:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.4);
+  background: rgba(255, 255, 255, 0.12);
+}
+
+.return-arrow,
+.mini-arrow {
+  display: inline-block;
+  width: 11px;
+  height: 7px;
+  background: currentColor;
+  clip-path: polygon(0 50%, 100% 0, 72% 50%, 100% 100%);
+}
+
+.mini-arrow {
+  transform: scaleX(-1);
+}
+
+.travel-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.travel-status {
+  position: absolute;
+  z-index: 48;
+  left: 50%;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  min-height: 30px;
+  padding: 0 11px;
+  transform: translateX(-50%);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 999px;
+  background: rgba(6, 6, 6, 0.76);
+  color: rgba(255, 255, 255, 0.58);
+  backdrop-filter: blur(14px);
+  font-size: 9px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.travel-status-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.8);
+  animation: travel-status-pulse 760ms ease-in-out infinite alternate;
+}
+
+@keyframes arrow-flight-out {
+  0% {
+    transform: translate(0, 0) rotate(-35deg) scale(0.72);
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  28% {
+    transform: translate(calc(var(--travel-x) * 0.09), calc(var(--travel-y) * 0.02 - 46px)) rotate(-22deg) scale(1.08);
+  }
+  65% {
+    transform: translate(calc(var(--travel-x) * 0.62), calc(var(--travel-y) * 0.48 - 24px)) rotate(10deg) scale(0.9);
+  }
+  100% {
+    transform: translate(var(--travel-x), var(--travel-y)) rotate(0deg) scale(0.25);
+    opacity: 0.18;
+  }
+}
+
+@keyframes arrow-flight-home {
+  0% {
+    transform: translate(var(--travel-x), var(--travel-y)) rotate(180deg) scale(0.25);
+    opacity: 0.24;
+  }
+  20% {
+    opacity: 1;
+  }
+  62% {
+    transform: translate(calc(var(--travel-x) * 0.36), calc(var(--travel-y) * 0.28 + 32px)) rotate(205deg) scale(1);
+  }
+  100% {
+    transform: translate(0, 0) rotate(225deg) scale(0.72);
+    opacity: 0;
+  }
+}
+
+@keyframes travel-wake-one {
+  0%, 12% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+  27% {
+    opacity: 0.72;
+  }
+  100% {
+    transform: translate(calc(var(--travel-x) * 0.89), calc(var(--travel-y) * 0.89)) scale(0.2);
+    opacity: 0;
+  }
+}
+
+@keyframes travel-wake-two {
+  0%, 14% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+  30% {
+    opacity: 0.48;
+  }
+  100% {
+    transform: translate(calc(var(--travel-x) * 0.78), calc(var(--travel-y) * 0.78 + 18px)) scale(0.15);
+    opacity: 0;
+  }
+}
+
+@keyframes travel-wake-three {
+  0%, 16% {
+    transform: translate(0, 0) scale(0.5);
+    opacity: 0;
+  }
+  34% {
+    opacity: 0.38;
+  }
+  100% {
+    transform: translate(calc(var(--travel-x) * 0.68), calc(var(--travel-y) * 0.68 - 16px)) scale(0.1);
+    opacity: 0;
+  }
+}
+
+@keyframes travel-wake-home {
+  0% {
+    transform: translate(var(--travel-x), var(--travel-y)) scale(0.2);
+    opacity: 0;
+  }
+  24% {
+    opacity: 0.5;
+  }
+  100% {
+    transform: translate(0, 0) scale(0.1);
+    opacity: 0;
+  }
+}
+
+@keyframes arrival-breathe {
+  0%, 100% {
+    transform: scale(1);
+    box-shadow:
+      0 0 0 16px rgba(255, 255, 255, 0.012),
+      0 0 90px rgba(255, 255, 255, 0.08),
+      inset 0 1px rgba(255, 255, 255, 0.08);
+  }
+  50% {
+    transform: scale(1.025);
+    box-shadow:
+      0 0 0 20px rgba(255, 255, 255, 0.009),
+      0 0 120px rgba(255, 255, 255, 0.11),
+      inset 0 1px rgba(255, 255, 255, 0.11);
+  }
+}
+
+@keyframes travel-status-pulse {
+  from {
+    opacity: 0.32;
+    transform: scale(0.7);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes orbit-return-world {
+  0% {
+    opacity: 0.34;
+    transform: scale(1.22);
+    filter: blur(3px);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+    filter: blur(0);
+  }
+}
+
+@keyframes orbit-return-rings {
+  0% {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(1.18);
+  }
+  100% {
+    opacity: 0.64;
+    transform: translate(-50%, -50%) scale(1);
+  }
+}
+
+@media (max-width: 680px) {
+  .destination-preview {
+    padding-top: 106px;
+    justify-content: flex-start;
+  }
+
+  .arrival-landmark {
+    width: 82px;
+    height: 82px;
+    margin-top: 12vh;
+    margin-bottom: 25px;
+  }
+
+  .destination-preview h2 {
+    font-size: clamp(46px, 17vw, 76px);
+  }
+
+  .arrival-actions {
+    flex-direction: column;
+    width: min(300px, 100%);
+  }
+
+  .arrival-primary,
+  .arrival-return {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .travel-status {
+    bottom: 18px;
+  }
+}
