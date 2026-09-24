@@ -9,6 +9,7 @@
     accent: 'arrow_os_accent_v1',
     experience: 'arrow_os_experience_v1',
     focusMinutes: 'arrow_os_focus_minutes_v1',
+    focusState: 'arrow_os_focus_state_v1',
   };
 
   const ORBIT_URL = 'https://link9060.github.io/Resonant-Orbit/';
@@ -306,7 +307,13 @@
       setOpen(instance, instance.pinned || root.dataset.open !== 'true');
     });
 
-    root.querySelector('.arrow-os-orbit').addEventListener('click', () => {
+    const orbitButton = root.querySelector('.arrow-os-orbit');
+    if (module === 'orbit') {
+      orbitButton.classList.add('is-active');
+      orbitButton.setAttribute('aria-current', 'page');
+    }
+
+    orbitButton.addEventListener('click', () => {
       if (module === 'orbit') {
         closePanel();
         const core = document.querySelector('.orbit-core-label');
@@ -549,7 +556,7 @@
       '</div>';
 
     const form = state.panelBody.querySelector('.arrow-os-calendar-form');
-    form.querySelector('input[type="date"]').value = new Date().toISOString().slice(0, 10);
+    form.querySelector('input[type="date"]').value = localDateInputValue();
     form.addEventListener('submit', event => {
       event.preventDefault();
       const [titleInput, dateInput, timeInput] = form.querySelectorAll('input');
@@ -605,22 +612,62 @@
     });
   }
 
+  function localDateInputValue(date = new Date()) {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+  }
+
   function focusMinutes() {
     const value = Number(readString(STORAGE.focusMinutes, '25'));
     return [15, 25, 45, 60].includes(value) ? value : 25;
   }
 
+  function saveFocusState() {
+    writeJson(STORAGE.focusState, {
+      remaining: Math.max(0, Math.floor(state.focusRemaining)),
+      running: Boolean(state.focusRunning),
+      updatedAt: Date.now(),
+    });
+  }
+
+  function restoreFocusState() {
+    const saved = readJson(STORAGE.focusState, null);
+    if (!saved || typeof saved !== 'object') {
+      state.focusRemaining = focusMinutes() * 60;
+      state.focusRunning = false;
+      state.focusUpdatedAt = Date.now();
+      return;
+    }
+
+    const baseRemaining = Number(saved.remaining);
+    state.focusRemaining = Number.isFinite(baseRemaining) && baseRemaining >= 0
+      ? baseRemaining
+      : focusMinutes() * 60;
+    state.focusRunning = Boolean(saved.running) && state.focusRemaining > 0;
+    const savedAt = Number(saved.updatedAt) || Date.now();
+
+    if (state.focusRunning) {
+      const elapsed = Math.max(0, Math.floor((Date.now() - savedAt) / 1000));
+      state.focusRemaining = Math.max(0, state.focusRemaining - elapsed);
+      if (state.focusRemaining <= 0) state.focusRunning = false;
+    }
+
+    state.focusUpdatedAt = Date.now();
+    if (state.focusRunning) beginFocusInterval();
+  }
+
   function resetFocus(minutes = focusMinutes()) {
-    stopFocusTimer();
+    stopFocusTimer(false);
     state.focusRemaining = minutes * 60;
     state.focusUpdatedAt = Date.now();
+    saveFocusState();
     renderFocus();
   }
 
-  function startFocusTimer() {
-    if (state.focusRunning) return;
-    state.focusRunning = true;
-    state.focusUpdatedAt = Date.now();
+  function beginFocusInterval() {
+    clearInterval(state.focusTimer);
     state.focusTimer = setInterval(() => {
       const elapsed = Math.floor((Date.now() - state.focusUpdatedAt) / 1000);
       if (elapsed <= 0) return;
@@ -628,17 +675,32 @@
       state.focusRemaining = Math.max(0, state.focusRemaining - elapsed);
       updateFocusDisplay();
       if (state.focusRemaining <= 0) {
-        stopFocusTimer();
+        stopFocusTimer(true);
+        const previousTitle = document.title;
         document.title = 'Focus complete · ARROW';
+        setTimeout(() => {
+          if (document.title === 'Focus complete · ARROW') document.title = previousTitle;
+        }, 4000);
       }
     }, 250);
+  }
+
+  function startFocusTimer() {
+    if (state.focusRunning) return;
+    if (state.focusRemaining <= 0) state.focusRemaining = focusMinutes() * 60;
+    state.focusRunning = true;
+    state.focusUpdatedAt = Date.now();
+    beginFocusInterval();
+    saveFocusState();
     renderFocus();
   }
 
-  function stopFocusTimer() {
+  function stopFocusTimer(save = true) {
     state.focusRunning = false;
     clearInterval(state.focusTimer);
     state.focusTimer = null;
+    state.focusUpdatedAt = Date.now();
+    if (save) saveFocusState();
   }
 
   function formatTime(seconds) {
@@ -673,7 +735,7 @@
 
     state.panelBody.querySelector('[data-focus-action="toggle"]').addEventListener('click', () => {
       if (state.focusRunning) {
-        stopFocusTimer();
+        stopFocusTimer(true);
         renderFocus();
       } else {
         startFocusTimer();
@@ -792,6 +854,7 @@
     const file = event.target.files?.[0];
     if (!file) return;
     try {
+      if (file.size > 1024 * 1024) throw new Error('ARROW import files must be smaller than 1 MB.');
       const payload = JSON.parse(await file.text());
       if (!payload?.data || typeof payload.data !== 'object') throw new Error('Invalid ARROW export.');
       Object.entries(STORAGE).forEach(([name, key]) => {
@@ -910,6 +973,11 @@
   function mountAll() {
     document.querySelectorAll('[data-arrow-os-shell]').forEach(createInstance);
     const first = [...state.instances][0];
+
+    if (first && readString(STORAGE.theme, '')) {
+      applyTheme(getThemeChoice(), false);
+    }
+
     if (first) receiveFromOrbit(first.module);
     updateHostTheme();
   }
@@ -967,8 +1035,9 @@
   document.documentElement.dataset.arrowAccent = readString(STORAGE.accent, 'mono');
   if (readString(STORAGE.experience, '')) applyExperienceChoice(getExperienceChoice(), false);
   if (readString(STORAGE.accent, '')) applyAccent(readString(STORAGE.accent, 'mono'), false);
-  if (readString(STORAGE.theme, '')) applyTheme(getThemeChoice(), false);
   applyMotion(getMotionChoice(), false);
+  restoreFocusState();
+  window.addEventListener('beforeunload', saveFocusState);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', () => requestAnimationFrame(mountAll), { once: true });
