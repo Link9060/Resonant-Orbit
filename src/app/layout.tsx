@@ -13,12 +13,17 @@ export const viewport: Viewport = {
   themeColor: '#050505',
 };
 
+const arrowShellBase =
+  process.env.NEXT_PUBLIC_ORBIT_DEPLOY_TARGET === 'github-pages'
+    ? '/Resonant-Orbit'
+    : '';
+
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href="/Resonant-Orbit/arrow-shell.css?v=20260924-50" />
-        <script defer src="/Resonant-Orbit/arrow-shell.js?v=20260924-50" />
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260924-50`} />
+        <script defer src={`${arrowShellBase}/arrow-shell.js?v=20260924-50`} />
       </head>
       <body>{children}</body>
     </html>
