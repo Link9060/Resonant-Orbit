@@ -592,7 +592,7 @@ export function OrbitWorld() {
         };
       });
 
-      const settleProjectedNode = <T extends { x: number; y: number }>(projected: T) => {
+      const settleProjectedNode = (projected: (typeof rawNodes)[number]) => {
         const mobile = width < 680;
         const settled = resolveSafeScreenPosition(
           projected.x,
