@@ -87,6 +87,7 @@ export function OrbitWorld() {
   const linkRefs = useRef<Partial<Record<Destination['id'], SVGLineElement | null>>>({});
   const pointerRef = useRef({ x: 0, y: 0, inside: false });
   const impulseRef = useRef(0);
+  const zoomRef = useRef({ current: 1, target: 1 });
   const timersRef = useRef<number[]>([]);
   const rotationRef = useRef<RotationState>({
     yaw: 0,
@@ -230,6 +231,10 @@ export function OrbitWorld() {
       rotation.yaw += (rotation.targetYaw - rotation.yaw) * 0.12;
       rotation.pitch += (rotation.targetPitch - rotation.pitch) * 0.12;
 
+      const zoom = zoomRef.current;
+      zoom.current += (zoom.target - zoom.current) * 0.11;
+      shell.style.setProperty('--world-zoom', zoom.current.toFixed(3));
+
       hover += ((pointer.inside && travelPhase === 'idle' && !rotation.dragging ? 1 : 0) - hover) * 0.075;
       impulse += (impulseRef.current - impulse) * 0.14;
       impulseRef.current *= 0.91;
@@ -241,7 +246,10 @@ export function OrbitWorld() {
       const centerY = height * 0.5;
       const normalizedX = (pointer.x - centerX) / Math.max(1, width * 0.5);
       const normalizedY = (pointer.y - centerY) / Math.max(1, height * 0.5);
-      const worldScale = (width < 720 ? 0.9 : 1.12) * (1 + travelMix * 0.16);
+      const worldScale =
+        (width < 720 ? 0.9 : 1.12) *
+        zoomRef.current.current *
+        (1 + travelMix * 0.16);
 
       renderer(ctx, centerX, centerY, width, time, true, {
         mx: normalizedX,
@@ -371,6 +379,22 @@ export function OrbitWorld() {
     pointerRef.current.inside = false;
   };
 
+  const handleWheel = (event: React.WheelEvent<HTMLDivElement>) => {
+    if (travelPhase !== 'idle' || navigatorOpen) return;
+    if ((event.target as HTMLElement).closest('button, input, a')) return;
+
+    event.preventDefault();
+    const zoom = zoomRef.current;
+    zoom.target = clamp(zoom.target - event.deltaY * 0.0007, 0.82, 1.22);
+  };
+
+  const changeZoom = (amount: number) => {
+    if (travelPhase !== 'idle') return;
+    const zoom = zoomRef.current;
+    zoom.target = clamp(zoom.target + amount, 0.82, 1.22);
+    impulseRef.current = Math.max(impulseRef.current, 0.32);
+  };
+
   const focusDestination = (destination: Destination, impulse = 1) => {
     if (travelPhase !== 'idle') return;
 
@@ -456,6 +480,7 @@ export function OrbitWorld() {
     rotation.targetPitch = 0;
     rotation.velocityYaw = 0;
     rotation.velocityPitch = 0;
+    zoomRef.current.target = 1;
     setSelectedId('orbit');
     impulseRef.current = 0.7;
   };
@@ -493,6 +518,7 @@ export function OrbitWorld() {
       onPointerCancel={endDrag}
       onPointerEnter={handlePointerMove}
       onPointerLeave={resetPointer}
+      onWheel={handleWheel}
     >
       <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
 
@@ -588,6 +614,10 @@ export function OrbitWorld() {
         <button type="button" onClick={recenterWorld} disabled={travelPhase !== 'idle'}>
           recenter
         </button>
+        <span className="zoom-controls" aria-label="World zoom">
+          <button type="button" onClick={() => changeZoom(-0.1)} disabled={travelPhase !== 'idle'} aria-label="Zoom out">−</button>
+          <button type="button" onClick={() => changeZoom(0.1)} disabled={travelPhase !== 'idle'} aria-label="Zoom in">+</button>
+        </span>
         <button
           type="button"
           className="navigator-trigger"
