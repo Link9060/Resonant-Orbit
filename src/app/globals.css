@@ -401,12 +401,20 @@ button:focus-visible {
   cursor: pointer;
   text-align: left;
   pointer-events: auto;
-  transition: transform 240ms cubic-bezier(.2, .8, .2, 1), opacity 180ms ease;
+  transform: translate(-50%, -50%) scale(var(--node-scale, 1));
+  opacity: var(--node-opacity, 1);
+  transition: opacity 180ms ease, filter 180ms ease;
+  will-change: left, top, transform, opacity;
 }
 
 .destination-node:hover,
 .destination-node.is-selected {
-  transform: scale(1.045);
+  opacity: 1;
+}
+
+.destination-node:hover .node-landmark,
+.destination-node.is-selected .node-landmark {
+  transform: scale(1.07);
 }
 
 .destination-node::before {
