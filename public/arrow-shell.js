@@ -458,23 +458,6 @@
     if (event.key === 'Escape') {
       event.preventDefault();
       closePanel();
-      return;
-    }
-
-    if (event.key !== 'Tab') return;
-    const focusable = [...state.panelEl.querySelectorAll('button:not(:disabled), input:not(:disabled), textarea:not(:disabled), select:not(:disabled), a[href], [tabindex]:not([tabindex="-1"])')]
-      .filter(el => !el.hidden && el.offsetParent !== null);
-
-    if (!focusable.length) return;
-    const first = focusable[0];
-    const last = focusable[focusable.length - 1];
-
-    if (event.shiftKey && document.activeElement === first) {
-      event.preventDefault();
-      last.focus();
-    } else if (!event.shiftKey && document.activeElement === last) {
-      event.preventDefault();
-      first.focus();
     }
   }
 
@@ -992,7 +975,16 @@
     }, 1080);
   }
 
+  function pruneInstances() {
+    state.instances.forEach(instance => {
+      if (!document.documentElement.contains(instance.mount)) {
+        state.instances.delete(instance);
+      }
+    });
+  }
+
   function mountAll() {
+    pruneInstances();
     document.querySelectorAll('[data-arrow-os-shell]').forEach(createInstance);
     const first = [...state.instances][0];
 
@@ -1039,6 +1031,12 @@
     if (!Object.values(STORAGE).includes(event.key)) return;
     if (event.key === STORAGE.theme) applyTheme(getThemeChoice(), false);
     if (event.key === STORAGE.motion) applyMotion(getMotionChoice(), false);
+    if (event.key === STORAGE.experience) applyExperienceChoice(getExperienceChoice(), false);
+    if (event.key === STORAGE.accent) applyAccent(readString(STORAGE.accent, 'mono'), false);
+    if (event.key === STORAGE.focusState || event.key === STORAGE.focusMinutes) {
+      stopFocusTimer(false);
+      restoreFocusState();
+    }
     if (state.activePanel) renderPanel(state.activePanel);
   });
 
@@ -1061,10 +1059,16 @@
   restoreFocusState();
   window.addEventListener('beforeunload', saveFocusState);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => requestAnimationFrame(mountAll), { once: true });
-  } else {
+  const startMounting = () => {
     requestAnimationFrame(mountAll);
+    const observer = new MutationObserver(() => mountAll());
+    observer.observe(document.body, { childList: true, subtree: true });
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', startMounting, { once: true });
+  } else {
+    startMounting();
   }
 
   window.ArrowOS = {
