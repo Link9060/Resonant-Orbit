@@ -2599,3 +2599,66 @@ button:focus-visible {
     display: none;
   }
 }
+
+
+/* --- Route availability ------------------------------------------------- */
+
+.node-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  min-height: 9px;
+}
+
+.route-chip {
+  padding: 1px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.route-chip.is-live {
+  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.route-chip.is-staged {
+  color: rgba(255, 255, 255, 0.24);
+}
+
+.navigator-result-meta {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.navigator-result-meta em {
+  padding: 1px 4px;
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  font-style: normal;
+  font-size: 6px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.navigator-result-meta em.is-live {
+  border-color: rgba(255, 255, 255, 0.16);
+  background: rgba(255, 255, 255, 0.06);
+  color: rgba(255, 255, 255, 0.72);
+}
+
+.navigator-result-meta em.is-staged {
+  color: rgba(255, 255, 255, 0.24);
+}
+
+@media (max-width: 680px) {
+  .route-chip {
+    display: none;
+  }
+}
