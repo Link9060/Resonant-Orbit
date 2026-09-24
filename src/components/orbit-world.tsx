@@ -14,7 +14,7 @@ import {
   nearestEquivalentAngle,
   projectAnchor,
   projectPoint,
-  pushOutsideRect,
+  resolveSafeScreenPosition,
   resolveScreenCollisions,
   smoothstep,
   type ScreenRect,
@@ -84,7 +84,6 @@ type TouchPoint = { x: number; y: number };
 
 const destinations = ARROW_DESTINATIONS;
 const destinationIndex = ARROW_DESTINATION_BY_ID;
-const TAU = Math.PI * 2;
 
 function DestinationIcon({ id, size = 18 }: { id: Destination['id']; size?: number }) {
   if (id === 'atlas') return <CompassIcon size={size} />;
@@ -126,7 +125,9 @@ export function OrbitWorld() {
   const nodeRefs = useRef<Partial<Record<Destination['id'], HTMLButtonElement | null>>>({});
   const linkRefs = useRef<Partial<Record<Destination['id'], SVGLineElement | null>>>({});
   const nodeFrontRef = useRef<Partial<Record<Destination['id'], boolean>>>({});
+  const nodeSideRef = useRef<Partial<Record<Destination['id'], 'left' | 'right'>>>({});
   const selectedBackSinceRef = useRef<number | null>(null);
+  const restoreNavigatorFocusRef = useRef(true);
 
   const pointerRef = useRef({ x: 0, y: 0, inside: false });
   const touchPointersRef = useRef(new Map<number, TouchPoint>());
@@ -195,6 +196,27 @@ export function OrbitWorld() {
     travelPhase !== 'idle' ||
     incomingFrom !== null ||
     navigatorOpen;
+
+  const beginReturnToOrbit = () => {
+    const ui = uiRef.current;
+    if (ui.travelPhase !== 'preview' || !ui.travelId) return;
+
+    timersRef.current.forEach(timer => window.clearTimeout(timer));
+    timersRef.current = [];
+    setTravelPhase('returning');
+    impulseRef.current = 1;
+
+    const duration = reducedMotionRef.current ? 80 : 1050;
+    timersRef.current.push(
+      window.setTimeout(() => {
+        setTravelPhase('idle');
+        setTravelId(null);
+        setSelectedId('orbit');
+        setFlightPath({ startX: 0, startY: 0, targetX: 0, targetY: 0 });
+        impulseRef.current = 0.65;
+      }, duration),
+    );
+  };
 
   useEffect(() => {
     uiRef.current = { selectedId, travelPhase, travelId, incomingFrom, navigatorOpen };
@@ -308,13 +330,17 @@ export function OrbitWorld() {
   useEffect(() => {
     if (!navigatorOpen) return;
 
+    restoreNavigatorFocusRef.current = true;
     previousFocusRef.current =
       document.activeElement instanceof HTMLElement ? document.activeElement : null;
     const focusTimer = window.setTimeout(() => navigatorInputRef.current?.focus(), 0);
 
     return () => {
       window.clearTimeout(focusTimer);
-      previousFocusRef.current?.focus();
+      if (restoreNavigatorFocusRef.current) {
+        previousFocusRef.current?.focus({ preventScroll: true });
+      }
+      restoreNavigatorFocusRef.current = true;
       previousFocusRef.current = null;
     };
   }, [navigatorOpen]);
@@ -322,14 +348,6 @@ export function OrbitWorld() {
   useEffect(() => {
     const previous = previousTravelPhaseRef.current;
     previousTravelPhaseRef.current = travelPhase;
-
-    if (travelPhase === 'preview') {
-      const timer = window.setTimeout(() => {
-        arrivalPanelRef.current?.focus({ preventScroll: true });
-      }, reducedMotionRef.current ? 16 : 80);
-
-      return () => window.clearTimeout(timer);
-    }
 
     if (travelPhase === 'idle' && previous === 'returning') {
       const frame = window.requestAnimationFrame(() => {
@@ -356,21 +374,7 @@ export function OrbitWorld() {
 
       if (event.key === 'Escape' && ui.travelPhase === 'preview') {
         event.preventDefault();
-        timersRef.current.forEach(timer => window.clearTimeout(timer));
-        timersRef.current = [];
-        setTravelPhase('returning');
-        impulseRef.current = 1;
-
-        const duration = reducedMotionRef.current ? 80 : 1050;
-        timersRef.current.push(
-          window.setTimeout(() => {
-            setTravelPhase('idle');
-            setTravelId(null);
-            setSelectedId('orbit');
-            setFlightPath({ startX: 0, startY: 0, targetX: 0, targetY: 0 });
-            impulseRef.current = 0.65;
-          }, duration),
-        );
+        beginReturnToOrbit();
         return;
       }
 
@@ -566,15 +570,20 @@ export function OrbitWorld() {
           centerY,
         );
 
-        let position = { x: projected.x, y: projected.y };
-        for (const safeRect of safeRectsRef.current) {
-          position = pushOutsideRect(
-            position.x,
-            position.y,
-            safeRect,
-            width < 680 ? 16 : 20,
-          );
-        }
+        const mobile = width < 680;
+        const position = resolveSafeScreenPosition(
+          projected.x,
+          projected.y,
+          safeRectsRef.current,
+          {
+            left: mobile ? 66 : 94,
+            top: mobile ? 70 : 62,
+            right: width - (mobile ? 66 : 94),
+            bottom: height - (mobile ? 86 : 68),
+          },
+          mobile ? 38 : 48,
+          4,
+        );
 
         return {
           destination,
@@ -589,7 +598,24 @@ export function OrbitWorld() {
         width < 680 ? 82 : 112,
         centerX,
         centerY,
-      );
+      ).map(projected => {
+        const mobile = width < 680;
+        const settled = resolveSafeScreenPosition(
+          projected.x,
+          projected.y,
+          safeRectsRef.current,
+          {
+            left: mobile ? 66 : 94,
+            top: mobile ? 70 : 62,
+            right: width - (mobile ? 66 : 94),
+            bottom: height - (mobile ? 86 : 68),
+          },
+          mobile ? 38 : 48,
+          3,
+        );
+
+        return { ...projected, ...settled };
+      });
 
       for (const projected of projectedNodes) {
         const destination = projected.destination;
@@ -613,6 +639,12 @@ export function OrbitWorld() {
             if (now - selectedBackSinceRef.current > 240) {
               setSelectedId('orbit');
               selectedBackSinceRef.current = null;
+
+              if (document.activeElement === node) {
+                window.requestAnimationFrame(() => {
+                  coreRef.current?.focus({ preventScroll: true });
+                });
+              }
             }
           } else {
             selectedBackSinceRef.current = null;
@@ -638,7 +670,17 @@ export function OrbitWorld() {
             ? 35
             : 18 + Math.round(projected.depth * 7),
         );
-        node.dataset.side = projected.x < centerX ? 'left' : 'right';
+        const currentSide =
+          nodeSideRef.current[destination.id] ??
+          (projected.x < centerX ? 'left' : 'right');
+        const sideDeadzone = width < 680 ? 20 : 30;
+        const nextSide =
+          currentSide === 'left'
+            ? projected.x > centerX + sideDeadzone ? 'right' : 'left'
+            : projected.x < centerX - sideDeadzone ? 'left' : 'right';
+
+        nodeSideRef.current[destination.id] = nextSide;
+        node.dataset.side = nextSide;
         node.dataset.backface = nextFront ? 'false' : 'true';
         node.tabIndex = locked || !nextFront ? -1 : 0;
         node.style.pointerEvents = locked || !nextFront ? 'none' : 'auto';
@@ -821,16 +863,17 @@ export function OrbitWorld() {
     rotation.lastX = event.clientX;
     rotation.lastY = event.clientY;
 
-    const yawDelta = dx * 0.0054;
-    const pitchDelta = dy * 0.0045;
+    const touchScale = event.pointerType === 'touch' ? 0.78 : 1;
+    const yawDelta = dx * 0.0054 * touchScale;
+    const pitchDelta = dy * 0.0045 * touchScale;
     rotation.targetYaw += yawDelta;
     rotation.targetPitch = clamp(
       rotation.targetPitch + pitchDelta,
       -0.72,
       0.72,
     );
-    rotation.velocityYaw = yawDelta * 0.42;
-    rotation.velocityPitch = pitchDelta * 0.32;
+    rotation.velocityYaw = yawDelta * (event.pointerType === 'touch' ? 0.28 : 0.42);
+    rotation.velocityPitch = pitchDelta * (event.pointerType === 'touch' ? 0.22 : 0.32);
   };
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
@@ -913,8 +956,16 @@ export function OrbitWorld() {
     if ((event.target as HTMLElement).closest('button, input, a, [role="dialog"]')) return;
 
     event.preventDefault();
+    const deltaUnit =
+      event.deltaMode === 1
+        ? 16
+        : event.deltaMode === 2
+          ? Math.max(120, event.currentTarget.clientHeight)
+          : 1;
+    const normalizedDelta = clamp(event.deltaY * deltaUnit, -240, 240);
+
     zoomRef.current.target = clamp(
-      zoomRef.current.target - event.deltaY * 0.0007,
+      zoomRef.current.target - normalizedDelta * 0.0007,
       0.82,
       1.22,
     );
@@ -1010,24 +1061,7 @@ export function OrbitWorld() {
     );
   };
 
-  const returnToOrbit = () => {
-    if (!travelingTo || travelPhase !== 'preview') return;
-
-    clearTimers();
-    setTravelPhase('returning');
-    impulseRef.current = 1;
-
-    const duration = reducedMotionRef.current ? 80 : 1050;
-    timersRef.current.push(
-      window.setTimeout(() => {
-        setTravelPhase('idle');
-        setTravelId(null);
-        setSelectedId('orbit');
-        setFlightPath({ startX: 0, startY: 0, targetX: 0, targetY: 0 });
-        impulseRef.current = 0.65;
-      }, duration),
-    );
-  };
+  const returnToOrbit = beginReturnToOrbit;
 
   const recenterWorld = () => {
     if (incomingFrom || travelPhase !== 'idle') return;
@@ -1053,13 +1087,20 @@ export function OrbitWorld() {
     const query = navigatorQuery.trim().toLowerCase();
     if (!query) return true;
 
-    return [destination.name, destination.code, destination.description]
+    return [
+      String(destination.shortcut),
+      destination.name,
+      destination.code,
+      destination.description,
+      destination.detail,
+    ]
       .join(' ')
       .toLowerCase()
       .includes(query);
   });
 
   const chooseFromNavigator = (destination: Destination) => {
+    restoreNavigatorFocusRef.current = false;
     setNavigatorOpen(false);
     setNavigatorQuery('');
     window.setTimeout(() => focusDestination(destination, 0.9), 0);
@@ -1217,6 +1258,7 @@ export function OrbitWorld() {
           className="orbit-shortcuts"
           aria-label="ARROW quick routes"
           aria-hidden={travelPhase !== 'idle' || Boolean(incomingFrom)}
+          inert={travelPhase !== 'idle' || Boolean(incomingFrom) ? true : undefined}
         >
           <span className="orbit-shortcuts-label">Quick routes</span>
           <div className="orbit-shortcuts-list">
@@ -1228,6 +1270,7 @@ export function OrbitWorld() {
                 onClick={() => focusDestination(destination, 0.75)}
                 disabled={interactionLocked}
                 aria-keyshortcuts={String(destination.shortcut)}
+                aria-pressed={selectedId === destination.id}
                 aria-label={`${destination.shortcut}: Focus ${destination.name}`}
                 title={`${destination.shortcut} · ${destination.name}`}
               >
@@ -1468,7 +1511,8 @@ export function OrbitWorld() {
                 <button
                   type="button"
                   key={destination.id}
-                  className="navigator-result"
+                  className={`navigator-result ${selectedId === destination.id ? 'is-current' : ''}`}
+                  aria-current={selectedId === destination.id ? 'true' : undefined}
                   onClick={() => chooseFromNavigator(destination)}
                 >
                   <span className="navigator-index">0{destination.shortcut}</span>
@@ -1483,7 +1527,7 @@ export function OrbitWorld() {
                   <span className={`navigator-route ${destination.href ? 'is-live' : 'is-staged'}`}>
                     {destination.href ? 'connected' : 'staged'}
                   </span>
-                  <ArrowUpRightIcon size={15} />
+                  <TargetIcon size={15} />
                 </button>
               ))}
 
