@@ -32,8 +32,14 @@ type RotationState = {
 };
 
 
+const TAU = Math.PI * 2;
+
 function clamp(value: number, min: number, max: number) {
   return Math.max(min, Math.min(max, value));
+}
+
+function nearestEquivalentAngle(angle: number, current: number) {
+  return angle + Math.round((current - angle) / TAU) * TAU;
 }
 
 function projectAnchor(
@@ -164,8 +170,7 @@ export function OrbitWorld() {
       if (!isTyping && /^[1-4]$/.test(event.key)) {
         const destination = destinations[Number(event.key) - 1];
         if (!destination) return;
-        setSelectedId(destination.id);
-        impulseRef.current = 0.8;
+        focusDestination(destination, 0.8);
       }
 
       if (!isTyping && event.key.toLowerCase() === 'o') {
@@ -366,10 +371,33 @@ export function OrbitWorld() {
     pointerRef.current.inside = false;
   };
 
-  const selectDestination = (destination: Destination) => {
+  const focusDestination = (destination: Destination, impulse = 1) => {
     if (travelPhase !== 'idle') return;
+
+    const [x, y, z] = destination.anchor;
+    const horizontal = Math.max(0.001, Math.hypot(x, z));
+    const sideOffset = x >= 0 ? 0.38 : -0.38;
+    const baseYaw = Math.atan2(-x, z);
+    const desiredYaw = nearestEquivalentAngle(
+      baseYaw + sideOffset,
+      rotationRef.current.targetYaw,
+    );
+    const forwardDepth = horizontal * Math.cos(sideOffset);
+    const basePitch = Math.atan2(y, Math.max(0.001, forwardDepth));
+    const desiredPitch = clamp(basePitch + 0.13, -0.58, 0.58);
+
+    const rotation = rotationRef.current;
+    rotation.targetYaw = desiredYaw;
+    rotation.targetPitch = desiredPitch;
+    rotation.velocityYaw = 0;
+    rotation.velocityPitch = 0;
+
     setSelectedId(destination.id);
-    impulseRef.current = 1;
+    impulseRef.current = impulse;
+  };
+
+  const selectDestination = (destination: Destination) => {
+    focusDestination(destination);
   };
 
   const clearTimers = () => {
@@ -442,10 +470,9 @@ export function OrbitWorld() {
   });
 
   const chooseFromNavigator = (destination: Destination) => {
-    setSelectedId(destination.id);
+    focusDestination(destination, 0.9);
     setNavigatorOpen(false);
     setNavigatorQuery('');
-    impulseRef.current = 0.9;
   };
 
   const travelStyle = {
