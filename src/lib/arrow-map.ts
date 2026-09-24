@@ -38,7 +38,7 @@ export const ARROW_DESTINATIONS: readonly ArrowDestination[] = [
     description: 'Messaging, planning, coordination, and the social layer.',
     detail: 'Broadcast landmark',
     arrivalLine: 'Communication without breaking flow.',
-    href: 'https://resonantrelay.org',
+    href: 'https://link9060.github.io/Resonant-Relay/',
     anchor: [0.76, 0.5, 0.34],
   },
   {
