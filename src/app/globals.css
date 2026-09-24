@@ -473,7 +473,7 @@ button:focus-visible {
   background: rgba(5, 5, 5, 0.88);
   box-shadow: 0 0 24px rgba(0, 0, 0, 0.8), inset 0 1px rgba(255, 255, 255, 0.05);
   backdrop-filter: blur(12px);
-  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms cubic-bezier(.2, .8, .2, 1);
 }
 
 .destination-node:hover .node-landmark,
@@ -1137,7 +1137,8 @@ button:focus-visible {
 
 .world-shell.travel-launching .destination-node.is-travel-target {
   z-index: 30;
-  transform: scale(1.18);
+  transform: translate(-50%, -50%) scale(1.18);
+  opacity: 1;
 }
 
 .world-shell.travel-launching .destination-node.is-travel-target .node-landmark {
@@ -1703,5 +1704,130 @@ button:focus-visible {
 
   .travel-status {
     bottom: 18px;
+  }
+}
+
+
+/* --- Draggable world controls ------------------------------------------- */
+
+.world-shell {
+  cursor: grab;
+}
+
+.world-shell.is-dragging {
+  cursor: grabbing;
+}
+
+.world-shell.is-dragging .destination-node,
+.world-shell.is-dragging .orbit-core-label {
+  pointer-events: none;
+}
+
+.world-shell.is-dragging .world-canvas {
+  filter: brightness(1.08);
+}
+
+.world-shell.is-dragging .orbit-rings {
+  opacity: 0.82;
+}
+
+.destination-node:disabled {
+  cursor: default;
+}
+
+.node-copy,
+.node-landmark {
+  pointer-events: none;
+}
+
+.world-controls {
+  position: absolute;
+  z-index: 28;
+  left: 50%;
+  bottom: 24px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  transform: translateX(-50%);
+  color: rgba(255, 255, 255, 0.36);
+  font-size: 8px;
+  font-weight: 620;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+  transition: opacity 240ms ease, transform 320ms cubic-bezier(.2, .8, .2, 1);
+}
+
+.world-controls::before {
+  content: "";
+  position: absolute;
+  inset: -7px -9px;
+  z-index: -1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  background: rgba(6, 6, 6, 0.52);
+  backdrop-filter: blur(12px);
+}
+
+.drag-hint {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
+.drag-icon {
+  position: relative;
+  width: 12px;
+  height: 9px;
+  border: 1px solid rgba(255, 255, 255, 0.34);
+  border-radius: 999px;
+}
+
+.drag-icon::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -3px;
+  width: 1px;
+  height: 13px;
+  background: rgba(255, 255, 255, 0.22);
+  transform: translateX(-50%);
+}
+
+.world-controls button {
+  padding: 0 0 0 8px;
+  border: 0;
+  border-left: 1px solid rgba(255, 255, 255, 0.11);
+  background: transparent;
+  color: rgba(255, 255, 255, 0.58);
+  cursor: pointer;
+  font-size: inherit;
+  font-weight: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+}
+
+.world-controls button:hover {
+  color: rgba(255, 255, 255, 0.92);
+}
+
+.world-controls button:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.world-shell:not(.travel-idle) .world-controls {
+  opacity: 0;
+  transform: translateX(-50%) translateY(10px);
+  pointer-events: none;
+}
+
+@media (max-width: 680px) {
+  .world-controls {
+    bottom: 166px;
+  }
+
+  .world-inspector.has-selection ~ .world-controls {
+    bottom: 166px;
   }
 }
