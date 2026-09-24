@@ -116,14 +116,11 @@ export function OrbitWorld() {
   const inspectorRef = useRef<HTMLElement>(null);
   const craftRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<HTMLButtonElement>(null);
-  const travelButtonRef = useRef<HTMLButtonElement>(null);
   const arrivalPanelRef = useRef<HTMLElement>(null);
-  const arrivalPrimaryRef = useRef<HTMLButtonElement>(null);
-  const arrivalReturnRef = useRef<HTMLButtonElement>(null);
   const navigatorRef = useRef<HTMLElement>(null);
   const navigatorInputRef = useRef<HTMLInputElement>(null);
+  const shortcutRailRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
-  const focusBeforeTravelRef = useRef<HTMLElement | null>(null);
   const previousTravelPhaseRef = useRef<TravelPhase>('idle');
 
   const nodeRefs = useRef<Partial<Record<Destination['id'], HTMLButtonElement | null>>>({});
@@ -180,6 +177,7 @@ export function OrbitWorld() {
   const [incomingFrom, setIncomingFrom] = useState<Destination['id'] | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [renderProfile, setRenderProfile] = useState<RenderProfile>('balanced');
+  const [usesCommandKey, setUsesCommandKey] = useState(true);
 
   const renderer = useMemo(() => {
     const density =
@@ -232,6 +230,9 @@ export function OrbitWorld() {
         highMemory;
 
       setRenderProfile(lowPower ? 'low' : highPower ? 'high' : 'balanced');
+      setUsesCommandKey(
+        /Mac|iPhone|iPad|iPod/i.test(navigator.platform || navigator.userAgent),
+      );
     };
 
     updateRuntimeProfile();
@@ -260,12 +261,14 @@ export function OrbitWorld() {
         relativeRect(shell, header),
         relativeRect(shell, stageCopyRef.current),
         relativeRect(shell, inspectorRef.current),
+        relativeRect(shell, shortcutRailRef.current),
       ].filter((rect): rect is ScreenRect => rect !== null);
     };
 
     const observer = new ResizeObserver(updateRects);
     if (stageCopyRef.current) observer.observe(stageCopyRef.current);
     if (inspectorRef.current) observer.observe(inspectorRef.current);
+    if (shortcutRailRef.current) observer.observe(shortcutRailRef.current);
     observer.observe(shell);
 
     updateRects();
@@ -351,19 +354,27 @@ export function OrbitWorld() {
         return;
       }
 
-      if (ui.incomingFrom || ui.travelPhase !== 'idle') return;
-
-      if (ui.navigatorOpen && /^[1-4]$/.test(event.key)) {
+      if (event.key === 'Escape' && ui.travelPhase === 'preview') {
         event.preventDefault();
-        const shortcut = Number(event.key);
-        const destination = destinations.find(item => item.shortcut === shortcut);
-        if (!destination) return;
+        timersRef.current.forEach(timer => window.clearTimeout(timer));
+        timersRef.current = [];
+        setTravelPhase('returning');
+        impulseRef.current = 1;
 
-        setNavigatorOpen(false);
-        setNavigatorQuery('');
-        window.setTimeout(() => focusDestination(destination, 0.9), 0);
+        const duration = reducedMotionRef.current ? 80 : 1050;
+        timersRef.current.push(
+          window.setTimeout(() => {
+            setTravelPhase('idle');
+            setTravelId(null);
+            setSelectedId('orbit');
+            setFlightPath({ startX: 0, startY: 0, targetX: 0, targetY: 0 });
+            impulseRef.current = 0.65;
+          }, duration),
+        );
         return;
       }
+
+      if (ui.incomingFrom || ui.travelPhase !== 'idle') return;
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -371,22 +382,27 @@ export function OrbitWorld() {
         return;
       }
 
-      if (!ui.navigatorOpen && !isTyping && event.key === '/') {
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (ui.navigatorOpen || isTyping) return;
+
+      if (event.key === '/') {
         event.preventDefault();
         setNavigatorOpen(true);
         return;
       }
 
-      if (ui.navigatorOpen || isTyping) return;
-
       if (/^[1-4]$/.test(event.key)) {
+        event.preventDefault();
         const shortcut = Number(event.key);
         const destination = destinations.find(item => item.shortcut === shortcut);
         if (destination) focusDestination(destination, 0.8);
         return;
       }
 
-      if (event.key.toLowerCase() === 'o') recenterWorld();
+      if (event.key.toLowerCase() === 'o') {
+        event.preventDefault();
+        recenterWorld();
+      }
     };
 
     window.addEventListener('keydown', onKeyDown);
@@ -959,11 +975,16 @@ export function OrbitWorld() {
     };
   };
 
+  const openDestination = (destination: Destination) => {
+    if (!destination.href) return;
+
+    const url = new URL(destination.href);
+    url.searchParams.set('from', 'orbit');
+    window.location.assign(url.toString());
+  };
+
   const launchDestination = () => {
     if (!selected || interactionLocked) return;
-
-    focusBeforeTravelRef.current =
-      document.activeElement instanceof HTMLElement ? document.activeElement : null;
 
     const start = relativePoint(craftRef.current);
     const target = relativePoint(nodeRefs.current[selected.id] ?? null);
@@ -1045,6 +1066,35 @@ export function OrbitWorld() {
   };
 
   const handleNavigatorKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
+    const results = Array.from(
+      navigatorRef.current?.querySelectorAll<HTMLButtonElement>('.navigator-result') ?? [],
+    );
+
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      if (!results.length) return;
+      event.preventDefault();
+
+      const currentIndex = results.indexOf(document.activeElement as HTMLButtonElement);
+      const direction = event.key === 'ArrowDown' ? 1 : -1;
+      const nextIndex =
+        currentIndex === -1
+          ? direction > 0 ? 0 : results.length - 1
+          : (currentIndex + direction + results.length) % results.length;
+
+      results[nextIndex]?.focus();
+      return;
+    }
+
+    if (
+      event.key === 'Enter' &&
+      document.activeElement === navigatorInputRef.current &&
+      filteredDestinations[0]
+    ) {
+      event.preventDefault();
+      chooseFromNavigator(filteredDestinations[0]);
+      return;
+    }
+
     if (event.key !== 'Tab') return;
 
     const focusable = Array.from(
@@ -1162,6 +1212,33 @@ export function OrbitWorld() {
           <span className="core-title">Orbit</span>
         </button>
 
+        <nav
+          ref={shortcutRailRef}
+          className="orbit-shortcuts"
+          aria-label="ARROW quick routes"
+          aria-hidden={travelPhase !== 'idle' || Boolean(incomingFrom)}
+        >
+          <span className="orbit-shortcuts-label">Quick routes</span>
+          <div className="orbit-shortcuts-list">
+            {destinations.map(destination => (
+              <button
+                type="button"
+                key={destination.id}
+                className={`orbit-shortcut ${selectedId === destination.id ? 'is-active' : ''}`}
+                onClick={() => focusDestination(destination, 0.75)}
+                disabled={interactionLocked}
+                aria-keyshortcuts={String(destination.shortcut)}
+                aria-label={`${destination.shortcut}: Focus ${destination.name}`}
+                title={`${destination.shortcut} · ${destination.name}`}
+              >
+                <kbd>{destination.shortcut}</kbd>
+                <DestinationIcon id={destination.id} size={14} />
+                <span>{destination.name}</span>
+              </button>
+            ))}
+          </div>
+        </nav>
+
         <div className="destination-layer">
           {destinations.map(destination => (
             <button
@@ -1216,7 +1293,7 @@ export function OrbitWorld() {
               <RotateWorldIcon size={15} />
               <span>drag</span>
             </span>
-            <button type="button" onClick={recenterWorld} disabled={interactionLocked} title="Recenter Orbit">
+            <button type="button" onClick={recenterWorld} disabled={interactionLocked} title="Recenter Orbit" aria-keyshortcuts="O">
               <TargetIcon size={15} />
               <span>recenter</span>
             </button>
@@ -1235,23 +1312,23 @@ export function OrbitWorld() {
                 setNavigatorOpen(true);
               }}
               disabled={interactionLocked}
-              title="Open ARROW Navigator"
+              title={usesCommandKey ? 'Open ARROW Navigator (⌘K)' : 'Open ARROW Navigator (Ctrl+K)'}
+              aria-keyshortcuts="Meta+K Control+K"
             >
               <SearchIcon size={15} />
               <span>navigator</span>
-              <kbd><CommandIcon size={11} />K</kbd>
+              <kbd>{usesCommandKey ? <CommandIcon size={11} /> : <span>Ctrl</span>}K</kbd>
             </button>
           </div>
 
           <div className="inspector-actions">
             {selected ? (
               <button
-                ref={travelButtonRef}
                 type="button"
                 className="focus-button travel-button"
                 onClick={launchDestination}
               >
-                Travel to {selected.name}
+                {selected.href ? 'Travel to' : 'Preview'} {selected.name}
                 <ArrowUpRightIcon size={14} />
               </button>
             ) : (
@@ -1267,7 +1344,7 @@ export function OrbitWorld() {
               </button>
             )}
             <span className="handoff-state">
-              {selected ? (selected.href ? 'route connected' : 'route not connected yet') : 'select a destination'}
+              {selected ? (selected.href ? 'route connected' : 'preview only · route staged') : 'select a destination'}
             </span>
           </div>
         </aside>
@@ -1294,21 +1371,19 @@ export function OrbitWorld() {
                 <>
                   {travelingTo.href ? (
                     <button
-                      ref={arrivalPrimaryRef}
                       type="button"
                       className="arrival-primary is-live"
-                      onClick={() => window.location.assign(travelingTo.href!)}
+                      onClick={() => openDestination(travelingTo)}
                     >
                       Open {travelingTo.name}
                       <ArrowUpRightIcon size={14} />
                     </button>
                   ) : (
                     <button type="button" className="arrival-primary" disabled>
-                      Route not connected
+                      Route staged
                     </button>
                   )}
                   <button
-                    ref={arrivalReturnRef}
                     type="button"
                     className="arrival-return"
                     onClick={returnToOrbit}
@@ -1334,6 +1409,7 @@ export function OrbitWorld() {
         <div className="stage-footer">
           <span><RotateWorldIcon size={13} /> drag to rotate</span>
           <span><SearchIcon size={13} /> Navigator</span>
+          <span>1–4 quick routes</span>
         </div>
       </div>
 
@@ -1418,8 +1494,8 @@ export function OrbitWorld() {
             </div>
 
             <footer className="navigator-footer">
-              <span><kbd>1–4</kbd> focus destination</span>
-              <span><kbd>O</kbd> recenter Orbit</span>
+              <span><kbd>↑↓</kbd> browse</span>
+              <span><kbd>Enter</kbd> select · <kbd>Esc</kbd> close</span>
             </footer>
           </section>
         </div>
