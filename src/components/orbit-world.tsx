@@ -311,22 +311,35 @@ export function OrbitWorld() {
 
   useEffect(() => {
     const previous = previousTravelPhaseRef.current;
+    previousTravelPhaseRef.current = travelPhase;
 
     if (travelPhase === 'preview' && previous !== 'preview') {
-      const timer = window.setTimeout(() => {
-        arrivalPrimaryRef.current?.focus();
-        if (!arrivalPrimaryRef.current) arrivalReturnRef.current?.focus();
-      }, reducedMotionRef.current ? 0 : 60);
-      return () => window.clearTimeout(timer);
+      let frameOne = 0;
+      let frameTwo = 0;
+
+      frameOne = window.requestAnimationFrame(() => {
+        frameTwo = window.requestAnimationFrame(() => {
+          const target =
+            arrivalPrimaryRef.current ??
+            arrivalReturnRef.current;
+
+          target?.focus({ preventScroll: true });
+        });
+      });
+
+      return () => {
+        window.cancelAnimationFrame(frameOne);
+        window.cancelAnimationFrame(frameTwo);
+      };
     }
 
     if (travelPhase === 'idle' && previous === 'returning') {
-      const timer = window.setTimeout(() => coreRef.current?.focus(), 0);
-      previousTravelPhaseRef.current = travelPhase;
-      return () => window.clearTimeout(timer);
-    }
+      const frame = window.requestAnimationFrame(() => {
+        coreRef.current?.focus({ preventScroll: true });
+      });
 
-    previousTravelPhaseRef.current = travelPhase;
+      return () => window.cancelAnimationFrame(frame);
+    }
   }, [travelPhase]);
 
   useEffect(() => {
