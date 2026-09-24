@@ -319,7 +319,7 @@ export function OrbitWorld() {
     const previous = previousTravelPhaseRef.current;
     previousTravelPhaseRef.current = travelPhase;
 
-    if (travelPhase === 'preview' && previous !== 'preview') {
+    if (travelPhase === 'preview') {
       const timer = window.setTimeout(() => {
         const target =
           arrivalPrimaryRef.current ??
