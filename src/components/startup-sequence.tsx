@@ -15,7 +15,7 @@ type Particle = {
   delay: number;
 };
 
-function clamp(value: number) {
+function clamp01(value: number) {
   return Math.max(0, Math.min(1, value));
 }
 
@@ -24,10 +24,17 @@ function easeOutCubic(value: number) {
 }
 
 function easeInOutCubic(value: number) {
-  return value < 0.5 ? 4 * value * value * value : 1 - Math.pow(-2 * value + 2, 3) / 2;
+  return value < 0.5
+    ? 4 * value * value * value
+    : 1 - Math.pow(-2 * value + 2, 3) / 2;
 }
 
-function drawArrowMark(ctx: CanvasRenderingContext2D, x: number, y: number, size: number) {
+function drawArrowMark(
+  ctx: CanvasRenderingContext2D,
+  x: number,
+  y: number,
+  size: number,
+) {
   const path = new Path2D(ARROW_MARK_PATH);
   ctx.save();
   ctx.translate(x - size / 2, y - size / 2);
@@ -36,7 +43,13 @@ function drawArrowMark(ctx: CanvasRenderingContext2D, x: number, y: number, size
   ctx.restore();
 }
 
-function ParticleWordmark({ active, onFormed }: { active: boolean; onFormed: () => void }) {
+function ParticleWordmark({
+  active,
+  onFormed,
+}: {
+  active: boolean;
+  onFormed: () => void;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const onFormedRef = useRef(onFormed);
 
@@ -52,13 +65,20 @@ function ParticleWordmark({ active, onFormed }: { active: boolean; onFormed: () 
     if (!context) return;
 
     let animationFrame = 0;
+    let resizeTimer = 0;
     let cancelled = false;
     let formationReported = false;
+    let buildVersion = 0;
 
     const buildAnimation = () => {
+      buildVersion += 1;
+      const version = buildVersion;
+      window.cancelAnimationFrame(animationFrame);
+
       const width = window.innerWidth;
       const height = window.innerHeight;
       const density = Math.min(window.devicePixelRatio || 1, 2);
+
       canvas.width = Math.floor(width * density);
       canvas.height = Math.floor(height * density);
       canvas.style.width = `${width}px`;
@@ -68,7 +88,9 @@ function ParticleWordmark({ active, onFormed }: { active: boolean; onFormed: () 
       const targetCanvas = document.createElement('canvas');
       targetCanvas.width = width;
       targetCanvas.height = height;
-      const targetContext = targetCanvas.getContext('2d', { willReadFrequently: true });
+      const targetContext = targetCanvas.getContext('2d', {
+        willReadFrequently: true,
+      });
       if (!targetContext) return;
 
       const wordSize = Math.max(58, Math.min(92, width * 0.16));
@@ -84,13 +106,22 @@ function ParticleWordmark({ active, onFormed }: { active: boolean; onFormed: () 
       targetContext.textBaseline = 'middle';
       targetContext.font = font;
 
-      const glyphWidths = Array.from(word, character => targetContext.measureText(character).width);
-      const textWidth = glyphWidths.reduce((total, glyphWidth) => total + glyphWidth, 0) + letterSpacing * (glyphWidths.length - 1);
+      const glyphWidths = Array.from(word, character =>
+        targetContext.measureText(character).width,
+      );
+      const textWidth =
+        glyphWidths.reduce((total, glyphWidth) => total + glyphWidth, 0) +
+        letterSpacing * (glyphWidths.length - 1);
       const groupWidth = markSize + gap + textWidth;
       const groupLeft = width / 2 - groupWidth / 2;
       const textX = groupLeft + markSize + gap;
 
-      drawArrowMark(targetContext, groupLeft + markSize / 2, centerY, markSize);
+      drawArrowMark(
+        targetContext,
+        groupLeft + markSize / 2,
+        centerY,
+        markSize,
+      );
 
       let cursorX = textX;
       Array.from(word).forEach((character, index) => {
@@ -100,51 +131,78 @@ function ParticleWordmark({ active, onFormed }: { active: boolean; onFormed: () 
 
       const pixels = targetContext.getImageData(0, 0, width, height).data;
       const destinations: Array<{ x: number; y: number }> = [];
-      const sampleStep = 4;
+      const sampleStep = width < 520 ? 5 : 4;
 
       for (let y = 0; y < height; y += sampleStep) {
         for (let x = 0; x < width; x += sampleStep) {
-          if ((pixels[(y * width + x) * 4 + 3] ?? 0) > 110) destinations.push({ x, y });
+          if ((pixels[(y * width + x) * 4 + 3] ?? 0) > 110) {
+            destinations.push({ x, y });
+          }
         }
       }
 
       for (let index = destinations.length - 1; index > 0; index -= 1) {
         const swapIndex = Math.floor(Math.random() * (index + 1));
-        [destinations[index], destinations[swapIndex]] = [destinations[swapIndex]!, destinations[index]!];
+        [destinations[index], destinations[swapIndex]] = [
+          destinations[swapIndex]!,
+          destinations[index]!,
+        ];
       }
 
-      const limit = width < 520 ? 950 : 1600;
-      const particles: Particle[] = destinations.slice(0, limit).map((destination, index) => {
-        const angle = Math.random() * Math.PI * 2;
-        const distance = 52 + Math.random() * Math.min(210, width * 0.26);
-        return {
-          targetX: destination.x,
-          targetY: destination.y,
-          burstX: width / 2 + Math.cos(angle) * distance,
-          burstY: centerY + Math.sin(angle) * distance,
-          radius: 0.7 + Math.random() * 0.9,
-          delay: (index % 19) * 6 + Math.random() * 55,
-        };
-      });
+      const limit = width < 520 ? 850 : 1500;
+      const particles: Particle[] = destinations
+        .slice(0, limit)
+        .map((destination, index) => {
+          const angle = Math.random() * Math.PI * 2;
+          const distance =
+            52 + Math.random() * Math.min(210, width * 0.26);
+
+          return {
+            targetX: destination.x,
+            targetY: destination.y,
+            burstX: width / 2 + Math.cos(angle) * distance,
+            burstY: centerY + Math.sin(angle) * distance,
+            radius: 0.7 + Math.random() * 0.9,
+            delay: (index % 19) * 6 + Math.random() * 55,
+          };
+        });
 
       const startedAt = performance.now();
 
       const draw = (now: number) => {
+        if (cancelled || version !== buildVersion) return;
+
         const elapsed = now - startedAt;
         context.clearRect(0, 0, width, height);
         context.fillStyle = '#ffffff';
 
-        const solidProgress = easeInOutCubic(clamp((elapsed - 1780) / 260));
+        const solidProgress = easeInOutCubic(
+          clamp01((elapsed - 1780) / 260),
+        );
 
         for (const particle of particles) {
-          const burstProgress = easeOutCubic(clamp(elapsed / 430));
-          const settleProgress = easeInOutCubic(clamp((elapsed - 260 - particle.delay) / 1320));
-          const burstX = width / 2 + (particle.burstX - width / 2) * burstProgress;
-          const burstY = centerY + (particle.burstY - centerY) * burstProgress;
-          const x = burstX + (particle.targetX - burstX) * settleProgress;
-          const y = burstY + (particle.targetY - burstY) * settleProgress;
-          const alpha = Math.min(1, elapsed / 130) * (0.48 + settleProgress * 0.52) * (1 - solidProgress);
-          const radius = particle.radius * (1 - settleProgress * 0.12);
+          const burstProgress = easeOutCubic(clamp01(elapsed / 430));
+          const settleProgress = easeInOutCubic(
+            clamp01((elapsed - 260 - particle.delay) / 1320),
+          );
+          const burstX =
+            width / 2 +
+            (particle.burstX - width / 2) * burstProgress;
+          const burstY =
+            centerY +
+            (particle.burstY - centerY) * burstProgress;
+          const x =
+            burstX +
+            (particle.targetX - burstX) * settleProgress;
+          const y =
+            burstY +
+            (particle.targetY - burstY) * settleProgress;
+          const alpha =
+            Math.min(1, elapsed / 130) *
+            (0.48 + settleProgress * 0.52) *
+            (1 - solidProgress);
+          const radius =
+            particle.radius * (1 - settleProgress * 0.12);
 
           context.globalAlpha = alpha;
           context.beginPath();
@@ -164,26 +222,41 @@ function ParticleWordmark({ active, onFormed }: { active: boolean; onFormed: () 
           onFormedRef.current();
         }
 
-        if (elapsed < 2350 && !cancelled) {
+        if (elapsed < 2350) {
           animationFrame = window.requestAnimationFrame(draw);
-        } else if (!cancelled) {
+        } else {
           context.clearRect(0, 0, width, height);
           context.drawImage(targetCanvas, 0, 0);
         }
       };
 
-      if (!cancelled) animationFrame = window.requestAnimationFrame(draw);
+      animationFrame = window.requestAnimationFrame(draw);
+    };
+
+    const handleResize = () => {
+      window.clearTimeout(resizeTimer);
+      resizeTimer = window.setTimeout(buildAnimation, 120);
     };
 
     buildAnimation();
+    window.addEventListener('resize', handleResize);
 
     return () => {
       cancelled = true;
+      buildVersion += 1;
+      window.clearTimeout(resizeTimer);
       window.cancelAnimationFrame(animationFrame);
+      window.removeEventListener('resize', handleResize);
     };
   }, [active]);
 
-  return <canvas ref={canvasRef} className={`startup-particle-canvas ${active ? 'is-active' : ''}`} aria-hidden="true" />;
+  return (
+    <canvas
+      ref={canvasRef}
+      className={`startup-particle-canvas ${active ? 'is-active' : ''}`}
+      aria-hidden="true"
+    />
+  );
 }
 
 export function StartupSequence() {
@@ -194,20 +267,40 @@ export function StartupSequence() {
   const [finished, setFinished] = useState(false);
 
   useEffect(() => {
-    const timer = window.setTimeout(() => {
-      const source = readIncomingArrowSource(window.location.search);
+    const motionQuery = window.matchMedia(
+      '(prefers-reduced-motion: reduce)',
+    );
 
-      if (source) {
+    const resolveVisibility = () => {
+      const source = readIncomingArrowSource(window.location.search);
+      const shouldSkip =
+        Boolean(source) ||
+        motionQuery.matches ||
+        sessionStorage.getItem(STARTUP_SESSION_KEY) === '1';
+
+      if (source || motionQuery.matches) {
         sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
-        setReady(true);
-        setVisible(false);
-        return;
       }
 
       setReady(true);
-      setVisible(sessionStorage.getItem(STARTUP_SESSION_KEY) !== '1');
-    }, 0);
-    return () => window.clearTimeout(timer);
+      setVisible(!shouldSkip);
+    };
+
+    const timer = window.setTimeout(resolveVisibility, 0);
+    const handleMotionChange = () => {
+      if (motionQuery.matches) {
+        sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
+        setFinished(true);
+        setVisible(false);
+      }
+    };
+
+    motionQuery.addEventListener('change', handleMotionChange);
+
+    return () => {
+      window.clearTimeout(timer);
+      motionQuery.removeEventListener('change', handleMotionChange);
+    };
   }, []);
 
   useEffect(() => {
@@ -218,7 +311,9 @@ export function StartupSequence() {
       setFinished(true);
     }, 3550);
 
-    const removeTimer = window.setTimeout(() => setVisible(false), 4200);
+    const removeTimer = window.setTimeout(() => {
+      setVisible(false);
+    }, 4200);
 
     return () => {
       window.clearTimeout(finishTimer);
@@ -234,8 +329,15 @@ export function StartupSequence() {
   };
 
   return (
-    <div className={`startup-shell ${finished ? 'is-finished' : ''}`} role="dialog" aria-label="Orbit introduction">
-      <button type="button" onClick={skip} className="startup-skip">Skip intro</button>
+    <div
+      className={`startup-shell ${finished ? 'is-finished' : ''}`}
+      role="dialog"
+      aria-modal="true"
+      aria-label="Orbit introduction"
+    >
+      <button type="button" onClick={skip} className="startup-skip">
+        Skip intro
+      </button>
 
       <button
         type="button"
@@ -248,13 +350,21 @@ export function StartupSequence() {
           <span className="startup-orbit orbit-one" />
           <span className="startup-orbit orbit-two" />
           <span className="startup-dot" />
-          {!activated && <span className="startup-prompt">enter orbit</span>}
+          {!activated && (
+            <span className="startup-prompt">enter orbit</span>
+          )}
         </span>
       </button>
 
-      <ParticleWordmark active={activated} onFormed={() => setFormed(true)} />
+      <ParticleWordmark
+        active={activated}
+        onFormed={() => setFormed(true)}
+      />
 
-      <div className={`startup-copy ${formed ? 'is-formed' : ''}`} aria-hidden={!formed}>
+      <div
+        className={`startup-copy ${formed ? 'is-formed' : ''}`}
+        aria-hidden={!formed}
+      >
         <p>the center of ARROW.</p>
       </div>
     </div>
