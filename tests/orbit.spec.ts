@@ -32,6 +32,17 @@ test('travel moves focus into the destination arrival screen', async ({ page }) 
 
   const openRelay = page.getByRole('button', { name: 'Open Relay' });
   await expect(openRelay).toBeVisible();
+  const activeElement = await page.evaluate(() => {
+    const active = document.activeElement as HTMLElement | null;
+    return {
+      tag: active?.tagName ?? null,
+      text: active?.textContent?.trim() ?? null,
+      className: active?.className ?? null,
+      ariaHidden: active?.getAttribute('aria-hidden') ?? null,
+      inert: active?.hasAttribute('inert') ?? false,
+    };
+  });
+  console.log('Orbit arrival active element:', JSON.stringify(activeElement));
   await expect(openRelay).toBeFocused();
 });
 
