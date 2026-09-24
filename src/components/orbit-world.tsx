@@ -115,7 +115,6 @@ export function OrbitWorld() {
   const inspectorRef = useRef<HTMLElement>(null);
   const craftRef = useRef<HTMLDivElement>(null);
   const coreRef = useRef<HTMLButtonElement>(null);
-  const arrivalPanelRef = useRef<HTMLElement>(null);
   const navigatorRef = useRef<HTMLElement>(null);
   const navigatorInputRef = useRef<HTMLInputElement>(null);
   const shortcutRailRef = useRef<HTMLElement>(null);
@@ -593,12 +592,7 @@ export function OrbitWorld() {
         };
       });
 
-      const projectedNodes = resolveScreenCollisions(
-        rawNodes,
-        width < 680 ? 82 : 112,
-        centerX,
-        centerY,
-      ).map(projected => {
+      const settleProjectedNode = <T extends { x: number; y: number }>(projected: T) => {
         const mobile = width < 680;
         const settled = resolveSafeScreenPosition(
           projected.x,
@@ -615,7 +609,21 @@ export function OrbitWorld() {
         );
 
         return { ...projected, ...settled };
-      });
+      };
+
+      const firstCollisionPass = resolveScreenCollisions(
+        rawNodes,
+        width < 680 ? 82 : 112,
+        centerX,
+        centerY,
+      ).map(settleProjectedNode);
+
+      const projectedNodes = resolveScreenCollisions(
+        firstCollisionPass,
+        width < 680 ? 76 : 102,
+        centerX,
+        centerY,
+      ).map(settleProjectedNode);
 
       for (const projected of projectedNodes) {
         const destination = projected.destination;
@@ -1103,7 +1111,16 @@ export function OrbitWorld() {
     restoreNavigatorFocusRef.current = false;
     setNavigatorOpen(false);
     setNavigatorQuery('');
-    window.setTimeout(() => focusDestination(destination, 0.9), 0);
+
+    window.setTimeout(() => {
+      focusDestination(destination, 0.9);
+
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          nodeRefs.current[destination.id]?.focus({ preventScroll: true });
+        });
+      });
+    }, 0);
   };
 
   const handleNavigatorKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
@@ -1394,7 +1411,6 @@ export function OrbitWorld() {
 
         {travelingTo && travelPhase !== 'launching' && (
           <section
-            ref={arrivalPanelRef}
             className="destination-preview"
             role="region"
             aria-label={`${travelingTo.name} arrival`}
