@@ -2011,7 +2011,7 @@ input:focus-visible {
   .orbit-shortcuts {
     left: 50%;
     right: auto;
-    top: calc(196px + env(safe-area-inset-top));
+    top: calc(216px + env(safe-area-inset-top));
     padding: 6px;
     transform: translateX(-50%);
   }
