@@ -8,17 +8,55 @@ async function openOrbit(page: import('@playwright/test').Page) {
   await page.goto('/');
 }
 
-test('Navigator shortcuts focus the matching destination', async ({ page }) => {
+test('quick-route rail exposes all four destinations', async ({ page }) => {
+  await openOrbit(page);
+
+  const quickRoutes = page.getByRole('navigation', { name: 'ARROW quick routes' });
+  await expect(quickRoutes).toBeVisible();
+  await expect(quickRoutes.getByRole('button')).toHaveCount(4);
+  await expect(quickRoutes.getByRole('button', { name: '3: Focus Relay' })).toBeVisible();
+});
+
+test('global number shortcut focuses Relay without hijacking modified shortcuts', async ({ page }) => {
+  await openOrbit(page);
+
+  await page.keyboard.press('Control+1');
+  await expect(page.getByRole('heading', { name: 'Your ARROW system' })).toBeVisible();
+
+  await page.keyboard.press('3');
+  await expect(page.getByRole('heading', { name: 'Relay' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Travel to Relay' })).toBeVisible();
+});
+
+test('Navigator allows numeric search text and arrow-key browsing', async ({ page }) => {
   await openOrbit(page);
 
   await page.keyboard.press('Control+K');
-  await expect(page.getByRole('dialog', { name: 'Orbit navigator' })).toBeVisible();
+  const dialog = page.getByRole('dialog', { name: 'Orbit navigator' });
+  const search = dialog.getByRole('textbox', { name: 'Search ARROW destinations' });
 
-  await page.keyboard.press('3');
+  await expect(dialog).toBeVisible();
+  await search.fill('3');
+  await expect(search).toHaveValue('3');
+  await expect(dialog).toBeVisible();
 
-  await expect(page.getByRole('dialog', { name: 'Orbit navigator' })).toBeHidden();
+  await search.fill('');
+  await page.keyboard.press('ArrowDown');
+  await expect(dialog.getByRole('button', { name: /Atlas/i }).first()).toBeFocused();
+});
+
+test('Navigator Enter selects the first filtered destination', async ({ page }) => {
+  await openOrbit(page);
+
+  await page.keyboard.press('Control+K');
+  const dialog = page.getByRole('dialog', { name: 'Orbit navigator' });
+  const search = dialog.getByRole('textbox', { name: 'Search ARROW destinations' });
+
+  await search.fill('relay');
+  await page.keyboard.press('Enter');
+
+  await expect(dialog).toBeHidden();
   await expect(page.getByRole('heading', { name: 'Relay' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Travel to Relay' })).toBeVisible();
 });
 
 test('travel moves focus into the destination arrival screen', async ({ page }) => {
@@ -40,18 +78,26 @@ test('travel moves focus into the destination arrival screen', async ({ page }) 
   await expect(openRelay).toBeFocused();
 });
 
-test('returning to Orbit restores focus to the core', async ({ page }) => {
+test('Escape returns from a destination preview', async ({ page }) => {
   await openOrbit(page);
 
   await page.keyboard.press('3');
   await page.getByRole('button', { name: 'Travel to Relay' }).click();
-  await expect(page.getByRole('button', { name: 'Back to Orbit' })).toBeVisible();
+  await expect(page.getByRole('region', { name: 'Relay arrival' })).toBeVisible();
 
-  await page.getByRole('button', { name: 'Back to Orbit' }).click();
+  await page.keyboard.press('Escape');
 
   const core = page.getByRole('button', { name: /YOU ARE HERE Orbit/i });
   await expect(core).toBeVisible();
   await expect(core).toBeFocused();
+});
+
+test('staged destinations are labeled as previews rather than connected travel', async ({ page }) => {
+  await openOrbit(page);
+
+  await page.keyboard.press('1');
+  await expect(page.getByRole('button', { name: 'Preview Atlas' })).toBeVisible();
+  await expect(page.getByText('preview only · route staged')).toBeVisible();
 });
 
 test('reduced-motion incoming handoff clears the source query immediately', async ({ page }) => {
