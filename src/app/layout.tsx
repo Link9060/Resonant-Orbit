@@ -1,4 +1,5 @@
 import type { Metadata, Viewport } from 'next';
+import Script from 'next/script';
 import './globals.css';
 
 export const metadata: Metadata = {
@@ -23,9 +24,14 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
     <html lang="en">
       <head>
         <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260924-70`} />
-        <script defer src={`${arrowShellBase}/arrow-shell.js?v=20260924-70`} />
       </head>
-      <body>{children}</body>
+      <body>
+        {children}
+        <Script
+          src={`${arrowShellBase}/arrow-shell.js?v=20260924-70`}
+          strategy="afterInteractive"
+        />
+      </body>
     </html>
   );
 }
