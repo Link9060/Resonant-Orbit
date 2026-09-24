@@ -34,7 +34,7 @@ export default function Home() {
           <OrbitWorld />
 
           <div className="stage-footer">
-            <p><span className="footer-key">drag</span> to disturb the field</p>
+            <p><span className="footer-key">move</span> to disturb the field</p>
             <p><span className="footer-key">select</span> a destination to focus it</p>
           </div>
         </section>
