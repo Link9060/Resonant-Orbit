@@ -454,6 +454,7 @@ export function OrbitWorld() {
         craftRef.current.style.setProperty('--craft-y', `${craftPoint.y}px`);
         craftRef.current.style.setProperty('--craft-rotation', `${craftRotation}deg`);
         craftRef.current.style.setProperty('--craft-depth', craftPoint.depth.toFixed(3));
+        craftRef.current.style.setProperty('--craft-opacity', (0.38 + craftPoint.depth * 0.62).toFixed(3));
       }
 
       if (ringsRef.current) {
