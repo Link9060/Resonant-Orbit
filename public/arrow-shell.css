@@ -887,3 +887,14 @@ html[data-arrow-motion="reduce"] .arrow-os-handoff-ring {
     transition-duration: .01ms !important;
   }
 }
+
+
+.arrow-os-experience-grid {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+@media (max-width: 420px) {
+  .arrow-os-experience-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
