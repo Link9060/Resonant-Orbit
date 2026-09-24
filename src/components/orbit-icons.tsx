@@ -2,6 +2,8 @@ import type { SVGProps } from 'react';
 
 type IconProps = SVGProps<SVGSVGElement> & { size?: number };
 
+export const ARROW_MARK_PATH = 'M3 5.2 21 12 3 18.8 8.2 12 3 5.2Z';
+
 function BaseIcon({ size = 18, children, ...props }: IconProps & { children: React.ReactNode }) {
   return (
     <svg
@@ -24,7 +26,7 @@ function BaseIcon({ size = 18, children, ...props }: IconProps & { children: Rea
 export function ArrowMarkIcon({ size = 18, ...props }: IconProps) {
   return (
     <svg width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" {...props}>
-      <path d="M3 5.2 21 12 3 18.8 8.2 12 3 5.2Z" fill="currentColor" />
+      <path d={ARROW_MARK_PATH} fill="currentColor" />
     </svg>
   );
 }
