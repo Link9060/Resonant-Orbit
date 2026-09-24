@@ -1438,6 +1438,17 @@ input:focus-visible {
   max-height: min(54vh, 430px);
   overflow-y: auto;
   padding: 4px 8px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, .14) transparent;
+}
+
+.navigator-results::-webkit-scrollbar {
+  width: 6px;
+}
+
+.navigator-results::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255, 255, 255, .14);
 }
 
 .navigator-result {
@@ -1458,9 +1469,14 @@ input:focus-visible {
 }
 
 .navigator-result:hover,
-.navigator-result:focus-visible {
+.navigator-result:focus-visible,
+.navigator-result.is-current {
   background: rgba(255, 255, 255, .052);
   transform: translateX(2px);
+}
+
+.navigator-result.is-current {
+  box-shadow: inset 2px 0 rgba(255, 255, 255, .42);
 }
 
 .navigator-index {
@@ -1573,10 +1589,14 @@ input:focus-visible {
 
 .startup-skip {
   position: absolute;
-  right: max(22px, calc(env(safe-area-inset-right) + 12px));
-  top: max(22px, calc(env(safe-area-inset-top) + 12px));
+  right: max(16px, calc(env(safe-area-inset-right) + 8px));
+  top: max(16px, calc(env(safe-area-inset-top) + 8px));
   z-index: 20;
+  min-width: 44px;
+  min-height: 44px;
+  padding: 0 10px;
   border: 0;
+  border-radius: 999px;
   background: transparent;
   color: rgba(255, 255, 255, .46);
   cursor: pointer;
@@ -1989,9 +2009,16 @@ input:focus-visible {
 
 @media (max-width: 680px) {
   .orbit-shortcuts {
-    top: calc(72px + env(safe-area-inset-top));
-    right: max(10px, calc(env(safe-area-inset-right) + 6px));
+    left: 50%;
+    right: auto;
+    top: calc(196px + env(safe-area-inset-top));
     padding: 6px;
+    transform: translateX(-50%);
+  }
+
+  .world-shell:not(.travel-idle) .orbit-shortcuts,
+  .world-shell.incoming-active .orbit-shortcuts {
+    transform: translateX(-50%) translateY(-6px);
   }
 
   .orbit-shortcuts-label,
@@ -2000,6 +2027,7 @@ input:focus-visible {
   }
 
   .orbit-shortcuts-list {
+    flex-direction: row;
     gap: 2px;
   }
 
