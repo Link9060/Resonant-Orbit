@@ -90,6 +90,66 @@ test('Navigator Enter selects the first result and moves focus to its world node
   await expect(relayNode).toBeFocused();
 });
 
+test('travel starts from the live craft pose and uses a one-second continuous animation', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+  });
+  await page.goto('/');
+
+  await page.keyboard.press('3');
+  await page.waitForTimeout(180);
+
+  const orbitCraft = page.locator('.craft-orbit');
+  const before = await orbitCraft.boundingBox();
+  expect(before).not.toBeNull();
+
+  await page.route('https://link9060.github.io/Resonant-Relay/**', route => route.abort());
+  await page.getByRole('button', { name: 'Travel to Relay' }).click();
+
+  const travelCraft = page.locator('.travel-craft');
+  await expect(travelCraft).toBeVisible();
+
+  const duration = await travelCraft.evaluate(element =>
+    getComputedStyle(element).animationDuration,
+  );
+  expect(duration).toBe('1s');
+
+  const after = await travelCraft.boundingBox();
+  expect(after).not.toBeNull();
+
+  const beforeCenter = {
+    x: before!.x + before!.width / 2,
+    y: before!.y + before!.height / 2,
+  };
+  const afterCenter = {
+    x: after!.x + after!.width / 2,
+    y: after!.y + after!.height / 2,
+  };
+
+  expect(Math.hypot(
+    afterCenter.x - beforeCenter.x,
+    afterCenter.y - beforeCenter.y,
+  )).toBeLessThan(28);
+
+  const flightVars = await page.locator('.world-shell').evaluate(element => {
+    const style = getComputedStyle(element);
+    return {
+      startX: style.getPropertyValue('--flight-start-x').trim(),
+      startY: style.getPropertyValue('--flight-start-y').trim(),
+      viaX: style.getPropertyValue('--flight-via-x').trim(),
+      viaY: style.getPropertyValue('--flight-via-y').trim(),
+      targetX: style.getPropertyValue('--flight-target-x').trim(),
+      targetY: style.getPropertyValue('--flight-target-y').trim(),
+    };
+  });
+
+  for (const value of Object.values(flightVars)) {
+    expect(value).toMatch(/^-?\d+(?:\.\d+)?px$/);
+  }
+});
+
 test('Waypoint is a connected fourth destination', async ({ page }) => {
   await openOrbit(page);
 
