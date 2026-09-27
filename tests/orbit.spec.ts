@@ -314,7 +314,7 @@ test('Waypoint return reforms Orbit from a singularity and particles', async ({ 
   await expect(page.locator('.incoming-singularity')).toBeVisible();
   await expect(page.locator('.incoming-reform-particle')).toHaveCount(30);
   await expect(page.locator('.incoming-craft')).toBeVisible();
-  await expect(page.locator('.world-scene')).toHaveCSS('animation-duration', '1.05s');
+  await expect(page.locator('.world-canvas')).toHaveCSS('animation-duration', '1.05s');
 });
 
 test('reduced-motion incoming handoff clears the source query immediately', async ({ page }) => {
