@@ -133,6 +133,9 @@ test('travel starts from the live craft pose and uses a one-second continuous an
   );
   expect(duration).toBe('1s');
 
+  await expect(page.locator('.travel-transfer-veil')).toBeVisible();
+  await expect(page.locator('.travel-transfer-particle')).toHaveCount(26);
+
   const flightVars = await page.locator('.world-shell').evaluate(element => {
     const style = getComputedStyle(element);
     return {
@@ -297,7 +300,7 @@ test('viewport opts into full safe-area coverage', async ({ page }) => {
   expect(viewport).toContain('viewport-fit=cover');
 });
 
-test('Waypoint return uses the canonical one-second Orbit landing path', async ({ page }) => {
+test('Waypoint return reforms Orbit from a singularity and particles', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.addInitScript(() => {
     localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
@@ -308,15 +311,10 @@ test('Waypoint return uses the canonical one-second Orbit landing path', async (
 
   const shell = page.locator('.world-shell');
   await expect(shell).toHaveAttribute('data-incoming-from', 'waypoint');
-
-  const craft = page.locator('.incoming-craft');
-  await expect(craft).toBeVisible();
-  await expect(craft).toHaveCSS('animation-duration', '1s');
-
-  const incomingX = await shell.evaluate(element =>
-    getComputedStyle(element).getPropertyValue('--incoming-x').trim(),
-  );
-  expect(incomingX).toBe('-40vw');
+  await expect(page.locator('.incoming-singularity')).toBeVisible();
+  await expect(page.locator('.incoming-reform-particle')).toHaveCount(30);
+  await expect(page.locator('.incoming-craft')).toBeVisible();
+  await expect(page.locator('.world-scene')).toHaveCSS('animation-duration', '1.05s');
 });
 
 test('reduced-motion incoming handoff clears the source query immediately', async ({ page }) => {
