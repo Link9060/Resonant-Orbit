@@ -994,48 +994,37 @@
   function moduleOrbitControl(module) {
     const instance = [...state.instances].find(item => item.module === module);
     if (!instance?.root) return null;
-
-    // On arrival the expanded Orbit item is hidden, but the ARROW trigger is
-    // visible. Land on the visible control so the final frame has a real
-    // on-screen destination instead of an invisible menu coordinate.
     return (
       instance.root.querySelector('.arrow-os-trigger') ||
       instance.root.querySelector('.arrow-os-orbit')
     );
   }
 
-  function handoffPoint(element) {
+  function viewportPoint(element) {
     const rect = element?.getBoundingClientRect?.();
     if (!rect || (!rect.width && !rect.height)) {
-      return { x: Math.min(320, innerWidth * .34), y: -Math.min(220, innerHeight * .28) };
+      return { x: innerWidth / 2, y: innerHeight / 2 };
     }
     return {
-      x: rect.left + rect.width / 2 - innerWidth / 2,
-      y: rect.top + rect.height / 2 - innerHeight / 2,
+      x: rect.left + rect.width / 2,
+      y: rect.top + rect.height / 2,
     };
   }
 
-  function handoffGeometry(target) {
-    const distance = Math.max(1, Math.hypot(target.x, target.y));
-    const perpX = -target.y / distance;
-    const perpY = target.x / distance;
-    const curve = Math.min(72, Math.max(22, distance * .12));
-    return {
-      viaX: target.x * .52 + perpX * curve,
-      viaY: target.y * .52 + perpY * curve,
-      heading: Math.atan2(-target.y, -target.x) * 180 / Math.PI,
-      arrivalHeading: Math.atan2(target.y, target.x) * 180 / Math.PI,
-    };
-  }
-
-  function applyHandoffGeometry(overlay, target) {
-    const geometry = handoffGeometry(target);
-    overlay.style.setProperty('--handoff-x', target.x + 'px');
-    overlay.style.setProperty('--handoff-y', target.y + 'px');
-    overlay.style.setProperty('--handoff-via-x', geometry.viaX + 'px');
-    overlay.style.setProperty('--handoff-via-y', geometry.viaY + 'px');
-    overlay.style.setProperty('--handoff-heading', geometry.heading + 'deg');
-    overlay.style.setProperty('--handoff-arrival-heading', geometry.arrivalHeading + 'deg');
+  function populateParticles(container, count, inward) {
+    if (!container) return;
+    for (let index = 0; index < count; index++) {
+      const angle = Math.PI * 2 * index / count + (index % 3) * .045;
+      const distance = 90 + (index % 8) * 34;
+      const particle = document.createElement('span');
+      particle.className = 'arrow-os-transition-particle';
+      particle.style.setProperty('--particle-x', (Math.cos(angle) * distance) + 'px');
+      particle.style.setProperty('--particle-y', (Math.sin(angle) * distance) + 'px');
+      particle.style.setProperty('--particle-delay', ((index % 7) * 13) + 'ms');
+      particle.style.setProperty('--particle-size', (1.5 + (index % 4) * .75) + 'px');
+      particle.dataset.direction = inward ? 'in' : 'out';
+      container.appendChild(particle);
+    }
   }
 
   function launchToOrbit(module, anchor) {
@@ -1050,17 +1039,27 @@
     }
 
     const source = anchor || moduleOrbitControl(module);
+    const point = viewportPoint(source);
+    document.documentElement.style.setProperty('--arrow-bh-x', point.x + 'px');
+    document.documentElement.style.setProperty('--arrow-bh-y', point.y + 'px');
+
     const overlay = document.createElement('div');
-    overlay.className = 'arrow-os-handoff arrow-os-departure';
+    overlay.className = 'arrow-os-handoff arrow-os-blackhole-departure';
     overlay.setAttribute('role', 'status');
     overlay.setAttribute('aria-live', 'polite');
+    overlay.style.setProperty('--bh-x', point.x + 'px');
+    overlay.style.setProperty('--bh-y', point.y + 'px');
     overlay.innerHTML =
-      '<span class="arrow-os-handoff-ring ring-a"></span>' +
-      '<span class="arrow-os-handoff-ring ring-b"></span>' +
-      '<span class="arrow-os-handoff-craft"><span></span></span>' +
-      '<p>Returning to Orbit</p>';
-    applyHandoffGeometry(overlay, handoffPoint(source));
+      '<span class="arrow-os-blackhole-glow"></span>' +
+      '<span class="arrow-os-blackhole-core"></span>' +
+      '<span class="arrow-os-particle-field"></span>' +
+      '<p>Collapsing to Orbit</p>';
+    populateParticles(overlay.querySelector('.arrow-os-particle-field'), 28, true);
     document.body.appendChild(overlay);
+
+    requestAnimationFrame(() => {
+      document.documentElement.classList.add('arrow-os-blackhole-active');
+    });
 
     setTimeout(() => location.assign(url.toString()), 940);
   }
@@ -1082,20 +1081,20 @@
     }
 
     const overlay = document.createElement('div');
-    overlay.className = 'arrow-os-handoff arrow-os-arrival';
+    overlay.className = 'arrow-os-handoff arrow-os-center-arrival';
     overlay.setAttribute('role', 'status');
     overlay.setAttribute('aria-live', 'polite');
     overlay.innerHTML =
-      '<span class="arrow-os-handoff-ring ring-a"></span>' +
-      '<span class="arrow-os-handoff-ring ring-b"></span>' +
-      '<span class="arrow-os-handoff-craft"><span></span></span>' +
+      '<span class="arrow-os-center-arrival-core"></span>' +
+      '<span class="arrow-os-particle-field"></span>' +
       '<p>Arriving in ' + module.toUpperCase() + '</p>';
-    applyHandoffGeometry(overlay, handoffPoint(moduleOrbitControl(module)));
+    populateParticles(overlay.querySelector('.arrow-os-particle-field'), 26, false);
     document.body.appendChild(overlay);
+
     setTimeout(() => {
       overlay.remove();
       clear();
-    }, 980);
+    }, 900);
   }
 
   function pruneInstances() {
