@@ -510,14 +510,14 @@ export function OrbitWorld() {
     timersRef.current.push(
       window.setTimeout(() => {
         impulseRef.current = 1.05;
-      }, 520),
+      }, 660),
       window.setTimeout(() => {
         setIncomingFrom(null);
         const url = new URL(window.location.href);
         url.searchParams.delete('from');
         window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
         impulseRef.current = 0.7;
-      }, 1050),
+      }, 1280),
     );
   }, []);
 
