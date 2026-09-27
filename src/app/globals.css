@@ -2611,7 +2611,58 @@ input:focus-visible {
 
 
 .world-shell[data-flight-behind='true'].travel-launching .travel-craft {
+  animation-name: arrow-flight-out-behind;
   filter:
     drop-shadow(0 0 11px rgba(255, 255, 255, .9))
     drop-shadow(0 0 30px rgba(255, 255, 255, .34));
+}
+
+@keyframes arrow-flight-out-behind {
+  0% {
+    transform:
+      translate(var(--flight-start-x), var(--flight-start-y))
+      rotate(var(--flight-start-rotation))
+      scale(var(--flight-start-scale));
+    opacity: 0;
+    animation-timing-function: cubic-bezier(.2, .82, .16, 1);
+  }
+  8% {
+    transform:
+      translate(var(--flight-start-x), var(--flight-start-y))
+      rotate(var(--flight-heading-rotation))
+      scale(var(--flight-start-scale));
+    opacity: .08;
+    animation-timing-function: cubic-bezier(.12, .82, .12, 1);
+  }
+  25% {
+    transform:
+      translate(var(--flight-via-x), var(--flight-via-y))
+      rotate(var(--flight-heading-rotation))
+      scale(1.1);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(.16, .72, .1, 1);
+  }
+  76% {
+    transform:
+      translate(var(--flight-target-x), var(--flight-target-y))
+      rotate(var(--flight-target-rotation))
+      scale(.98);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(.05, .7, .16, 1);
+  }
+  84% {
+    transform:
+      translate(var(--flight-target-x), var(--flight-target-y))
+      rotate(var(--flight-target-rotation))
+      scale(.92);
+    opacity: 1;
+    animation-timing-function: cubic-bezier(.2, .72, .08, 1);
+  }
+  100% {
+    transform:
+      translate(0, 0)
+      rotate(var(--flight-target-rotation))
+      scale(72);
+    opacity: 1;
+  }
 }
