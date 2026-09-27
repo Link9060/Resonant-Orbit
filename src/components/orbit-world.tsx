@@ -4,6 +4,7 @@ import {
   ARROW_DESTINATIONS,
   ARROW_DESTINATION_BY_ID,
   readIncomingArrowSource,
+  readOrbitFocusTarget,
   type ArrowDestination,
   type OrbitSelectionId,
 } from '@/lib/arrow-map';
@@ -27,7 +28,7 @@ import {
   CommandIcon,
   CompassIcon,
   CoreIcon,
-  FutureNodeIcon,
+  WaypointIcon,
   PulseIcon,
   RadioTowerIcon,
   RotateWorldIcon,
@@ -85,12 +86,50 @@ type TouchPoint = { x: number; y: number };
 
 const destinations = ARROW_DESTINATIONS;
 const destinationIndex = ARROW_DESTINATION_BY_ID;
+const VIEW_STORAGE_KEY = 'orbit-view-v2';
+const WAYPOINT_URL = 'https://link9060.github.io/Resonant-Waypoint/';
+
+function readStoredList(key: string): Array<Record<string, unknown>> {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(key) || '[]');
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    return [];
+  }
+}
+
+function readPublishedCount(keys: string[]) {
+  for (const key of keys) {
+    const value = Number(localStorage.getItem(key));
+    if (Number.isFinite(value) && value > 0) return value;
+  }
+  return 0;
+}
+
+function readDestinationStatuses(): Record<Destination['id'], string> {
+  const tasks = readStoredList('arrow_os_tasks_v1');
+  const events = readStoredList('arrow_os_events_v1');
+  const links = readStoredList('arrow_os_links_v1');
+  const openTasks = tasks.filter(task => !task.done).length;
+  const relayUnread = readPublishedCount(['relay_unread_count', 'relay-unread-count', 'arrow_relay_unread_v1']);
+  const ravinContexts = readPublishedCount(['ravin_active_context_count', 'arrow_ravin_context_count_v1']);
+  const atlasItems = readPublishedCount(['atlas_item_count', 'arrow_atlas_item_count_v1']);
+
+  return {
+    atlas: atlasItems ? `${atlasItems} items indexed` : links.length ? `${links.length} linked` : 'data ready',
+    ravin: ravinContexts ? `${ravinContexts} contexts active` : 'intelligence ready',
+    relay: relayUnread ? `${relayUnread} unread` : 'communication ready',
+    waypoint: openTasks || events.length
+      ? `${openTasks} open · ${events.length} events`
+      : 'direction clear',
+  };
+}
 
 function DestinationIcon({ id, size = 18 }: { id: Destination['id']; size?: number }) {
   if (id === 'atlas') return <CompassIcon size={size} />;
   if (id === 'ravin') return <CoreIcon size={size} />;
   if (id === 'relay') return <RadioTowerIcon size={size} />;
-  return <FutureNodeIcon size={size} />;
+  return <WaypointIcon size={size} />;
 }
 
 function relativeRect(
@@ -180,6 +219,12 @@ export function OrbitWorld() {
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
   const [renderProfile, setRenderProfile] = useState<RenderProfile>('balanced');
   const [usesCommandKey, setUsesCommandKey] = useState(true);
+  const [destinationStatus, setDestinationStatus] = useState<Record<Destination['id'], string>>({
+    atlas: 'data ready',
+    ravin: 'intelligence ready',
+    relay: 'communication ready',
+    waypoint: 'direction clear',
+  });
 
   const renderer = useMemo(() => {
     const density =
@@ -225,8 +270,6 @@ export function OrbitWorld() {
 
   useEffect(() => {
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
-    const coarseQuery = window.matchMedia('(pointer: coarse)');
-
     const updateRuntimeProfile = () => {
       const choice = document.documentElement.dataset.arrowMotion;
       const reduceMotion = choice ? choice === 'reduce' : motionQuery.matches;
@@ -243,13 +286,11 @@ export function OrbitWorld() {
 
       const lowPower =
         reduceMotion ||
-        coarseQuery.matches ||
         hardwareConcurrency <= 4 ||
         lowMemory;
 
       const highPower =
         !reduceMotion &&
-        !coarseQuery.matches &&
         hardwareConcurrency >= 10 &&
         highMemory;
 
@@ -262,12 +303,20 @@ export function OrbitWorld() {
     updateRuntimeProfile();
     motionQuery.addEventListener('change', updateRuntimeProfile);
     window.addEventListener('arrow:motionchange', updateRuntimeProfile);
-    coarseQuery.addEventListener('change', updateRuntimeProfile);
-
     return () => {
       motionQuery.removeEventListener('change', updateRuntimeProfile);
       window.removeEventListener('arrow:motionchange', updateRuntimeProfile);
-      coarseQuery.removeEventListener('change', updateRuntimeProfile);
+    };
+  }, []);
+
+  useEffect(() => {
+    const refreshDestinationStatus = () => setDestinationStatus(readDestinationStatuses());
+    refreshDestinationStatus();
+    window.addEventListener('storage', refreshDestinationStatus);
+    window.addEventListener('arrow-os:datachange', refreshDestinationStatus as EventListener);
+    return () => {
+      window.removeEventListener('storage', refreshDestinationStatus);
+      window.removeEventListener('arrow-os:datachange', refreshDestinationStatus as EventListener);
     };
   }, []);
 
@@ -438,6 +487,7 @@ export function OrbitWorld() {
     let impulse = 0;
     let travelMix = 0;
     let lastFrame = performance.now();
+    let lastPaint = 0;
     let sampleStarted = performance.now();
     let sampleFrames = 0;
 
@@ -467,6 +517,18 @@ export function OrbitWorld() {
         ui.travelPhase !== 'idle' ||
         ui.incomingFrom !== null ||
         ui.navigatorOpen;
+
+      const idleLowPower =
+        !locked &&
+        !rotation.dragging &&
+        !pointer.inside &&
+        (reduced || renderProfile === 'low');
+      const minimumFrameInterval = reduced ? 1000 / 12 : idleLowPower ? 1000 / 30 : 0;
+      if (minimumFrameInterval && now - lastPaint < minimumFrameInterval) {
+        frame = window.requestAnimationFrame(draw);
+        return;
+      }
+      lastPaint = now;
 
       if (!rotation.dragging && !locked) {
         rotation.targetYaw += rotation.velocityYaw;
@@ -896,7 +958,8 @@ export function OrbitWorld() {
 
   const handlePointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (interactionLocked || event.button !== 0) return;
-    if ((event.target as HTMLElement).closest('button, input, a, [role="dialog"]')) return;
+    if ((event.target as HTMLElement).closest('button, input, a, textarea, [role="dialog"]')) return;
+    if (event.pointerType === 'mouse') event.preventDefault();
 
     if (event.pointerType === 'touch') {
       touchPointersRef.current.set(event.pointerId, {
@@ -1070,11 +1133,16 @@ export function OrbitWorld() {
     setTravelPhase('launching');
     impulseRef.current = 1.35;
 
+    const destination = selected;
     const duration = reducedMotionRef.current ? 80 : 1450;
     timersRef.current.push(
       window.setTimeout(() => {
-        setTravelPhase('preview');
         impulseRef.current = 0.8;
+        if (destination.href) {
+          openDestination(destination);
+          return;
+        }
+        setTravelPhase('preview');
       }, duration),
     );
   };
@@ -1111,6 +1179,7 @@ export function OrbitWorld() {
       destination.code,
       destination.description,
       destination.detail,
+      ...destination.searchTerms,
     ]
       .join(' ')
       .toLowerCase()
@@ -1184,6 +1253,68 @@ export function OrbitWorld() {
       first.focus();
     }
   };
+
+  useEffect(() => {
+    const source = readIncomingArrowSource(window.location.search);
+    const requestedFocus = readOrbitFocusTarget(window.location.search);
+
+    if (!source) {
+      try {
+        const saved = JSON.parse(sessionStorage.getItem(VIEW_STORAGE_KEY) || 'null') as {
+          selectedId?: DestinationId;
+          yaw?: number;
+          pitch?: number;
+          zoom?: number;
+        } | null;
+        if (saved) {
+          if (typeof saved.yaw === 'number') {
+            rotationRef.current.yaw = saved.yaw;
+            rotationRef.current.targetYaw = saved.yaw;
+          }
+          if (typeof saved.pitch === 'number') {
+            rotationRef.current.pitch = clamp(saved.pitch, -0.72, 0.72);
+            rotationRef.current.targetPitch = rotationRef.current.pitch;
+          }
+          if (typeof saved.zoom === 'number') {
+            zoomRef.current.current = clamp(saved.zoom, 0.82, 1.22);
+            zoomRef.current.target = zoomRef.current.current;
+          }
+          if (!requestedFocus && saved.selectedId && saved.selectedId !== 'orbit') {
+            const savedDestination = destinationIndex.get(saved.selectedId as Destination['id']);
+            if (savedDestination) setSelectedId(savedDestination.id);
+          }
+        }
+      } catch {}
+    }
+
+    if (requestedFocus) {
+      const destination = destinationIndex.get(requestedFocus);
+      if (destination) {
+        window.requestAnimationFrame(() => focusDestination(destination, 0.9));
+      }
+      const url = new URL(window.location.href);
+      url.searchParams.delete('focus');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+  }, []);
+
+  useEffect(() => {
+    const saveView = () => {
+      try {
+        sessionStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify({
+          selectedId: uiRef.current.selectedId,
+          yaw: rotationRef.current.targetYaw,
+          pitch: rotationRef.current.targetPitch,
+          zoom: zoomRef.current.target,
+        }));
+      } catch {}
+    };
+    window.addEventListener('pagehide', saveView);
+    return () => {
+      saveView();
+      window.removeEventListener('pagehide', saveView);
+    };
+  }, []);
 
   const flightStyle = {
     '--flight-start-x': `${flightPath.startX}px`,
@@ -1333,6 +1464,7 @@ export function OrbitWorld() {
               <span className="node-copy">
                 <span className="node-code">{destination.code}</span>
                 <strong>{destination.name}</strong>
+                <span className="node-status">{destinationStatus[destination.id]}</span>
               </span>
             </button>
           ))}
@@ -1406,15 +1538,18 @@ export function OrbitWorld() {
                 type="button"
                 className="focus-button"
                 onClick={() => {
-                  impulseRef.current = 1;
+                  const url = new URL(WAYPOINT_URL);
+                  url.searchParams.set('from', 'orbit');
+                  url.searchParams.set('tab', 'dump');
+                  window.location.assign(url.toString());
                 }}
               >
                 <PulseIcon size={14} />
-                Pulse field
+                Quick capture
               </button>
             )}
             <span className="handoff-state">
-              {selected ? (selected.href ? 'route connected' : 'preview only · route staged') : 'select a destination'}
+              {selected ? (selected.href ? 'route connected' : 'preview only · route staged') : 'brain dump into Waypoint'}
             </span>
           </div>
         </aside>
