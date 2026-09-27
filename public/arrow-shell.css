@@ -662,85 +662,19 @@
   inset: 0;
   z-index: 2147483646;
   overflow: hidden;
-  background: #000;
   color: #fff;
   isolation: isolate;
   pointer-events: none;
 }
 
-.arrow-os-handoff-craft,
-.arrow-os-handoff-ring {
-  position: absolute;
-  left: 50%;
-  top: 50%;
-}
-
-.arrow-os-handoff-craft {
-  width: 32px;
-  height: 32px;
-  margin: -16px;
-  transform-origin: center;
-  will-change: transform, opacity;
-  filter:
-    drop-shadow(0 0 9px rgba(255,255,255,.92))
-    drop-shadow(0 0 30px rgba(255,255,255,.4));
-}
-
-.arrow-os-handoff-craft span {
-  position: absolute;
-  inset: 8px 1px;
-  background: #fff;
-  clip-path: polygon(0 0,100% 50%,0 100%,30% 50%);
-}
-
-.arrow-os-handoff-ring {
-  width: 64px;
-  height: 64px;
-  margin: -32px;
-  border: 1px solid rgba(255,255,255,.18);
-  border-radius: 999px;
-  opacity: 0;
-}
-
-.arrow-os-departure {
-  animation: arrow-os-departure-overlay 940ms linear both;
-}
-
-.arrow-os-departure .arrow-os-handoff-craft {
-  animation: arrow-os-departure-craft 940ms linear both;
-}
-
-.arrow-os-departure .ring-a {
-  animation: arrow-os-ring-out 500ms 390ms ease-out both;
-}
-
-.arrow-os-departure .ring-b {
-  animation: arrow-os-ring-out 560ms 430ms ease-out both;
-}
-
-.arrow-os-arrival {
-  animation: arrow-os-arrival-overlay 980ms linear both;
-}
-
-.arrow-os-arrival .arrow-os-handoff-craft {
-  animation: arrow-os-arrival-craft 980ms linear both;
-}
-
-.arrow-os-arrival .ring-a {
-  animation: arrow-os-ring-in 440ms 85ms ease-out both;
-}
-
-.arrow-os-arrival .ring-b {
-  animation: arrow-os-ring-in 520ms 120ms ease-out both;
-}
-
 .arrow-os-handoff p {
   position: absolute;
+  z-index: 8;
   left: 50%;
   bottom: max(28px,calc(env(safe-area-inset-bottom) + 16px));
   margin: 0;
   transform: translateX(-50%);
-  color: rgba(255,255,255,.48);
+  color: rgba(255,255,255,.44);
   font-size: 9px;
   font-weight: 700;
   letter-spacing: .16em;
@@ -748,123 +682,207 @@
   white-space: nowrap;
 }
 
-.arrow-os-departure p {
-  animation: arrow-os-handoff-copy-out 940ms ease both;
+.arrow-os-particle-field {
+  position: absolute;
+  z-index: 5;
+  width: 0;
+  height: 0;
 }
 
-.arrow-os-arrival p {
-  animation: arrow-os-handoff-copy-in 980ms ease both;
+.arrow-os-transition-particle {
+  position: absolute;
+  width: var(--particle-size);
+  height: var(--particle-size);
+  margin: calc(var(--particle-size) / -2);
+  border-radius: 999px;
+  background: #fff;
+  box-shadow:
+    0 0 7px rgba(255,255,255,.84),
+    0 0 18px rgba(255,255,255,.2);
+  opacity: 0;
 }
 
-@keyframes arrow-os-departure-overlay {
-  0% { background-color: rgba(0,0,0,0); }
-  26%,100% { background-color: #000; }
+/* Center -> Orbit: the page itself collapses into a singularity. */
+
+html.arrow-os-blackhole-active body > :not(.arrow-os-handoff):not(script):not(style):not(link) {
+  transform-origin: var(--arrow-bh-x) var(--arrow-bh-y);
+  animation: arrow-os-page-collapse 760ms cubic-bezier(.36,.02,.16,1) both;
+  pointer-events: none !important;
 }
 
-@keyframes arrow-os-arrival-overlay {
-  0%,48% { background-color: #000; }
-  100% { background-color: rgba(0,0,0,0); }
+.arrow-os-blackhole-departure {
+  background: rgba(0,0,0,0);
+  animation: arrow-os-blackhole-overlay 940ms linear both;
 }
 
-@keyframes arrow-os-departure-craft {
+.arrow-os-blackhole-glow,
+.arrow-os-blackhole-core,
+.arrow-os-blackhole-departure .arrow-os-particle-field {
+  position: absolute;
+  left: var(--bh-x);
+  top: var(--bh-y);
+}
+
+.arrow-os-blackhole-glow {
+  z-index: 3;
+  width: 92px;
+  height: 92px;
+  margin: -46px;
+  border-radius: 50%;
+  background: radial-gradient(
+    circle,
+    rgba(255,255,255,.22) 0,
+    rgba(255,255,255,.08) 22%,
+    rgba(255,255,255,.025) 46%,
+    transparent 72%
+  );
+  opacity: 0;
+  animation: arrow-os-blackhole-glow 780ms 70ms ease both;
+}
+
+.arrow-os-blackhole-core {
+  z-index: 6;
+  width: 18px;
+  height: 18px;
+  margin: -9px;
+  border-radius: 50%;
+  background: #000;
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.76),
+    0 0 14px rgba(255,255,255,.52),
+    0 0 48px rgba(255,255,255,.22);
+  animation: arrow-os-blackhole-core 820ms 40ms cubic-bezier(.22,.72,.12,1) both;
+}
+
+.arrow-os-blackhole-departure .arrow-os-transition-particle[data-direction="in"] {
+  animation: arrow-os-particle-collapse 620ms calc(80ms + var(--particle-delay)) cubic-bezier(.28,.02,.18,1) both;
+}
+
+.arrow-os-blackhole-departure p {
+  animation: arrow-os-blackhole-copy 900ms ease both;
+}
+
+@keyframes arrow-os-page-collapse {
   0% {
-    transform:
-      translate(var(--handoff-x),var(--handoff-y))
-      rotate(var(--handoff-heading))
-      scale(.48);
-    opacity: .2;
-    animation-timing-function: cubic-bezier(.18,.82,.16,1);
-  }
-  9% {
-    transform:
-      translate(var(--handoff-x),var(--handoff-y))
-      rotate(var(--handoff-heading))
-      scale(.72);
+    transform: scale(1);
     opacity: 1;
-    animation-timing-function: cubic-bezier(.16,.76,.12,1);
   }
-  46% {
-    transform:
-      translate(var(--handoff-via-x),var(--handoff-via-y))
-      rotate(var(--handoff-heading))
-      scale(1.08);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(.12,.72,.1,1);
+  42% {
+    transform: scale(.86) rotate(-.4deg);
+    opacity: .92;
   }
-  76% {
-    transform: translate(0,0) rotate(0deg) scale(.94);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(.2,.72,.08,1);
-  }
-  84% {
-    transform: translate(0,0) rotate(0deg) scale(.9);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(.12,.66,.06,1);
+  78% {
+    transform: scale(.16) rotate(-2deg);
+    opacity: .52;
   }
   100% {
-    transform: translate(0,0) rotate(0deg) scale(72);
-    opacity: 1;
-  }
-}
-
-@keyframes arrow-os-arrival-craft {
-  0% {
-    transform: translate(0,0) rotate(0deg) scale(72);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(.18,.76,.16,1);
-  }
-  18% {
-    transform: translate(0,0) rotate(var(--handoff-arrival-heading)) scale(1.14);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(.14,.72,.12,1);
-  }
-  48% {
-    transform:
-      translate(var(--handoff-via-x),var(--handoff-via-y))
-      rotate(var(--handoff-arrival-heading))
-      scale(1.02);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(.16,.72,.12,1);
-  }
-  84% {
-    transform:
-      translate(var(--handoff-x),var(--handoff-y))
-      rotate(var(--handoff-arrival-heading))
-      scale(.72);
-    opacity: 1;
-    animation-timing-function: cubic-bezier(.22,.76,.18,1);
-  }
-  100% {
-    transform:
-      translate(var(--handoff-x),var(--handoff-y))
-      rotate(0deg)
-      scale(.46);
+    transform: scale(.015) rotate(-4deg);
     opacity: 0;
   }
 }
 
-@keyframes arrow-os-ring-out {
+@keyframes arrow-os-blackhole-overlay {
+  0%,32% { background: rgba(0,0,0,0); }
+  72% { background: rgba(0,0,0,.68); }
+  100% { background: #000; }
+}
+
+@keyframes arrow-os-blackhole-glow {
   0% { transform: scale(.2); opacity: 0; }
-  20% { opacity: .45; }
-  100% { transform: scale(8.5); opacity: 0; }
+  28% { transform: scale(1.05); opacity: .9; }
+  70% { transform: scale(.72); opacity: .7; }
+  100% { transform: scale(.08); opacity: 0; }
 }
 
-@keyframes arrow-os-ring-in {
-  0% { transform: scale(8.5); opacity: 0; }
-  35% { opacity: .36; }
-  100% { transform: scale(.22); opacity: 0; }
+@keyframes arrow-os-blackhole-core {
+  0% { transform: scale(.25); opacity: .25; }
+  24% { transform: scale(1.15); opacity: 1; }
+  72% { transform: scale(.82); opacity: 1; }
+  100% { transform: scale(.14); opacity: 1; }
 }
 
-@keyframes arrow-os-handoff-copy-out {
-  0%,34% { opacity: 0; transform: translate(-50%,8px); }
-  55%,80% { opacity: 1; transform: translate(-50%,0); }
-  100% { opacity: 0; transform: translate(-50%,-4px); }
+@keyframes arrow-os-particle-collapse {
+  0% {
+    transform: translate(var(--particle-x),var(--particle-y)) scale(1);
+    opacity: 0;
+  }
+  18% { opacity: .9; }
+  82% { opacity: .72; }
+  100% {
+    transform: translate(0,0) scale(.18);
+    opacity: 0;
+  }
 }
 
-@keyframes arrow-os-handoff-copy-in {
-  0%,20% { opacity: 0; transform: translate(-50%,6px); }
-  38%,70% { opacity: 1; transform: translate(-50%,0); }
-  100% { opacity: 0; transform: translate(-50%,-4px); }
+@keyframes arrow-os-blackhole-copy {
+  0%,38% { opacity: 0; transform: translate(-50%,7px); }
+  54%,76% { opacity: .65; transform: translate(-50%,0); }
+  100% { opacity: 0; transform: translate(-50%,-3px); }
+}
+
+/* Orbit -> center: reveal the destination through an outward particle field. */
+
+.arrow-os-center-arrival {
+  background: #000;
+  animation: arrow-os-center-arrival-overlay 900ms ease both;
+}
+
+.arrow-os-center-arrival-core,
+.arrow-os-center-arrival .arrow-os-particle-field {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+}
+
+.arrow-os-center-arrival-core {
+  z-index: 6;
+  width: 14px;
+  height: 14px;
+  margin: -7px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow:
+    0 0 12px rgba(255,255,255,.76),
+    0 0 44px rgba(255,255,255,.24);
+  animation: arrow-os-center-core-release 620ms 50ms ease both;
+}
+
+.arrow-os-center-arrival .arrow-os-transition-particle[data-direction="out"] {
+  animation: arrow-os-particle-release 610ms calc(70ms + var(--particle-delay)) cubic-bezier(.16,.74,.14,1) both;
+}
+
+.arrow-os-center-arrival p {
+  animation: arrow-os-center-copy 820ms ease both;
+}
+
+@keyframes arrow-os-center-arrival-overlay {
+  0%,34% { background: #000; }
+  72% { background: rgba(0,0,0,.52); }
+  100% { background: rgba(0,0,0,0); }
+}
+
+@keyframes arrow-os-center-core-release {
+  0% { transform: scale(.15); opacity: 0; }
+  24% { transform: scale(1.1); opacity: 1; }
+  100% { transform: scale(.2); opacity: 0; }
+}
+
+@keyframes arrow-os-particle-release {
+  0% {
+    transform: translate(0,0) scale(.24);
+    opacity: 0;
+  }
+  18% { opacity: 1; }
+  100% {
+    transform: translate(var(--particle-x),var(--particle-y)) scale(.2);
+    opacity: 0;
+  }
+}
+
+@keyframes arrow-os-center-copy {
+  0%,18% { opacity: 0; transform: translate(-50%,6px); }
+  38%,68% { opacity: .55; transform: translate(-50%,0); }
+  100% { opacity: 0; transform: translate(-50%,-3px); }
 }
 
 @media (max-width: 1180px) and (min-width: 681px) {
@@ -964,8 +982,9 @@ html[data-arrow-motion="reduce"] .arrow-os-island,
 html[data-arrow-motion="reduce"] .arrow-os-content,
 html[data-arrow-motion="reduce"] .arrow-os-mark,
 html[data-arrow-motion="reduce"] .arrow-os-handoff,
-html[data-arrow-motion="reduce"] .arrow-os-handoff-craft,
-html[data-arrow-motion="reduce"] .arrow-os-handoff-ring {
+html[data-arrow-motion="reduce"] .arrow-os-blackhole-core,
+html[data-arrow-motion="reduce"] .arrow-os-blackhole-glow,
+html[data-arrow-motion="reduce"] .arrow-os-transition-particle {
   animation-duration: .01ms !important;
   transition-duration: .01ms !important;
 }
@@ -975,8 +994,9 @@ html[data-arrow-motion="reduce"] .arrow-os-handoff-ring {
   .arrow-os-content,
   .arrow-os-mark,
   .arrow-os-handoff,
-  .arrow-os-handoff-craft,
-  .arrow-os-handoff-ring {
+  .arrow-os-blackhole-core,
+  .arrow-os-blackhole-glow,
+  .arrow-os-transition-particle {
     animation-duration: .01ms !important;
     transition-duration: .01ms !important;
   }
