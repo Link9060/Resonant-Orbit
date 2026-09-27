@@ -23,12 +23,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260927-motion-v2`} />
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260927-motion-v3`} />
       </head>
       <body>
         {children}
         <Script
-          src={`${arrowShellBase}/arrow-shell.js?v=20260927-motion-v2`}
+          src={`${arrowShellBase}/arrow-shell.js?v=20260927-motion-v3`}
           strategy="afterInteractive"
         />
       </body>
