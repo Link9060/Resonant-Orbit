@@ -1172,7 +1172,7 @@ input:focus-visible {
   }
   100% {
     transform:
-      translate(0, 0)
+      translate(var(--flight-target-x), var(--flight-target-y))
       rotate(var(--flight-target-rotation))
       scale(72);
     opacity: 1;
@@ -2706,7 +2706,7 @@ input:focus-visible {
   }
   100% {
     transform:
-      translate(0, 0)
+      translate(var(--flight-target-x), var(--flight-target-y))
       rotate(var(--flight-target-rotation))
       scale(72);
     opacity: 1;
