@@ -5,8 +5,8 @@ const { JSDOM } = require('jsdom');
 const source = readFileSync(process.env.ARROW_SHELL_SOURCE || 'public/arrow-shell.js', 'utf8');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function fixture(module = 'orbit', query = '') {
-  const dom = new JSDOM(`<html><body><div data-arrow-os-shell data-module="${module}"></div><div id="app"></div></body></html>`, {
+async function fixture(module = 'orbit', query = '', orbitAccess = 'enabled') {
+  const dom = new JSDOM(`<html><body><div data-arrow-os-shell data-module="${module}" data-orbit-access="${orbitAccess}"></div><div id="app"></div></body></html>`, {
     url: 'https://link9060.github.io/test/' + query, runScripts: 'outside-only', pretendToBeVisual: true,
   });
   const w = dom.window;
@@ -57,6 +57,21 @@ for (const module of ['orbit', 'relay', 'atlas', 'ravin', 'waypoint']) {
   });
 }
 
+
+test('public Relay can show ARROW controls while Orbit stays disabled', async () => {
+  const f = await fixture('relay', '', 'disabled');
+  try {
+    const orbit = f.w.document.querySelector('.arrow-os-orbit');
+    assert.ok(orbit);
+    assert.equal(orbit.disabled, true);
+    assert.equal(orbit.getAttribute('aria-disabled'), 'true');
+    assert.ok(orbit.classList.contains('is-disabled'));
+    assert.match(orbit.textContent, /Orbit/);
+    orbit.click();
+    await delay(20);
+    assert.equal(f.w.document.querySelectorAll('.arrow-os-blackhole-departure').length, 0);
+  } finally { f.close(); }
+});
 
 test('shared center handoff API is available to every non-Orbit module', async () => {
   const f = await fixture('waypoint');
