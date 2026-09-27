@@ -103,12 +103,27 @@ test('travel starts from the live craft pose and uses a one-second continuous an
   await page.keyboard.press('3');
   await page.waitForTimeout(180);
 
-  const orbitCraft = page.locator('.craft-orbit');
-  const before = await orbitCraft.boundingBox();
-  expect(before).not.toBeNull();
-
   await page.route('https://link9060.github.io/Resonant-Relay/**', route => route.abort());
-  await page.getByRole('button', { name: 'Travel to Relay' }).click();
+
+  // Capture the orbiting craft and trigger Travel in the same browser task.
+  // This measures the exact click-time pose instead of a stale Playwright
+  // bounding box from a few animation frames earlier.
+  const beforeCenter = await page.evaluate(() => {
+    const craft = document.querySelector<HTMLElement>('.craft-orbit');
+    const shell = document.querySelector<HTMLElement>('.world-shell');
+    const travel = document.querySelector<HTMLButtonElement>('.travel-button');
+    if (!craft || !shell || !travel) throw new Error('Orbit travel controls are not ready');
+
+    const craftRect = craft.getBoundingClientRect();
+    const shellRect = shell.getBoundingClientRect();
+    const point = {
+      x: craftRect.left + craftRect.width / 2 - (shellRect.left + shellRect.width / 2),
+      y: craftRect.top + craftRect.height / 2 - (shellRect.top + shellRect.height / 2),
+    };
+
+    travel.click();
+    return point;
+  });
 
   const travelCraft = page.locator('.travel-craft');
   await expect(travelCraft).toBeVisible();
@@ -117,14 +132,6 @@ test('travel starts from the live craft pose and uses a one-second continuous an
     getComputedStyle(element).animationDuration,
   );
   expect(duration).toBe('1s');
-
-  const shellBox = await page.locator('.world-shell').boundingBox();
-  expect(shellBox).not.toBeNull();
-
-  const beforeCenter = {
-    x: before!.x + before!.width / 2 - (shellBox!.x + shellBox!.width / 2),
-    y: before!.y + before!.height / 2 - (shellBox!.y + shellBox!.height / 2),
-  };
 
   const flightVars = await page.locator('.world-shell').evaluate(element => {
     const style = getComputedStyle(element);
