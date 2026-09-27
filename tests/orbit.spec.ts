@@ -118,22 +118,13 @@ test('travel starts from the live craft pose and uses a one-second continuous an
   );
   expect(duration).toBe('1s');
 
-  const after = await travelCraft.boundingBox();
-  expect(after).not.toBeNull();
+  const shellBox = await page.locator('.world-shell').boundingBox();
+  expect(shellBox).not.toBeNull();
 
   const beforeCenter = {
-    x: before!.x + before!.width / 2,
-    y: before!.y + before!.height / 2,
+    x: before!.x + before!.width / 2 - (shellBox!.x + shellBox!.width / 2),
+    y: before!.y + before!.height / 2 - (shellBox!.y + shellBox!.height / 2),
   };
-  const afterCenter = {
-    x: after!.x + after!.width / 2,
-    y: after!.y + after!.height / 2,
-  };
-
-  expect(Math.hypot(
-    afterCenter.x - beforeCenter.x,
-    afterCenter.y - beforeCenter.y,
-  )).toBeLessThan(28);
 
   const flightVars = await page.locator('.world-shell').evaluate(element => {
     const style = getComputedStyle(element);
@@ -150,6 +141,13 @@ test('travel starts from the live craft pose and uses a one-second continuous an
   for (const value of Object.values(flightVars)) {
     expect(value).toMatch(/^-?\d+(?:\.\d+)?px$/);
   }
+
+  const startX = Number.parseFloat(flightVars.startX);
+  const startY = Number.parseFloat(flightVars.startY);
+  expect(Math.hypot(
+    startX - beforeCenter.x,
+    startY - beforeCenter.y,
+  )).toBeLessThan(8);
 });
 
 test('Waypoint is a connected fourth destination', async ({ page }) => {
