@@ -1335,7 +1335,7 @@ input:focus-visible {
   to { opacity: 1; transform: scale(1); filter: blur(0); }
 }
 
-/* Incoming module handoff: black-hole release + Orbit reconstruction */
+/* Incoming module handoff: full black-hole release + Orbit reconstruction */
 
 .incoming-flight-layer {
   position: absolute;
@@ -1344,53 +1344,146 @@ input:focus-visible {
   overflow: hidden;
   pointer-events: none;
   background: #000;
-  animation: incoming-overlay-release 1050ms ease both;
+  animation: incoming-overlay-release 1280ms ease both;
 }
 
-.incoming-singularity,
-.incoming-reform-particles,
+.incoming-reform-canvas {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.incoming-bh-halo,
+.incoming-bh-lens,
+.incoming-bh-disk,
+.incoming-bh-photon-ring,
+.incoming-bh-core,
 .incoming-craft {
   position: absolute;
   left: 50%;
   top: 50%;
 }
 
-.incoming-singularity {
+.incoming-bh-halo {
+  z-index: 2;
+  width: min(92vw,1120px);
+  height: min(92vw,1120px);
+  margin-left: calc(min(92vw,1120px) / -2);
+  margin-top: calc(min(92vw,1120px) / -2);
+  border-radius: 50%;
+  background:
+    radial-gradient(circle,
+      transparent 0 13%,
+      rgba(255,255,255,.06) 15%,
+      rgba(255,255,255,.16) 18%,
+      rgba(255,255,255,.045) 24%,
+      rgba(255,255,255,.012) 38%,
+      transparent 62%);
+  filter: blur(4px);
+  animation: incoming-bh-halo-release 1080ms 40ms ease both;
+}
+
+.incoming-bh-disk {
+  z-index: 5;
+  border-radius: 50%;
+  transform-origin: center;
+}
+
+.incoming-bh-disk-main {
+  width: min(96vw,1240px);
+  height: 92px;
+  margin-left: calc(min(96vw,1240px) / -2);
+  margin-top: -46px;
+  background:
+    linear-gradient(90deg,
+      transparent 0 3%,
+      rgba(255,255,255,.12) 9%,
+      rgba(255,255,255,.88) 24%,
+      #fff 42%,
+      rgba(255,255,255,.96) 55%,
+      rgba(255,255,255,.54) 76%,
+      rgba(255,255,255,.08) 92%,
+      transparent 100%);
+  box-shadow:
+    0 0 16px rgba(255,255,255,.66),
+    0 0 46px rgba(255,255,255,.36),
+    0 0 120px rgba(255,255,255,.16);
+  animation: incoming-bh-disk-main-release 980ms 30ms cubic-bezier(.16,.8,.12,1) both;
+}
+
+.incoming-bh-disk-far {
   z-index: 3;
-  width: 18px;
-  height: 18px;
-  margin: -9px;
+  width: min(82vw,980px);
+  height: 290px;
+  margin-left: calc(min(82vw,980px) / -2);
+  margin-top: -145px;
+  border: 5px solid rgba(255,255,255,.56);
+  border-left-color: rgba(255,255,255,.08);
+  border-right-color: rgba(255,255,255,.08);
+  box-shadow:
+    0 0 24px rgba(255,255,255,.34),
+    inset 0 0 30px rgba(255,255,255,.08);
+  animation: incoming-bh-disk-far-release 1000ms 20ms cubic-bezier(.16,.8,.12,1) both;
+}
+
+.incoming-bh-lens {
+  z-index: 4;
+  width: min(62vw,720px);
+  height: min(62vw,720px);
+  margin-left: calc(min(62vw,720px) / -2);
+  margin-top: calc(min(62vw,720px) / -2);
+  border-radius: 50%;
+  border: 3px solid transparent;
+  filter: drop-shadow(0 0 20px rgba(255,255,255,.28));
+}
+
+.incoming-bh-lens-upper {
+  border-top-color: rgba(255,255,255,.92);
+  border-left-color: rgba(255,255,255,.18);
+  animation: incoming-bh-lens-upper-release 990ms 30ms ease both;
+}
+
+.incoming-bh-lens-lower {
+  border-bottom-color: rgba(255,255,255,.68);
+  border-right-color: rgba(255,255,255,.12);
+  animation: incoming-bh-lens-lower-release 1020ms 50ms ease both;
+}
+
+.incoming-bh-photon-ring {
+  z-index: 9;
+  width: min(24vw,290px);
+  height: min(24vw,290px);
+  margin-left: calc(min(24vw,290px) / -2);
+  margin-top: calc(min(24vw,290px) / -2);
+  border: 4px solid rgba(255,255,255,.92);
+  border-radius: 50%;
+  box-shadow:
+    0 0 10px rgba(255,255,255,.9),
+    0 0 34px rgba(255,255,255,.56),
+    0 0 92px rgba(255,255,255,.22);
+  animation: incoming-bh-photon-release 930ms 20ms ease both;
+}
+
+.incoming-bh-core {
+  z-index: 10;
+  width: min(20vw,238px);
+  height: min(20vw,238px);
+  margin-left: calc(min(20vw,238px) / -2);
+  margin-top: calc(min(20vw,238px) / -2);
   border-radius: 50%;
   background: #000;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,.72),
-    0 0 18px rgba(255,255,255,.52),
-    0 0 58px rgba(255,255,255,.2);
-  animation: incoming-singularity-release 780ms 40ms cubic-bezier(.16,.8,.14,1) both;
-}
-
-.incoming-reform-particles {
-  z-index: 2;
-  width: 0;
-  height: 0;
-}
-
-.incoming-reform-particle {
-  position: absolute;
-  width: var(--reform-size);
-  height: var(--reform-size);
-  margin: calc(var(--reform-size) / -2);
-  border-radius: 999px;
-  background: #fff;
-  box-shadow:
-    0 0 7px rgba(255,255,255,.84),
-    0 0 18px rgba(255,255,255,.2);
-  opacity: 0;
-  animation: incoming-reform-particle 620ms calc(110ms + var(--reform-delay)) cubic-bezier(.16,.76,.14,1) both;
+    0 0 0 2px rgba(255,255,255,.26),
+    0 0 22px 8px rgba(255,255,255,.22),
+    0 0 90px 18px rgba(255,255,255,.08);
+  animation: incoming-bh-core-release 940ms 20ms ease both;
 }
 
 .incoming-craft {
-  z-index: 4;
+  z-index: 12;
   width: 24px;
   height: 24px;
   margin: -12px;
@@ -1400,11 +1493,12 @@ input:focus-visible {
   filter:
     drop-shadow(0 0 8px rgba(255,255,255,.82))
     drop-shadow(0 0 22px rgba(255,255,255,.3));
-  animation: incoming-craft-emerge 720ms 170ms cubic-bezier(.16,.78,.14,1) both;
+  animation: incoming-craft-emerge 700ms 380ms cubic-bezier(.16,.78,.14,1) both;
 }
 
 .incoming-source-label {
   position: absolute;
+  z-index: 13;
   left: 50%;
   bottom: 28px;
   transform: translateX(-50%);
@@ -1414,75 +1508,94 @@ input:focus-visible {
   letter-spacing: .13em;
   text-transform: uppercase;
   opacity: 0;
-  animation: incoming-label 900ms 80ms ease both;
+  animation: incoming-label 1100ms 80ms ease both;
 }
 
 .world-shell.incoming-active .world-canvas {
   transform-origin: 50% 50%;
-  animation: orbit-canvas-reform 1050ms cubic-bezier(.16,.82,.14,1) both;
+  animation: orbit-canvas-reform 1280ms cubic-bezier(.16,.82,.14,1) both;
 }
 
 .world-shell.incoming-active .orbit-links,
 .world-shell.incoming-active .destination-layer,
 .world-shell.incoming-active .orbit-core-label,
 .world-shell.incoming-active .stage-copy {
-  animation: orbit-ui-reform 1050ms ease both;
+  animation: orbit-ui-reform 1280ms ease both;
 }
 
 .world-shell.incoming-active .craft-orbit {
-  animation: orbit-live-craft-reveal 1050ms ease both;
+  animation: orbit-live-craft-reveal 1280ms ease both;
 }
 
 @keyframes incoming-overlay-release {
-  0%,38% { background: #000; }
-  72% { background: rgba(0,0,0,.72); }
+  0%,34% { background: #000; }
+  68% { background: rgba(0,0,0,.74); }
   100% { background: rgba(0,0,0,0); }
 }
 
-@keyframes incoming-singularity-release {
-  0% { transform: scale(.2); opacity: .2; }
-  24% { transform: scale(1.15); opacity: 1; }
-  62% { transform: scale(.74); opacity: 1; }
+@keyframes incoming-bh-halo-release {
+  0%,26% { transform: scale(1); opacity: .82; }
+  72% { transform: scale(.66); opacity: .52; }
+  100% { transform: scale(.12); opacity: 0; }
+}
+
+@keyframes incoming-bh-disk-main-release {
+  0%,24% { transform: rotate(-8deg) scaleX(1) scaleY(.92); opacity: 1; }
+  74% { transform: rotate(-13deg) scaleX(.52) scaleY(.34); opacity: .76; }
+  100% { transform: rotate(-18deg) scaleX(.12) scaleY(.05); opacity: 0; }
+}
+
+@keyframes incoming-bh-disk-far-release {
+  0%,24% { transform: rotate(-8deg) scale(1,.38); opacity: .72; }
+  76% { transform: rotate(-12deg) scale(.48,.18); opacity: .46; }
+  100% { transform: rotate(-16deg) scale(.1,.04); opacity: 0; }
+}
+
+@keyframes incoming-bh-lens-upper-release {
+  0%,24% { transform: rotate(-12deg) scale(1); opacity: .9; }
+  100% { transform: rotate(-22deg) scale(.12); opacity: 0; }
+}
+
+@keyframes incoming-bh-lens-lower-release {
+  0%,24% { transform: rotate(8deg) scale(.94); opacity: .68; }
+  100% { transform: rotate(18deg) scale(.1); opacity: 0; }
+}
+
+@keyframes incoming-bh-photon-release {
+  0%,26% { transform: scale(1); opacity: 1; }
+  72% { transform: scale(.55); opacity: .8; }
+  100% { transform: scale(.08); opacity: 0; }
+}
+
+@keyframes incoming-bh-core-release {
+  0%,28% { transform: scale(1); opacity: 1; }
+  76% { transform: scale(.48); opacity: 1; }
   100% { transform: scale(.06); opacity: 0; }
 }
 
-@keyframes incoming-reform-particle {
-  0% {
-    transform: translate(0,0) scale(.25);
-    opacity: 0;
-  }
-  16% { opacity: 1; }
-  100% {
-    transform: translate(var(--reform-x), var(--reform-y)) scale(.22);
-    opacity: 0;
-  }
-}
-
 @keyframes incoming-craft-emerge {
-  0%,14% {
-    transform: translate(0,0) rotate(-22deg) scale(.2);
+  0% {
+    transform: translate(0,0) rotate(-22deg) scale(.18);
     opacity: 0;
   }
-  30% {
-    opacity: 1;
-  }
-  78% {
-    transform: translate(76px,-50px) rotate(-36deg) scale(.98);
+  18% { opacity: 1; }
+  72% {
+    transform: translate(92px,-60px) rotate(-38deg) scale(1);
     opacity: 1;
   }
   100% {
-    transform: translate(92px,-62px) rotate(-40deg) scale(.8);
+    transform: translate(126px,-82px) rotate(-42deg) scale(.82);
     opacity: 0;
   }
 }
 
 @keyframes orbit-canvas-reform {
-  0%,18% {
+  0%,30% {
     opacity: 0;
-    transform: scale(.82);
+    transform: scale(.76);
   }
-  56% {
-    opacity: .46;
+  62% {
+    opacity: .5;
     transform: scale(.94);
   }
   100% {
@@ -1492,19 +1605,19 @@ input:focus-visible {
 }
 
 @keyframes orbit-ui-reform {
-  0%,34% { opacity: 0; }
-  72% { opacity: .58; }
+  0%,48% { opacity: 0; }
+  78% { opacity: .62; }
   100% { opacity: 1; }
 }
 
 @keyframes orbit-live-craft-reveal {
-  0%,68% { opacity: 0; }
+  0%,76% { opacity: 0; }
   100% { opacity: 1; }
 }
 
 @keyframes incoming-label {
-  0%,20% { opacity: 0; transform: translateX(-50%) translateY(6px); }
-  42%,68% { opacity: .56; transform: translateX(-50%) translateY(0); }
+  0%,18% { opacity: 0; transform: translateX(-50%) translateY(6px); }
+  36%,72% { opacity: .56; transform: translateX(-50%) translateY(0); }
   100% { opacity: 0; transform: translateX(-50%) translateY(-3px); }
 }
 
