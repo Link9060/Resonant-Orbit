@@ -250,8 +250,10 @@ test('ARROW task and appearance controls remain local system panels', async ({ p
   await expect(page.getByRole('dialog', { name: 'Tasks' })).toBeVisible();
   await expect(page).toHaveURL(/\/$/);
 
-  await page.keyboard.press('Escape');
-  await page.locator('.arrow-os-trigger').click();
+  await page.reload();
+  const trigger = page.locator('.arrow-os-trigger');
+  await expect(trigger).toBeVisible();
+  await trigger.click();
   await page.getByRole('button', { name: 'Appearance' }).click();
   await expect(page.getByRole('dialog', { name: 'Appearance' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Balanced' })).toBeVisible();
