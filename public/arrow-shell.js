@@ -334,7 +334,7 @@
         window.dispatchEvent(new CustomEvent('arrow:orbit-home'));
         return;
       }
-      launchToOrbit(module);
+      launchToOrbit(module, orbitButton);
     });
 
     root.querySelectorAll('[data-arrow-panel]').forEach(button => {
@@ -991,16 +991,57 @@
     return escapeHtml(value);
   }
 
-  function launchToOrbit(module) {
-    if (state.departing) return;
+  function moduleOrbitControl(module) {
+    const instance = [...state.instances].find(item => item.module === module);
+    return instance?.root?.querySelector('.arrow-os-orbit') || null;
+  }
+
+  function handoffPoint(element) {
+    const rect = element?.getBoundingClientRect?.();
+    if (!rect || (!rect.width && !rect.height)) {
+      return { x: Math.min(320, innerWidth * .34), y: -Math.min(220, innerHeight * .28) };
+    }
+    return {
+      x: rect.left + rect.width / 2 - innerWidth / 2,
+      y: rect.top + rect.height / 2 - innerHeight / 2,
+    };
+  }
+
+  function handoffGeometry(target) {
+    const distance = Math.max(1, Math.hypot(target.x, target.y));
+    const perpX = -target.y / distance;
+    const perpY = target.x / distance;
+    const curve = Math.min(72, Math.max(22, distance * .12));
+    return {
+      viaX: target.x * .52 + perpX * curve,
+      viaY: target.y * .52 + perpY * curve,
+      heading: Math.atan2(-target.y, -target.x) * 180 / Math.PI,
+      arrivalHeading: Math.atan2(target.y, target.x) * 180 / Math.PI,
+    };
+  }
+
+  function applyHandoffGeometry(overlay, target) {
+    const geometry = handoffGeometry(target);
+    overlay.style.setProperty('--handoff-x', target.x + 'px');
+    overlay.style.setProperty('--handoff-y', target.y + 'px');
+    overlay.style.setProperty('--handoff-via-x', geometry.viaX + 'px');
+    overlay.style.setProperty('--handoff-via-y', geometry.viaY + 'px');
+    overlay.style.setProperty('--handoff-heading', geometry.heading + 'deg');
+    overlay.style.setProperty('--handoff-arrival-heading', geometry.arrivalHeading + 'deg');
+  }
+
+  function launchToOrbit(module, anchor) {
+    if (module === 'orbit' || state.departing) return;
     state.departing = true;
+    const url = new URL(ORBIT_URL);
+    url.searchParams.set('from', module);
+
     if (motionReduced()) {
-      const url = new URL(ORBIT_URL);
-      url.searchParams.set('from', module);
       location.assign(url.toString());
       return;
     }
 
+    const source = anchor || moduleOrbitControl(module);
     const overlay = document.createElement('div');
     overlay.className = 'arrow-os-handoff arrow-os-departure';
     overlay.setAttribute('role', 'status');
@@ -1010,11 +1051,10 @@
       '<span class="arrow-os-handoff-ring ring-b"></span>' +
       '<span class="arrow-os-handoff-craft"><span></span></span>' +
       '<p>Returning to Orbit</p>';
+    applyHandoffGeometry(overlay, handoffPoint(source));
     document.body.appendChild(overlay);
 
-    const url = new URL(ORBIT_URL);
-    url.searchParams.set('from', module);
-    setTimeout(() => location.assign(url.toString()), 980);
+    setTimeout(() => location.assign(url.toString()), 940);
   }
 
   function receiveFromOrbit(module) {
@@ -1042,11 +1082,12 @@
       '<span class="arrow-os-handoff-ring ring-b"></span>' +
       '<span class="arrow-os-handoff-craft"><span></span></span>' +
       '<p>Arriving in ' + module.toUpperCase() + '</p>';
+    applyHandoffGeometry(overlay, handoffPoint(moduleOrbitControl(module)));
     document.body.appendChild(overlay);
     setTimeout(() => {
       overlay.remove();
       clear();
-    }, 1080);
+    }, 980);
   }
 
   function pruneInstances() {
@@ -1165,5 +1206,6 @@
     applyMotion,
     applyAccent,
     applyExperienceChoice,
+    launchToOrbit,
   };
 })();
