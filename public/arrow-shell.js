@@ -1021,30 +1021,101 @@
     };
   }
 
-  function populateParticles(container, count, inward) {
-    if (!container) return;
-    const maxDistance = Math.max(innerWidth, innerHeight) * .72;
-    for (let index = 0; index < count; index++) {
-      const angle = Math.PI * 2 * index / count + (index % 5) * .031;
-      const band = index % 11;
-      const distance = Math.min(maxDistance, 150 + band * 58 + (index % 3) * 24);
-      const particle = document.createElement('span');
-      particle.className = 'arrow-os-transition-particle';
-      particle.style.setProperty('--particle-x', (Math.cos(angle) * distance) + 'px');
-      particle.style.setProperty('--particle-y', (Math.sin(angle) * distance) + 'px');
-      particle.style.setProperty('--particle-delay', ((index % 13) * 11) + 'ms');
-      particle.style.setProperty('--particle-size', (2 + (index % 5) * .9) + 'px');
-      particle.style.setProperty('--particle-stretch', String(1 + (index % 4) * .9));
-      particle.dataset.direction = inward ? 'in' : 'out';
-      container.appendChild(particle);
-    }
+  function startParticleCanvas(canvas, direction) {
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    const context = canvas.getContext('2d');
+    if (!context) return;
+
+    const width = innerWidth;
+    const height = innerHeight;
+    const dpr = Math.min(devicePixelRatio || 1, 1.5);
+    canvas.width = Math.max(1, Math.floor(width * dpr));
+    canvas.height = Math.max(1, Math.floor(height * dpr));
+    canvas.style.width = width + 'px';
+    canvas.style.height = height + 'px';
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const cx = width / 2;
+    const cy = height / 2;
+    const count = width < 700 ? 150 : 230;
+    const radius = Math.hypot(width, height) * .62;
+    const particles = Array.from({ length: count }, (_, index) => {
+      const angle = Math.PI * 2 * index / count + (index % 9) * .018;
+      const lane = .18 + ((index * 37) % 100) / 100 * .82;
+      return {
+        angle,
+        distance: radius * lane,
+        size: 1.1 + (index % 5) * .52,
+        delay: (index % 17) * 5.5,
+        bend: ((index % 7) - 3) * .028,
+        alpha: .44 + (index % 6) * .09,
+      };
+    });
+
+    const inward = direction === 'in';
+    const startedAt = performance.now();
+    const duration = inward ? 1120 : 980;
+    let frame = 0;
+
+    const easeIn = value => value * value * value;
+    const easeOut = value => 1 - Math.pow(1 - value, 3);
+
+    const draw = now => {
+      const elapsed = now - startedAt;
+      const global = Math.min(1, elapsed / duration);
+      context.clearRect(0, 0, width, height);
+      context.globalCompositeOperation = 'lighter';
+
+      for (let index = 0; index < particles.length; index++) {
+        const particle = particles[index];
+        const local = Math.max(0, Math.min(1, (elapsed - particle.delay) / (duration - particle.delay)));
+        if (local <= 0) continue;
+
+        const travel = inward ? easeIn(local) : easeOut(local);
+        const r = inward
+          ? particle.distance * (1 - travel)
+          : particle.distance * travel;
+        const spiral = particle.angle + particle.bend * travel * 12;
+        const x = cx + Math.cos(spiral) * r;
+        const y = cy + Math.sin(spiral) * r * .72;
+        const speedGlow = inward ? travel : 1 - Math.abs(.5 - travel) * .8;
+        const length = 3 + speedGlow * (inward ? 19 : 13);
+        const tailX = x - Math.cos(spiral) * length * (inward ? -1 : 1);
+        const tailY = y - Math.sin(spiral) * length * .72 * (inward ? -1 : 1);
+
+        const fade = inward
+          ? Math.min(1, local * 3) * (1 - Math.max(0, (local - .86) / .14))
+          : Math.min(1, local * 4) * (1 - Math.max(0, (local - .9) / .1));
+
+        context.strokeStyle = `rgba(255,255,255,${particle.alpha * fade})`;
+        context.lineWidth = Math.max(.65, particle.size * .58);
+        context.beginPath();
+        context.moveTo(tailX, tailY);
+        context.lineTo(x, y);
+        context.stroke();
+
+        context.fillStyle = `rgba(255,255,255,${Math.min(1, particle.alpha * 1.22) * fade})`;
+        context.beginPath();
+        context.arc(x, y, particle.size, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      context.globalCompositeOperation = 'source-over';
+      if (global < 1 && document.documentElement.contains(canvas)) {
+        frame = requestAnimationFrame(draw);
+      } else {
+        context.clearRect(0, 0, width, height);
+      }
+    };
+
+    frame = requestAnimationFrame(draw);
+    canvas.dataset.frame = String(frame);
   }
 
   function warpPageIntoSingularity(point) {
     const selector = [
-      'main','header','nav','aside','section','article',
-      'h1','h2','h3','p','button','a','input','textarea',
-      '[role="button"]','[role="dialog"]',
+      'header','nav','aside','main > *','main section','main article',
+      'h1','h2','h3','p','button','a','[role="button"]',
       '[class*="card"]','[class*="panel"]'
     ].join(',');
 
@@ -1053,17 +1124,21 @@
         if (!(element instanceof HTMLElement)) return false;
         if (element.closest('.arrow-os-handoff')) return false;
         const rect = element.getBoundingClientRect();
-        if (rect.width < 12 || rect.height < 8) return false;
+        if (rect.width < 20 || rect.height < 10) return false;
         if (rect.bottom < 0 || rect.top > innerHeight || rect.right < 0 || rect.left > innerWidth) return false;
         const style = getComputedStyle(element);
-        return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity || 1) > .02;
+        return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity || 1) > .03;
       })
-      .slice(0, 76);
+      .sort((a, b) => {
+        const ar = a.getBoundingClientRect();
+        const br = b.getBoundingClientRect();
+        return (br.width * br.height) - (ar.width * ar.height);
+      })
+      .slice(0, 28);
 
     const maxDistance = Math.max(1, Math.hypot(innerWidth, innerHeight));
 
     candidates.forEach((element, index) => {
-      if (typeof element.animate !== 'function') return;
       const rect = element.getBoundingClientRect();
       const cx = rect.left + rect.width / 2;
       const cy = rect.top + rect.height / 2;
@@ -1072,43 +1147,17 @@
       const distance = Math.hypot(dx, dy);
       const normalized = Math.min(1, distance / maxDistance);
       const direction = dx * dy >= 0 ? 1 : -1;
-      const bendX = -dy * .08 * direction;
-      const bendY = dx * .08 * direction;
-      const delay = 55 + normalized * 135 + (index % 5) * 8;
-      const duration = 930 + normalized * 180;
-      const rotation = direction * (6 + normalized * 13);
+      const bendX = -dy * .055 * direction;
+      const bendY = dx * .055 * direction;
 
-      element.animate([
-        {
-          transform: 'translate(0,0) rotate(0deg) skew(0deg,0deg) scale(1)',
-          opacity: 1,
-          filter: 'blur(0px)',
-          offset: 0,
-        },
-        {
-          transform: `translate(${bendX}px,${bendY}px) rotate(${rotation * .28}deg) skewX(${direction * 2.5}deg) scale(.96)`,
-          opacity: .98,
-          filter: 'blur(.15px)',
-          offset: .28,
-        },
-        {
-          transform: `translate(${dx * .58 + bendX}px,${dy * .58 + bendY}px) rotate(${rotation * .7}deg) skewX(${direction * 8}deg) scale(.46,.72)`,
-          opacity: .78,
-          filter: 'blur(.8px)',
-          offset: .68,
-        },
-        {
-          transform: `translate(${dx}px,${dy}px) rotate(${rotation}deg) skewX(${direction * 18}deg) scale(.015,.12)`,
-          opacity: 0,
-          filter: 'blur(2.4px)',
-          offset: 1,
-        },
-      ], {
-        duration,
-        delay,
-        easing: 'cubic-bezier(.42,.02,.12,1)',
-        fill: 'forwards',
-      });
+      element.style.setProperty('--arrow-warp-x', dx + 'px');
+      element.style.setProperty('--arrow-warp-y', dy + 'px');
+      element.style.setProperty('--arrow-warp-bend-x', bendX + 'px');
+      element.style.setProperty('--arrow-warp-bend-y', bendY + 'px');
+      element.style.setProperty('--arrow-warp-rot', (direction * (4 + normalized * 10)) + 'deg');
+      element.style.setProperty('--arrow-warp-delay', (36 + normalized * 90 + (index % 4) * 7) + 'ms');
+      element.style.setProperty('--arrow-warp-duration', (850 + normalized * 170) + 'ms');
+      element.classList.add('arrow-os-gravity-target');
     });
   }
 
@@ -1142,10 +1191,10 @@
       '<span class="arrow-os-blackhole-disk disk-main"></span>' +
       '<span class="arrow-os-blackhole-photon-ring"></span>' +
       '<span class="arrow-os-blackhole-core"></span>' +
-      '<span class="arrow-os-particle-field"></span>' +
+      '<canvas class="arrow-os-particle-canvas" aria-hidden="true"></canvas>' +
       '<p>Collapsing to Orbit</p>';
-    populateParticles(overlay.querySelector('.arrow-os-particle-field'), 118, true);
     document.body.appendChild(overlay);
+    startParticleCanvas(overlay.querySelector('.arrow-os-particle-canvas'), 'in');
 
     requestAnimationFrame(() => {
       document.documentElement.classList.add('arrow-os-blackhole-active');
@@ -1179,10 +1228,10 @@
       '<span class="arrow-os-center-arrival-core"></span>' +
       '<span class="arrow-os-center-shock shock-a"></span>' +
       '<span class="arrow-os-center-shock shock-b"></span>' +
-      '<span class="arrow-os-particle-field"></span>' +
+      '<canvas class="arrow-os-particle-canvas" aria-hidden="true"></canvas>' +
       '<p>Arriving in ' + module.toUpperCase() + '</p>';
-    populateParticles(overlay.querySelector('.arrow-os-particle-field'), 104, false);
     document.body.appendChild(overlay);
+    startParticleCanvas(overlay.querySelector('.arrow-os-particle-canvas'), 'out');
 
     setTimeout(() => {
       overlay.remove();
