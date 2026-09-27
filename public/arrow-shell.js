@@ -1023,7 +1023,12 @@
 
   function startParticleCanvas(canvas, direction) {
     if (!(canvas instanceof HTMLCanvasElement)) return;
-    const context = canvas.getContext('2d');
+    let context = null;
+    try {
+      context = canvas.getContext('2d');
+    } catch {
+      return;
+    }
     if (!context) return;
 
     const width = innerWidth;
