@@ -1172,6 +1172,15 @@ input:focus-visible {
   text-transform: uppercase;
 }
 
+.world-shell.travel-launching .travel-status {
+  animation: transfer-status-away 1000ms ease both;
+}
+
+@keyframes transfer-status-away {
+  0%,52% { opacity: 1; }
+  72%,100% { opacity: 0; }
+}
+
 .travel-status-dot {
   width: 5px;
   height: 5px;
@@ -1264,7 +1273,7 @@ input:focus-visible {
   100% {
     transform:
       translate(var(--flight-target-x), var(--flight-target-y))
-      scale(82);
+      scale(140);
     opacity: 1;
   }
 }
@@ -1408,9 +1417,16 @@ input:focus-visible {
   animation: incoming-label 900ms 80ms ease both;
 }
 
-.world-shell.incoming-active .world-scene {
+.world-shell.incoming-active .world-canvas {
   transform-origin: 50% 50%;
-  animation: orbit-world-reform 1050ms cubic-bezier(.16,.82,.14,1) both;
+  animation: orbit-canvas-reform 1050ms cubic-bezier(.16,.82,.14,1) both;
+}
+
+.world-shell.incoming-active .orbit-links,
+.world-shell.incoming-active .destination-layer,
+.world-shell.incoming-active .orbit-core-label,
+.world-shell.incoming-active .stage-copy {
+  animation: orbit-ui-reform 1050ms ease both;
 }
 
 .world-shell.incoming-active .craft-orbit {
@@ -1460,19 +1476,25 @@ input:focus-visible {
   }
 }
 
-@keyframes orbit-world-reform {
+@keyframes orbit-canvas-reform {
   0%,18% {
     opacity: 0;
     transform: scale(.82);
   }
   56% {
-    opacity: .42;
+    opacity: .46;
     transform: scale(.94);
   }
   100% {
     opacity: 1;
     transform: scale(1);
   }
+}
+
+@keyframes orbit-ui-reform {
+  0%,34% { opacity: 0; }
+  72% { opacity: .58; }
+  100% { opacity: 1; }
 }
 
 @keyframes orbit-live-craft-reveal {
