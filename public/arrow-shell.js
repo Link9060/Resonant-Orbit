@@ -247,6 +247,7 @@
     mount.dataset.arrowOsMounted = 'true';
 
     const module = VALID_MODULES.has(mount.dataset.module) ? mount.dataset.module : 'relay';
+    const orbitEnabled = mount.dataset.orbitAccess !== 'disabled';
     const root = document.createElement('div');
     root.className = 'arrow-os-root';
     root.dataset.module = module;
@@ -280,6 +281,7 @@
       mount,
       root,
       module,
+      orbitEnabled,
       trigger: root.querySelector('.arrow-os-trigger'),
       content: root.querySelector('.arrow-os-content'),
       hover: false,
@@ -324,9 +326,17 @@
     if (module === 'orbit') {
       orbitButton.classList.add('is-active');
       orbitButton.setAttribute('aria-current', 'page');
+    } else if (!orbitEnabled) {
+      orbitButton.classList.add('is-disabled');
+      orbitButton.disabled = true;
+      orbitButton.setAttribute('aria-disabled', 'true');
+      orbitButton.setAttribute('aria-label', 'Orbit — coming soon');
+      orbitButton.setAttribute('title', 'Orbit — coming soon');
+      orbitButton.querySelector('span')?.replaceChildren('Orbit · Soon');
     }
 
     orbitButton.addEventListener('click', () => {
+      if (!orbitEnabled && module !== 'orbit') return;
       if (module === 'orbit') {
         closePanel();
         const core = document.querySelector('.orbit-core-label');
