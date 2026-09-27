@@ -701,25 +701,52 @@
   text-shadow: 0 0 18px rgba(255,255,255,.24);
 }
 
-.arrow-os-particle-field {
+.arrow-os-particle-canvas {
   position: absolute;
+  inset: 0;
   z-index: 12;
-  width: 0;
-  height: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
 }
 
-.arrow-os-transition-particle {
-  position: absolute;
-  width: var(--particle-size);
-  height: var(--particle-size);
-  margin: calc(var(--particle-size) / -2);
-  border-radius: 999px;
-  background: #fff;
-  box-shadow:
-    0 0 7px rgba(255,255,255,.96),
-    0 0 18px rgba(255,255,255,.42),
-    0 0 34px rgba(255,255,255,.14);
-  opacity: 0;
+.arrow-os-gravity-target {
+  transform-origin: center !important;
+  will-change: transform, opacity;
+  animation:
+    arrow-os-element-gravity
+    var(--arrow-warp-duration)
+    var(--arrow-warp-delay)
+    cubic-bezier(.42,.02,.12,1)
+    both !important;
+}
+
+@keyframes arrow-os-element-gravity {
+  0% {
+    transform: translate3d(0,0,0) rotate(0deg) scale(1,1);
+    opacity: 1;
+  }
+  30% {
+    transform:
+      translate3d(var(--arrow-warp-bend-x),var(--arrow-warp-bend-y),0)
+      rotate(calc(var(--arrow-warp-rot) * .28))
+      scale(.96,.98);
+    opacity: .98;
+  }
+  70% {
+    transform:
+      translate3d(calc(var(--arrow-warp-x) * .62),calc(var(--arrow-warp-y) * .62),0)
+      rotate(calc(var(--arrow-warp-rot) * .72))
+      scale(.48,.72);
+    opacity: .72;
+  }
+  100% {
+    transform:
+      translate3d(var(--arrow-warp-x),var(--arrow-warp-y),0)
+      rotate(var(--arrow-warp-rot))
+      scale(.025,.14);
+    opacity: 0;
+  }
 }
 
 /* Massive cinematic black-hole return ---------------------------------- */
@@ -743,8 +770,8 @@
 .arrow-os-blackhole-lens,
 .arrow-os-blackhole-disk,
 .arrow-os-blackhole-photon-ring,
-.arrow-os-blackhole-core,
-.arrow-os-blackhole-departure .arrow-os-particle-field {
+.arrow-os-blackhole-core
+{
   position: absolute;
   left: var(--bh-x);
   top: var(--bh-y);
@@ -873,10 +900,6 @@
   animation: arrow-os-bh-core 1180ms 90ms cubic-bezier(.18,.8,.12,1) both;
 }
 
-.arrow-os-blackhole-departure .arrow-os-transition-particle[data-direction="in"] {
-  animation: arrow-os-particle-collapse 980ms calc(110ms + var(--particle-delay)) cubic-bezier(.34,.02,.12,1) both;
-}
-
 .arrow-os-blackhole-departure p {
   animation: arrow-os-blackhole-copy 1320ms ease both;
 }
@@ -944,26 +967,6 @@
   100% { transform: scale(.16); opacity: 1; }
 }
 
-@keyframes arrow-os-particle-collapse {
-  0% {
-    transform: translate(var(--particle-x),var(--particle-y)) scale(var(--particle-stretch),.55);
-    opacity: 0;
-  }
-  10% { opacity: .96; }
-  54% {
-    opacity: .9;
-    filter: blur(.2px);
-  }
-  88% {
-    opacity: .8;
-  }
-  100% {
-    transform: translate(0,0) scale(.08,2.8);
-    opacity: 0;
-    filter: blur(1.4px);
-  }
-}
-
 @keyframes arrow-os-blackhole-copy {
   0%,34% { opacity: 0; transform: translate(-50%,8px); }
   48%,72% { opacity: .72; transform: translate(-50%,0); }
@@ -1017,10 +1020,6 @@
   animation: arrow-os-center-shock 900ms 210ms cubic-bezier(.14,.76,.12,1) both;
 }
 
-.arrow-os-center-arrival .arrow-os-transition-particle[data-direction="out"] {
-  animation: arrow-os-particle-release 900ms calc(120ms + var(--particle-delay)) cubic-bezier(.14,.76,.12,1) both;
-}
-
 .arrow-os-center-arrival p {
   animation: arrow-os-center-copy 1160ms ease both;
 }
@@ -1043,19 +1042,6 @@
   0% { transform: scale(.12); opacity: 0; }
   18% { opacity: .8; }
   100% { transform: scale(22); opacity: 0; }
-}
-
-@keyframes arrow-os-particle-release {
-  0% {
-    transform: translate(0,0) scale(.22,2.8);
-    opacity: 0;
-  }
-  12% { opacity: 1; }
-  68% { opacity: .9; }
-  100% {
-    transform: translate(var(--particle-x),var(--particle-y)) scale(var(--particle-stretch),.55);
-    opacity: 0;
-  }
 }
 
 @keyframes arrow-os-center-copy {
@@ -1162,8 +1148,7 @@ html[data-arrow-motion="reduce"] .arrow-os-content,
 html[data-arrow-motion="reduce"] .arrow-os-mark,
 html[data-arrow-motion="reduce"] .arrow-os-handoff,
 html[data-arrow-motion="reduce"] .arrow-os-blackhole-core,
-html[data-arrow-motion="reduce"] .arrow-os-blackhole-glow,
-html[data-arrow-motion="reduce"] .arrow-os-transition-particle {
+html[data-arrow-motion="reduce"] .arrow-os-blackhole-glow {
   animation-duration: .01ms !important;
   transition-duration: .01ms !important;
 }
@@ -1174,8 +1159,7 @@ html[data-arrow-motion="reduce"] .arrow-os-transition-particle {
   .arrow-os-mark,
   .arrow-os-handoff,
   .arrow-os-blackhole-core,
-  .arrow-os-blackhole-glow,
-  .arrow-os-transition-particle {
+  .arrow-os-blackhole-glow {
     animation-duration: .01ms !important;
     transition-duration: .01ms !important;
   }
