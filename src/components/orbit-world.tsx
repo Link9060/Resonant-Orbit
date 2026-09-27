@@ -505,9 +505,6 @@ export function OrbitWorld() {
     const draw = (now: number) => {
       if (!running || document.hidden) return;
 
-      const dt = Math.min(0.05, Math.max(0, (now - lastFrame) / 1000));
-      lastFrame = now;
-
       const time = now / 1000;
       const pointer = pointerRef.current;
       const rotation = rotationRef.current;
@@ -529,6 +526,8 @@ export function OrbitWorld() {
         return;
       }
       lastPaint = now;
+      const dt = Math.min(0.05, Math.max(0, (now - lastFrame) / 1000));
+      lastFrame = now;
 
       if (!rotation.dragging && !locked) {
         rotation.targetYaw += rotation.velocityYaw;
