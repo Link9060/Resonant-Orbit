@@ -186,6 +186,16 @@ input:focus-visible {
   overflow: hidden;
   cursor: grab;
   touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.world-shell input,
+.world-shell textarea,
+.world-shell [contenteditable="true"],
+.world-shell .orbit-navigator {
+  user-select: text;
+  -webkit-user-select: text;
 }
 
 .world-shell.is-dragging {
@@ -599,6 +609,15 @@ input:focus-visible {
   opacity: 0;
 }
 
+.node-status {
+  margin-top: 2px;
+  color: rgba(255, 255, 255, 0.34);
+  font-size: 7px;
+  font-weight: 560;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+
 .node-copy strong {
   font-size: 14px;
   font-weight: 470;
@@ -876,7 +895,8 @@ input:focus-visible {
 .travel-returning .wake-three { animation: travel-wake-home 1050ms 110ms ease-out both; }
 
 .world-shell.travel-launching .world-canvas {
-  filter: blur(.7px);
+  opacity: .82;
+  transform: scale(1.015);
 }
 
 .world-shell.travel-launching .destination-node:not(.is-travel-target) {
@@ -896,8 +916,8 @@ input:focus-visible {
 }
 
 .world-shell.travel-preview .world-canvas {
-  transform: scale(1.22);
-  filter: blur(4px);
+  transform: scale(1.14);
+  opacity: .16;
 }
 
 .world-shell.travel-returning .world-canvas {
