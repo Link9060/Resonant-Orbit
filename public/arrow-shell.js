@@ -1013,18 +1013,93 @@
 
   function populateParticles(container, count, inward) {
     if (!container) return;
+    const maxDistance = Math.max(innerWidth, innerHeight) * .72;
     for (let index = 0; index < count; index++) {
-      const angle = Math.PI * 2 * index / count + (index % 3) * .045;
-      const distance = 90 + (index % 8) * 34;
+      const angle = Math.PI * 2 * index / count + (index % 5) * .031;
+      const band = index % 11;
+      const distance = Math.min(maxDistance, 150 + band * 58 + (index % 3) * 24);
       const particle = document.createElement('span');
       particle.className = 'arrow-os-transition-particle';
       particle.style.setProperty('--particle-x', (Math.cos(angle) * distance) + 'px');
       particle.style.setProperty('--particle-y', (Math.sin(angle) * distance) + 'px');
-      particle.style.setProperty('--particle-delay', ((index % 7) * 13) + 'ms');
-      particle.style.setProperty('--particle-size', (1.5 + (index % 4) * .75) + 'px');
+      particle.style.setProperty('--particle-delay', ((index % 13) * 11) + 'ms');
+      particle.style.setProperty('--particle-size', (2 + (index % 5) * .9) + 'px');
+      particle.style.setProperty('--particle-stretch', String(1 + (index % 4) * .9));
       particle.dataset.direction = inward ? 'in' : 'out';
       container.appendChild(particle);
     }
+  }
+
+  function warpPageIntoSingularity(point) {
+    const selector = [
+      'main','header','nav','aside','section','article',
+      'h1','h2','h3','p','button','a','input','textarea',
+      '[role="button"]','[role="dialog"]',
+      '[class*="card"]','[class*="panel"]'
+    ].join(',');
+
+    const candidates = [...document.querySelectorAll(selector)]
+      .filter(element => {
+        if (!(element instanceof HTMLElement)) return false;
+        if (element.closest('.arrow-os-handoff')) return false;
+        const rect = element.getBoundingClientRect();
+        if (rect.width < 12 || rect.height < 8) return false;
+        if (rect.bottom < 0 || rect.top > innerHeight || rect.right < 0 || rect.left > innerWidth) return false;
+        const style = getComputedStyle(element);
+        return style.visibility !== 'hidden' && style.display !== 'none' && Number(style.opacity || 1) > .02;
+      })
+      .slice(0, 76);
+
+    const maxDistance = Math.max(1, Math.hypot(innerWidth, innerHeight));
+
+    candidates.forEach((element, index) => {
+      if (typeof element.animate !== 'function') return;
+      const rect = element.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = point.x - cx;
+      const dy = point.y - cy;
+      const distance = Math.hypot(dx, dy);
+      const normalized = Math.min(1, distance / maxDistance);
+      const direction = dx * dy >= 0 ? 1 : -1;
+      const bendX = -dy * .08 * direction;
+      const bendY = dx * .08 * direction;
+      const delay = 55 + normalized * 135 + (index % 5) * 8;
+      const duration = 930 + normalized * 180;
+      const rotation = direction * (6 + normalized * 13);
+
+      element.animate([
+        {
+          transform: 'translate(0,0) rotate(0deg) skew(0deg,0deg) scale(1)',
+          opacity: 1,
+          filter: 'blur(0px)',
+          offset: 0,
+        },
+        {
+          transform: `translate(${bendX}px,${bendY}px) rotate(${rotation * .28}deg) skewX(${direction * 2.5}deg) scale(.96)`,
+          opacity: .98,
+          filter: 'blur(.15px)',
+          offset: .28,
+        },
+        {
+          transform: `translate(${dx * .58 + bendX}px,${dy * .58 + bendY}px) rotate(${rotation * .7}deg) skewX(${direction * 8}deg) scale(.46,.72)`,
+          opacity: .78,
+          filter: 'blur(.8px)',
+          offset: .68,
+        },
+        {
+          transform: `translate(${dx}px,${dy}px) rotate(${rotation}deg) skewX(${direction * 18}deg) scale(.015,.12)`,
+          opacity: 0,
+          filter: 'blur(2.4px)',
+          offset: 1,
+        },
+      ], {
+        duration,
+        delay,
+        easing: 'cubic-bezier(.42,.02,.12,1)',
+        fill: 'forwards',
+      });
+    });
   }
 
   function launchToOrbit(module, anchor) {
@@ -1038,8 +1113,7 @@
       return;
     }
 
-    const source = anchor || moduleOrbitControl(module);
-    const point = viewportPoint(source);
+    const point = { x: innerWidth / 2, y: innerHeight / 2 };
     document.documentElement.style.setProperty('--arrow-bh-x', point.x + 'px');
     document.documentElement.style.setProperty('--arrow-bh-y', point.y + 'px');
 
@@ -1050,18 +1124,25 @@
     overlay.style.setProperty('--bh-x', point.x + 'px');
     overlay.style.setProperty('--bh-y', point.y + 'px');
     overlay.innerHTML =
-      '<span class="arrow-os-blackhole-glow"></span>' +
+      '<span class="arrow-os-gravity-vignette"></span>' +
+      '<span class="arrow-os-blackhole-halo"></span>' +
+      '<span class="arrow-os-blackhole-lens lens-upper"></span>' +
+      '<span class="arrow-os-blackhole-lens lens-lower"></span>' +
+      '<span class="arrow-os-blackhole-disk disk-far"></span>' +
+      '<span class="arrow-os-blackhole-disk disk-main"></span>' +
+      '<span class="arrow-os-blackhole-photon-ring"></span>' +
       '<span class="arrow-os-blackhole-core"></span>' +
       '<span class="arrow-os-particle-field"></span>' +
       '<p>Collapsing to Orbit</p>';
-    populateParticles(overlay.querySelector('.arrow-os-particle-field'), 28, true);
+    populateParticles(overlay.querySelector('.arrow-os-particle-field'), 118, true);
     document.body.appendChild(overlay);
 
     requestAnimationFrame(() => {
       document.documentElement.classList.add('arrow-os-blackhole-active');
+      warpPageIntoSingularity(point);
     });
 
-    setTimeout(() => location.assign(url.toString()), 940);
+    setTimeout(() => location.assign(url.toString()), 1380);
   }
 
   function receiveFromOrbit(module) {
@@ -1086,15 +1167,17 @@
     overlay.setAttribute('aria-live', 'polite');
     overlay.innerHTML =
       '<span class="arrow-os-center-arrival-core"></span>' +
+      '<span class="arrow-os-center-shock shock-a"></span>' +
+      '<span class="arrow-os-center-shock shock-b"></span>' +
       '<span class="arrow-os-particle-field"></span>' +
       '<p>Arriving in ' + module.toUpperCase() + '</p>';
-    populateParticles(overlay.querySelector('.arrow-os-particle-field'), 26, false);
+    populateParticles(overlay.querySelector('.arrow-os-particle-field'), 104, false);
     document.body.appendChild(overlay);
 
     setTimeout(() => {
       overlay.remove();
       clear();
-    }, 900);
+    }, 1260);
   }
 
   function pruneInstances() {
