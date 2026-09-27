@@ -23,12 +23,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260927-blackhole-canvas-v1`} />
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260927-blackhole-canvas-v2`} />
       </head>
       <body>
         {children}
         <Script
-          src={`${arrowShellBase}/arrow-shell.js?v=20260927-blackhole-canvas-v1`}
+          src={`${arrowShellBase}/arrow-shell.js?v=20260927-blackhole-canvas-v2`}
           strategy="afterInteractive"
         />
       </body>
