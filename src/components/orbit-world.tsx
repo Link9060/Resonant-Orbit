@@ -1002,7 +1002,9 @@ export function OrbitWorld() {
 
     const touchScale = event.pointerType === 'touch' ? 0.78 : 1;
     const yawDelta = dx * 0.0054 * touchScale;
-    const pitchDelta = dy * 0.0045 * touchScale;
+    // Direct-manipulation drag: move the globe in the same vertical
+    // direction as the pointer instead of behaving like an inverted camera.
+    const pitchDelta = -dy * 0.0045 * touchScale;
     rotation.targetYaw += yawDelta;
     rotation.targetPitch = clamp(
       rotation.targetPitch + pitchDelta,
