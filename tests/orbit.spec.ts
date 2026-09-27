@@ -264,6 +264,28 @@ test('viewport opts into full safe-area coverage', async ({ page }) => {
   expect(viewport).toContain('viewport-fit=cover');
 });
 
+test('Waypoint return uses the canonical one-second Orbit landing path', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+  });
+
+  await page.goto('/?from=waypoint');
+
+  const shell = page.locator('.world-shell');
+  await expect(shell).toHaveAttribute('data-incoming-from', 'waypoint');
+
+  const craft = page.locator('.incoming-craft');
+  await expect(craft).toBeVisible();
+  await expect(craft).toHaveCSS('animation-duration', '1s');
+
+  const incomingX = await shell.evaluate(element =>
+    getComputedStyle(element).getPropertyValue('--incoming-x').trim(),
+  );
+  expect(incomingX).toBe('-40vw');
+});
+
 test('reduced-motion incoming handoff clears the source query immediately', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {
