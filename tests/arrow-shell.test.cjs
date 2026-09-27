@@ -67,12 +67,24 @@ test('shared center handoff API is available to every non-Orbit module', async (
   } finally { f.close(); }
 });
 
+test('Back to Orbit collapses the current center into a black-hole handoff', async () => {
+  const f = await fixture('waypoint');
+  try {
+    const anchor = f.w.document.querySelector('.arrow-os-trigger');
+    f.w.ArrowOS.launchToOrbit('waypoint', anchor);
+    await delay(20);
+    assert.equal(f.w.document.querySelectorAll('.arrow-os-blackhole-departure').length, 1);
+    assert.equal(f.w.document.querySelectorAll('.arrow-os-transition-particle').length, 28);
+    assert.ok(f.w.document.documentElement.classList.contains('arrow-os-blackhole-active'));
+  } finally { f.close(); }
+});
+
 test('arrival creates one overlay, even while app content changes', async () => {
   const f = await fixture('atlas', '?from=orbit');
   try {
-    assert.equal(f.w.document.querySelectorAll('.arrow-os-arrival').length, 1);
+    assert.equal(f.w.document.querySelectorAll('.arrow-os-center-arrival').length, 1);
     for (let i = 0; i < 10; i++) f.w.ArrowOS.mountAll();
-    assert.equal(f.w.document.querySelectorAll('.arrow-os-arrival').length, 1);
+    assert.equal(f.w.document.querySelectorAll('.arrow-os-center-arrival').length, 1);
     assert.ok(f.deliveries() < 100);
   } finally { f.close(); }
 });
