@@ -968,3 +968,41 @@ html[data-arrow-experience="glass"] .arrow-os-panel {
 /* Allow the content to shrink inside a short viewport instead of being clipped. */
 .arrow-os-panel-head { flex-shrink: 0; }
 .arrow-os-panel-body { min-height: 0; overflow-y: auto; overscroll-behavior: contain; }
+
+
+/* Waypoint owns action/time data; shell panels are intentionally quick shared views. */
+.arrow-os-owner-note {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 3px 12px;
+  align-items: center;
+  margin-bottom: 12px;
+  padding: 10px 11px;
+  border: 1px solid rgb(var(--arrow-os-fg) / .1);
+  border-radius: 11px;
+  background: rgb(var(--arrow-os-fg) / .035);
+}
+.arrow-os-owner-note span {
+  color: rgb(var(--arrow-os-fg) / .45);
+  font-size: 8px;
+  font-weight: 760;
+  letter-spacing: .14em;
+}
+.arrow-os-owner-note p {
+  grid-column: 1 / -1;
+  margin: 0;
+  color: rgb(var(--arrow-os-fg) / .52);
+  font-size: 9px;
+  line-height: 1.45;
+}
+.arrow-os-owner-note a {
+  grid-column: 2;
+  grid-row: 1;
+  color: rgb(var(--arrow-os-fg) / .78);
+  font-size: 9px;
+  text-decoration: none;
+}
+.arrow-os-owner-note a:hover,
+.arrow-os-owner-note a:focus-visible {
+  color: rgb(var(--arrow-os-fg));
+}
