@@ -98,6 +98,7 @@ test('travel starts from the live craft pose and uses a one-second continuous an
     localStorage.setItem('orbit-startup-seen-v2', '1');
   });
   await page.goto('/');
+  await expect(page.locator('.world-shell')).toBeVisible();
 
   await page.keyboard.press('3');
   await page.waitForTimeout(180);
