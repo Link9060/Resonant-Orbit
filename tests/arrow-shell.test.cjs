@@ -57,6 +57,16 @@ for (const module of ['orbit', 'relay', 'atlas', 'ravin', 'waypoint']) {
   });
 }
 
+
+test('shared center handoff API is available to every non-Orbit module', async () => {
+  const f = await fixture('waypoint');
+  try {
+    assert.equal(typeof f.w.ArrowOS.launchToOrbit, 'function');
+    const orbitButton = f.w.document.querySelector('.arrow-os-orbit');
+    assert.ok(orbitButton);
+  } finally { f.close(); }
+});
+
 test('arrival creates one overlay, even while app content changes', async () => {
   const f = await fixture('atlas', '?from=orbit');
   try {
