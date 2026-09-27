@@ -7,6 +7,7 @@ async function openOrbit(page: import('@playwright/test').Page) {
     localStorage.setItem('orbit-startup-seen-v2', '1');
   });
   await page.goto('/');
+  await expect(page.locator('.world-shell')).toBeVisible();
 }
 
 test('ARROW login is the first surface before Orbit mounts', async ({ page }) => {
