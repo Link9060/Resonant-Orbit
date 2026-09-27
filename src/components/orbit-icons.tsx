@@ -63,6 +63,15 @@ export function CoreIcon(props: IconProps) {
   return <BaseIcon {...props}><circle cx="12" cy="12" r="3.25" /><path d="M12 3.5c3.9 0 7 3.8 7 8.5s-3.1 8.5-7 8.5-7-3.8-7-8.5 3.1-8.5 7-8.5Z" /><path d="M4.7 8.2c2-3.4 6.8-4.2 10.9-1.8s5.7 7 3.8 10.4-6.8 4.2-10.9 1.8S2.7 11.6 4.7 8.2Z" /></BaseIcon>;
 }
 
+export function WaypointIcon(props: IconProps) {
+  return <BaseIcon {...props}>
+    <circle cx="12" cy="12" r="2.1" fill="currentColor" stroke="none" />
+    <circle cx="12" cy="12" r="5.4" />
+    <circle cx="12" cy="12" r="8.5" opacity=".55" />
+    <path d="M12 1.7v2M12 20.3v2M1.7 12h2M20.3 12h2" />
+  </BaseIcon>;
+}
+
 export function FutureNodeIcon(props: IconProps) {
   return <BaseIcon {...props}><path d="m12 3 7.5 4.4v9.2L12 21l-7.5-4.4V7.4L12 3Z" /><path d="m8.6 9 3.4 2 3.4-2M12 11v4" /><circle cx="12" cy="15.8" r=".8" fill="currentColor" stroke="none" /></BaseIcon>;
 }
