@@ -70,8 +70,27 @@ type RotationState = {
 type FlightPath = {
   startX: number;
   startY: number;
+  viaX: number;
+  viaY: number;
   targetX: number;
   targetY: number;
+  startRotation: number;
+  headingRotation: number;
+  targetRotation: number;
+  startScale: number;
+  startOpacity: number;
+  behind: boolean;
+};
+
+type CraftPose = {
+  x: number;
+  y: number;
+  rotation: number;
+  z: number;
+  depth: number;
+  sphereRadius: number;
+  occluded: boolean;
+  valid: boolean;
 };
 
 type UiState = {
@@ -88,6 +107,28 @@ const destinations = ARROW_DESTINATIONS;
 const destinationIndex = ARROW_DESTINATION_BY_ID;
 const VIEW_STORAGE_KEY = 'orbit-view-v2';
 const WAYPOINT_URL = 'https://link9060.github.io/Resonant-Waypoint/';
+const FLIGHT_DURATION_MS = 1000;
+const EMPTY_FLIGHT_PATH: FlightPath = {
+  startX: 0,
+  startY: 0,
+  viaX: 0,
+  viaY: 0,
+  targetX: 0,
+  targetY: 0,
+  startRotation: 0,
+  headingRotation: 0,
+  targetRotation: 0,
+  startScale: 1,
+  startOpacity: 1,
+  behind: false,
+};
+
+function nearestRotationDegrees(angle: number, current: number) {
+  let next = angle;
+  while (next - current > 180) next -= 360;
+  while (next - current < -180) next += 360;
+  return next;
+}
 
 function readStoredList(key: string): Array<Record<string, unknown>> {
   try {
@@ -177,6 +218,16 @@ export function OrbitWorld() {
   const autoYawRef = useRef(0);
   const autoResumeAtRef = useRef(0);
   const craftAngleRef = useRef(-0.8);
+  const craftPoseRef = useRef<CraftPose>({
+    x: 0,
+    y: 0,
+    rotation: 0,
+    z: 0,
+    depth: 0.5,
+    sphereRadius: 0,
+    occluded: false,
+    valid: false,
+  });
   const timersRef = useRef<number[]>([]);
   const safeRectsRef = useRef<ScreenRect[]>([]);
   const reducedMotionRef = useRef(false);
@@ -207,10 +258,7 @@ export function OrbitWorld() {
   const [travelPhase, setTravelPhase] = useState<TravelPhase>('idle');
   const [travelId, setTravelId] = useState<Destination['id'] | null>(null);
   const [flightPath, setFlightPath] = useState<FlightPath>({
-    startX: 0,
-    startY: 0,
-    targetX: 0,
-    targetY: 0,
+    ...EMPTY_FLIGHT_PATH,
   });
   const [dragging, setDragging] = useState(false);
   const [navigatorOpen, setNavigatorOpen] = useState(false);
@@ -258,7 +306,7 @@ export function OrbitWorld() {
         setTravelPhase('idle');
         setTravelId(null);
         setSelectedId('orbit');
-        setFlightPath({ startX: 0, startY: 0, targetX: 0, targetY: 0 });
+        setFlightPath({ ...EMPTY_FLIGHT_PATH });
         impulseRef.current = 0.65;
       }, duration),
     );
@@ -578,8 +626,7 @@ export function OrbitWorld() {
       const normalizedY = (pointer.y - centerY) / Math.max(1, height * 0.5);
       const worldScale =
         (width < 720 ? 0.9 : 1.12) *
-        zoom.current *
-        (1 + travelMix * 0.16);
+        zoom.current;
 
       const worldYaw = autoYawRef.current + rotation.yaw;
       const worldPitch =
@@ -831,6 +878,17 @@ export function OrbitWorld() {
       const craftOcclusion = behindDisc
         ? smoothstep(-0.02, 0.12, craftPoint.z)
         : 1;
+
+      craftPoseRef.current = {
+        x: craftPoint.x - centerX,
+        y: craftPoint.y - centerY,
+        rotation: craftRotation,
+        z: craftPoint.z,
+        depth: craftPoint.depth,
+        sphereRadius,
+        occluded: behindDisc || craftOcclusion < 0.18,
+        valid: true,
+      };
 
       if (craftRef.current) {
         craftRef.current.style.setProperty('--craft-x', `${craftPoint.x}px`);
@@ -1117,8 +1175,84 @@ export function OrbitWorld() {
   const launchDestination = () => {
     if (!selected || interactionLocked) return;
 
-    const start = relativePoint(craftRef.current);
-    const target = relativePoint(nodeRefs.current[selected.id] ?? null);
+    const pose = craftPoseRef.current;
+    const fallbackStart = relativePoint(craftRef.current);
+    const start = pose.valid
+      ? { x: pose.x, y: pose.y }
+      : fallbackStart;
+
+    const targetNode = nodeRefs.current[selected.id] ?? null;
+    const targetLandmark =
+      targetNode?.querySelector<HTMLElement>('.node-landmark') ?? targetNode;
+    const target = relativePoint(targetLandmark);
+
+    const rotation = rotationRef.current;
+    rotation.targetYaw = rotation.yaw;
+    rotation.targetPitch = rotation.pitch;
+    rotation.velocityYaw = 0;
+    rotation.velocityPitch = 0;
+    autoResumeAtRef.current = performance.now() + FLIGHT_DURATION_MS + 600;
+
+    const dx = target.x - start.x;
+    const dy = target.y - start.y;
+    const distance = Math.max(1, Math.hypot(dx, dy));
+    const perpendicular = { x: -dy / distance, y: dx / distance };
+
+    let viaX: number;
+    let viaY: number;
+
+    if (pose.valid && pose.occluded) {
+      const startAngle = Math.atan2(start.y, start.x);
+      const targetAngle = Math.atan2(target.y, target.x);
+      const angleDelta = Math.atan2(
+        Math.sin(targetAngle - startAngle),
+        Math.cos(targetAngle - startAngle),
+      );
+      const direction = angleDelta === 0 ? 1 : Math.sign(angleDelta);
+      const emergeAngle =
+        startAngle +
+        direction *
+          Math.min(1.2, Math.max(0.62, Math.abs(angleDelta) * 0.58));
+      const emergeRadius = Math.max(
+        pose.sphereRadius * 1.18,
+        Math.hypot(start.x, start.y) * 1.04,
+      );
+
+      viaX = Math.cos(emergeAngle) * emergeRadius;
+      viaY = Math.sin(emergeAngle) * emergeRadius;
+    } else {
+      const midpointX = start.x + dx * 0.5;
+      const midpointY = start.y + dy * 0.5;
+      const curve = clamp(distance * 0.14, 18, 72);
+      const candidateA = {
+        x: midpointX + perpendicular.x * curve,
+        y: midpointY + perpendicular.y * curve,
+      };
+      const candidateB = {
+        x: midpointX - perpendicular.x * curve,
+        y: midpointY - perpendicular.y * curve,
+      };
+      const distanceA = Math.hypot(candidateA.x, candidateA.y);
+      const distanceB = Math.hypot(candidateB.x, candidateB.y);
+      const via = distanceA >= distanceB ? candidateA : candidateB;
+
+      viaX = via.x;
+      viaY = via.y;
+    }
+
+    const firstHeading =
+      Math.atan2(viaY - start.y, viaX - start.x) * (180 / Math.PI);
+    const finalHeading =
+      Math.atan2(target.y - viaY, target.x - viaX) * (180 / Math.PI);
+    const startRotation = pose.valid ? pose.rotation : firstHeading;
+    const headingRotation = nearestRotationDegrees(
+      firstHeading,
+      startRotation,
+    );
+    const targetRotation = nearestRotationDegrees(
+      finalHeading,
+      headingRotation,
+    );
 
     clearTimers();
     pointerRef.current.inside = false;
@@ -1126,17 +1260,25 @@ export function OrbitWorld() {
     setFlightPath({
       startX: start.x,
       startY: start.y,
+      viaX,
+      viaY,
       targetX: target.x,
       targetY: target.y,
+      startRotation,
+      headingRotation,
+      targetRotation,
+      startScale: pose.valid ? 0.76 + pose.depth * 0.32 : 1,
+      startOpacity: pose.valid && pose.occluded ? 0.08 : 1,
+      behind: pose.valid && pose.occluded,
     });
     setTravelPhase('launching');
-    impulseRef.current = 1.35;
+    impulseRef.current = 1.15;
 
     const destination = selected;
-    const duration = reducedMotionRef.current ? 80 : 1450;
+    const duration = reducedMotionRef.current ? 80 : FLIGHT_DURATION_MS;
     timersRef.current.push(
       window.setTimeout(() => {
-        impulseRef.current = 0.8;
+        impulseRef.current = 0.6;
         if (destination.href) {
           openDestination(destination);
           return;
@@ -1318,8 +1460,15 @@ export function OrbitWorld() {
   const flightStyle = {
     '--flight-start-x': `${flightPath.startX}px`,
     '--flight-start-y': `${flightPath.startY}px`,
+    '--flight-via-x': `${flightPath.viaX}px`,
+    '--flight-via-y': `${flightPath.viaY}px`,
     '--flight-target-x': `${flightPath.targetX}px`,
     '--flight-target-y': `${flightPath.targetY}px`,
+    '--flight-start-rotation': `${flightPath.startRotation}deg`,
+    '--flight-heading-rotation': `${flightPath.headingRotation}deg`,
+    '--flight-target-rotation': `${flightPath.targetRotation}deg`,
+    '--flight-start-scale': flightPath.startScale,
+    '--flight-start-opacity': flightPath.startOpacity,
   } as CSSProperties;
 
   return (
@@ -1335,6 +1484,7 @@ export function OrbitWorld() {
         `render-${renderProfile}`,
       ].filter(Boolean).join(' ')}
       data-travel-destination={travelId ?? undefined}
+      data-flight-behind={flightPath.behind ? 'true' : 'false'}
       data-incoming-from={incomingFrom ?? undefined}
       style={flightStyle}
       onPointerMove={handlePointerMove}
