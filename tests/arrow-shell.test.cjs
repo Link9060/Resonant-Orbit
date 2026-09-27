@@ -89,7 +89,7 @@ test('Back to Orbit collapses the current center into a black-hole handoff', asy
     f.w.ArrowOS.launchToOrbit('waypoint', anchor);
     await delay(20);
     assert.equal(f.w.document.querySelectorAll('.arrow-os-blackhole-departure').length, 1);
-    assert.equal(f.w.document.querySelectorAll('.arrow-os-transition-particle').length, 28);
+    assert.equal(f.w.document.querySelectorAll('.arrow-os-transition-particle').length, 118);
     assert.ok(f.w.document.documentElement.classList.contains('arrow-os-blackhole-active'));
   } finally { f.close(); }
 });
