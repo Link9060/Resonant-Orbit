@@ -1150,11 +1150,16 @@
       const bendX = -dy * .055 * direction;
       const bendY = dx * .055 * direction;
 
+      const rotation = direction * (4 + normalized * 10);
       element.style.setProperty('--arrow-warp-x', dx + 'px');
       element.style.setProperty('--arrow-warp-y', dy + 'px');
+      element.style.setProperty('--arrow-warp-mid-x', (dx * .62) + 'px');
+      element.style.setProperty('--arrow-warp-mid-y', (dy * .62) + 'px');
       element.style.setProperty('--arrow-warp-bend-x', bendX + 'px');
       element.style.setProperty('--arrow-warp-bend-y', bendY + 'px');
-      element.style.setProperty('--arrow-warp-rot', (direction * (4 + normalized * 10)) + 'deg');
+      element.style.setProperty('--arrow-warp-rot', rotation + 'deg');
+      element.style.setProperty('--arrow-warp-rot-a', (rotation * .28) + 'deg');
+      element.style.setProperty('--arrow-warp-rot-b', (rotation * .72) + 'deg');
       element.style.setProperty('--arrow-warp-delay', (36 + normalized * 90 + (index % 4) * 7) + 'ms');
       element.style.setProperty('--arrow-warp-duration', (850 + normalized * 170) + 'ms');
       element.classList.add('arrow-os-gravity-target');
