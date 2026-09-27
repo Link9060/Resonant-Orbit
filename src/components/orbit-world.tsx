@@ -118,16 +118,89 @@ const TRANSFER_PARTICLES = Array.from({ length: 26 }, (_, index) => {
     size: 2 + (index % 3),
   };
 });
-const REFORM_PARTICLES = Array.from({ length: 30 }, (_, index) => {
-  const angle = (Math.PI * 2 * index) / 30 + (index % 3) * 0.05;
-  const distance = 90 + (index % 8) * 34;
-  return {
-    x: Math.cos(angle) * distance,
-    y: Math.sin(angle) * distance,
-    delay: (index % 7) * 14,
-    size: 1.5 + (index % 4) * 0.75,
-  };
-});
+function IncomingReformCanvas() {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    const context = canvas?.getContext('2d');
+    if (!canvas || !context) return;
+
+    const width = window.innerWidth;
+    const height = window.innerHeight;
+    const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+    canvas.width = Math.max(1, Math.floor(width * dpr));
+    canvas.height = Math.max(1, Math.floor(height * dpr));
+    canvas.style.width = `${width}px`;
+    canvas.style.height = `${height}px`;
+    context.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+    const cx = width / 2;
+    const cy = height / 2;
+    const count = width < 700 ? 150 : 230;
+    const radius = Math.hypot(width, height) * .62;
+    const particles = Array.from({ length: count }, (_, index) => {
+      const angle = Math.PI * 2 * index / count + (index % 9) * .018;
+      const lane = .18 + ((index * 37) % 100) / 100 * .82;
+      return {
+        angle,
+        distance: radius * lane,
+        size: 1.1 + (index % 5) * .52,
+        delay: (index % 17) * 5.5,
+        bend: ((index % 7) - 3) * .028,
+        alpha: .44 + (index % 6) * .09,
+      };
+    });
+
+    const startedAt = performance.now();
+    const duration = 1040;
+    let frame = 0;
+    const easeOut = (value: number) => 1 - Math.pow(1 - value, 3);
+
+    const draw = (now: number) => {
+      const elapsed = now - startedAt;
+      const global = Math.min(1, elapsed / duration);
+      context.clearRect(0, 0, width, height);
+      context.globalCompositeOperation = 'lighter';
+
+      for (const particle of particles) {
+        const local = Math.max(0, Math.min(1, (elapsed - particle.delay) / (duration - particle.delay)));
+        if (local <= 0) continue;
+        const travel = easeOut(local);
+        const r = particle.distance * travel;
+        const spiral = particle.angle + particle.bend * travel * 12;
+        const x = cx + Math.cos(spiral) * r;
+        const y = cy + Math.sin(spiral) * r * .72;
+        const length = 4 + (1 - Math.abs(.5 - travel) * .8) * 13;
+        const tailX = x - Math.cos(spiral) * length;
+        const tailY = y - Math.sin(spiral) * length * .72;
+        const fade = Math.min(1, local * 4) * (1 - Math.max(0, (local - .9) / .1));
+
+        context.strokeStyle = `rgba(255,255,255,${particle.alpha * fade})`;
+        context.lineWidth = Math.max(.65, particle.size * .58);
+        context.beginPath();
+        context.moveTo(tailX, tailY);
+        context.lineTo(x, y);
+        context.stroke();
+
+        context.fillStyle = `rgba(255,255,255,${Math.min(1, particle.alpha * 1.22) * fade})`;
+        context.beginPath();
+        context.arc(x, y, particle.size, 0, Math.PI * 2);
+        context.fill();
+      }
+
+      context.globalCompositeOperation = 'source-over';
+      if (global < 1) frame = window.requestAnimationFrame(draw);
+      else context.clearRect(0, 0, width, height);
+    };
+
+    frame = window.requestAnimationFrame(draw);
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
+  return <canvas ref={canvasRef} className="incoming-reform-canvas" aria-hidden="true" />;
+}
+
 const EMPTY_FLIGHT_PATH: FlightPath = {
   startX: 0,
   startY: 0,
@@ -1574,21 +1647,14 @@ export function OrbitWorld() {
 
         {incomingFrom && (
           <div className="incoming-flight-layer" aria-hidden="true">
-            <span className="incoming-singularity" />
-            <span className="incoming-reform-particles">
-              {REFORM_PARTICLES.map((particle, index) => (
-                <span
-                  key={index}
-                  className="incoming-reform-particle"
-                  style={{
-                    '--reform-x': `${particle.x}px`,
-                    '--reform-y': `${particle.y}px`,
-                    '--reform-delay': `${particle.delay}ms`,
-                    '--reform-size': `${particle.size}px`,
-                  } as CSSProperties}
-                />
-              ))}
-            </span>
+            <span className="incoming-bh-halo" />
+            <span className="incoming-bh-lens incoming-bh-lens-upper" />
+            <span className="incoming-bh-lens incoming-bh-lens-lower" />
+            <span className="incoming-bh-disk incoming-bh-disk-far" />
+            <span className="incoming-bh-disk incoming-bh-disk-main" />
+            <span className="incoming-bh-photon-ring" />
+            <span className="incoming-bh-core" />
+            <IncomingReformCanvas />
             <span className="incoming-craft"><ArrowMarkIcon size={20} /></span>
             <span className="incoming-source-label">
               returning from {destinationIndex.get(incomingFrom)?.name ?? incomingFrom}
