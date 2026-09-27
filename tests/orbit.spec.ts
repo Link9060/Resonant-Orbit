@@ -3,10 +3,19 @@ import { expect, test } from '@playwright/test';
 async function openOrbit(page: import('@playwright/test').Page) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
     localStorage.setItem('orbit-startup-seen-v2', '1');
   });
   await page.goto('/');
 }
+
+test('ARROW login is the first surface before Orbit mounts', async ({ page }) => {
+  await page.goto('/');
+
+  await expect(page.getByRole('heading', { name: 'ARROW' })).toBeVisible();
+  await expect(page.getByText('ONE ACCOUNT · EVERY CENTER')).toBeVisible();
+  await expect(page.locator('.orbit-app')).toHaveCount(0);
+});
 
 test('quick-route rail exposes all four destinations and selected state', async ({ page }) => {
   await openOrbit(page);
@@ -168,7 +177,10 @@ test('destination nodes remain inside the mobile viewport after rotation', async
 
 test('startup behaves as a real modal and Escape returns focus to Orbit', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
-  await page.addInitScript(() => localStorage.removeItem('orbit-startup-seen-v2'));
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.removeItem('orbit-startup-seen-v2');
+  });
   await page.goto('/');
 
   const intro = page.getByRole('dialog', { name: 'Orbit introduction' });
@@ -195,6 +207,7 @@ test('viewport opts into full safe-area coverage', async ({ page }) => {
 test('reduced-motion incoming handoff clears the source query immediately', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
     localStorage.setItem('orbit-startup-seen-v2', '1');
   });
 
