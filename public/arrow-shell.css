@@ -163,6 +163,24 @@
   color: rgb(var(--arrow-os-fg) / .96);
 }
 
+.arrow-os-control.is-disabled,
+.arrow-os-control:disabled {
+  background: transparent;
+  color: rgb(var(--arrow-os-fg) / .18);
+  cursor: not-allowed;
+  opacity: .52;
+  filter: grayscale(1);
+}
+
+.arrow-os-control.is-disabled:hover,
+.arrow-os-control.is-disabled:focus-visible,
+.arrow-os-control:disabled:hover,
+.arrow-os-control:disabled:focus-visible {
+  background: transparent;
+  color: rgb(var(--arrow-os-fg) / .18);
+  transform: none;
+}
+
 .arrow-os-control svg,
 .arrow-os-panel svg {
   width: 15px;
