@@ -669,22 +669,23 @@
 
 .arrow-os-handoff p {
   position: absolute;
-  z-index: 8;
+  z-index: 20;
   left: 50%;
   bottom: max(28px,calc(env(safe-area-inset-bottom) + 16px));
   margin: 0;
   transform: translateX(-50%);
-  color: rgba(255,255,255,.44);
+  color: rgba(255,255,255,.52);
   font-size: 9px;
-  font-weight: 700;
-  letter-spacing: .16em;
+  font-weight: 720;
+  letter-spacing: .18em;
   text-transform: uppercase;
   white-space: nowrap;
+  text-shadow: 0 0 18px rgba(255,255,255,.24);
 }
 
 .arrow-os-particle-field {
   position: absolute;
-  z-index: 5;
+  z-index: 12;
   width: 0;
   height: 0;
 }
@@ -697,25 +698,33 @@
   border-radius: 999px;
   background: #fff;
   box-shadow:
-    0 0 7px rgba(255,255,255,.84),
-    0 0 18px rgba(255,255,255,.2);
+    0 0 7px rgba(255,255,255,.96),
+    0 0 18px rgba(255,255,255,.42),
+    0 0 34px rgba(255,255,255,.14);
   opacity: 0;
 }
 
-/* Center -> Orbit: the page itself collapses into a singularity. */
-
-html.arrow-os-blackhole-active body > :not(.arrow-os-handoff):not(script):not(style):not(link) {
-  transform-origin: var(--arrow-bh-x) var(--arrow-bh-y);
-  animation: arrow-os-page-collapse 760ms cubic-bezier(.36,.02,.16,1) both;
-  pointer-events: none !important;
-}
+/* Massive cinematic black-hole return ---------------------------------- */
 
 .arrow-os-blackhole-departure {
   background: rgba(0,0,0,0);
-  animation: arrow-os-blackhole-overlay 940ms linear both;
+  animation: arrow-os-blackhole-overlay 1380ms linear both;
 }
 
-.arrow-os-blackhole-glow,
+.arrow-os-gravity-vignette {
+  position: absolute;
+  inset: -12%;
+  z-index: 1;
+  background:
+    radial-gradient(circle at center, transparent 0 23%, rgba(0,0,0,.08) 38%, rgba(0,0,0,.62) 68%, #000 100%);
+  opacity: 0;
+  animation: arrow-os-gravity-vignette 1380ms ease both;
+}
+
+.arrow-os-blackhole-halo,
+.arrow-os-blackhole-lens,
+.arrow-os-blackhole-disk,
+.arrow-os-blackhole-photon-ring,
 .arrow-os-blackhole-core,
 .arrow-os-blackhole-departure .arrow-os-particle-field {
   position: absolute;
@@ -723,111 +732,235 @@ html.arrow-os-blackhole-active body > :not(.arrow-os-handoff):not(script):not(st
   top: var(--bh-y);
 }
 
-.arrow-os-blackhole-glow {
+.arrow-os-blackhole-halo {
   z-index: 3;
-  width: 92px;
-  height: 92px;
-  margin: -46px;
+  width: min(92vw,1120px);
+  height: min(92vw,1120px);
+  margin-left: calc(min(92vw,1120px) / -2);
+  margin-top: calc(min(92vw,1120px) / -2);
   border-radius: 50%;
-  background: radial-gradient(
-    circle,
-    rgba(255,255,255,.22) 0,
-    rgba(255,255,255,.08) 22%,
-    rgba(255,255,255,.025) 46%,
-    transparent 72%
-  );
+  background:
+    radial-gradient(circle,
+      transparent 0 13%,
+      rgba(255,255,255,.06) 15%,
+      rgba(255,255,255,.16) 18%,
+      rgba(255,255,255,.045) 24%,
+      rgba(255,255,255,.012) 38%,
+      transparent 62%);
+  filter: blur(5px);
   opacity: 0;
-  animation: arrow-os-blackhole-glow 780ms 70ms ease both;
+  animation: arrow-os-bh-halo 1180ms 90ms cubic-bezier(.16,.8,.12,1) both;
+}
+
+.arrow-os-blackhole-disk {
+  z-index: 7;
+  width: min(96vw,1240px);
+  left: var(--bh-x);
+  margin-left: calc(min(96vw,1240px) / -2);
+  border-radius: 50%;
+  transform-origin: 50% 50%;
+  opacity: 0;
+}
+
+.arrow-os-blackhole-disk.disk-main {
+  height: 92px;
+  margin-top: -46px;
+  background:
+    linear-gradient(90deg,
+      transparent 0 3%,
+      rgba(255,255,255,.12) 9%,
+      rgba(255,255,255,.88) 24%,
+      #fff 42%,
+      rgba(255,255,255,.96) 55%,
+      rgba(255,255,255,.54) 76%,
+      rgba(255,255,255,.08) 92%,
+      transparent 100%);
+  box-shadow:
+    0 0 16px rgba(255,255,255,.66),
+    0 0 46px rgba(255,255,255,.36),
+    0 0 120px rgba(255,255,255,.16);
+  filter: blur(1.2px);
+  animation: arrow-os-bh-disk-main 1260ms 80ms cubic-bezier(.16,.82,.12,1) both;
+}
+
+.arrow-os-blackhole-disk.disk-far {
+  z-index: 4;
+  width: min(82vw,980px);
+  height: 290px;
+  margin-left: calc(min(82vw,980px) / -2);
+  margin-top: -145px;
+  border: 5px solid rgba(255,255,255,.56);
+  border-left-color: rgba(255,255,255,.08);
+  border-right-color: rgba(255,255,255,.08);
+  box-shadow:
+    0 0 24px rgba(255,255,255,.34),
+    inset 0 0 30px rgba(255,255,255,.08);
+  filter: blur(1px);
+  animation: arrow-os-bh-disk-far 1240ms 100ms cubic-bezier(.16,.8,.12,1) both;
+}
+
+.arrow-os-blackhole-lens {
+  z-index: 5;
+  width: min(62vw,720px);
+  height: min(62vw,720px);
+  margin-left: calc(min(62vw,720px) / -2);
+  margin-top: calc(min(62vw,720px) / -2);
+  border-radius: 50%;
+  border: 3px solid transparent;
+  opacity: 0;
+  filter: drop-shadow(0 0 20px rgba(255,255,255,.28));
+}
+
+.arrow-os-blackhole-lens.lens-upper {
+  border-top-color: rgba(255,255,255,.92);
+  border-left-color: rgba(255,255,255,.18);
+  animation: arrow-os-bh-lens-upper 1220ms 90ms cubic-bezier(.16,.8,.12,1) both;
+}
+
+.arrow-os-blackhole-lens.lens-lower {
+  border-bottom-color: rgba(255,255,255,.68);
+  border-right-color: rgba(255,255,255,.12);
+  animation: arrow-os-bh-lens-lower 1220ms 120ms cubic-bezier(.16,.8,.12,1) both;
+}
+
+.arrow-os-blackhole-photon-ring {
+  z-index: 11;
+  width: min(24vw,290px);
+  height: min(24vw,290px);
+  margin-left: calc(min(24vw,290px) / -2);
+  margin-top: calc(min(24vw,290px) / -2);
+  border: 4px solid rgba(255,255,255,.92);
+  border-radius: 50%;
+  box-shadow:
+    0 0 10px rgba(255,255,255,.9),
+    0 0 34px rgba(255,255,255,.56),
+    0 0 92px rgba(255,255,255,.22);
+  opacity: 0;
+  animation: arrow-os-bh-photon-ring 1150ms 130ms cubic-bezier(.18,.78,.12,1) both;
 }
 
 .arrow-os-blackhole-core {
-  z-index: 6;
-  width: 18px;
-  height: 18px;
-  margin: -9px;
+  z-index: 13;
+  width: min(20vw,238px);
+  height: min(20vw,238px);
+  margin-left: calc(min(20vw,238px) / -2);
+  margin-top: calc(min(20vw,238px) / -2);
   border-radius: 50%;
   background: #000;
   box-shadow:
-    0 0 0 1px rgba(255,255,255,.76),
-    0 0 14px rgba(255,255,255,.52),
-    0 0 48px rgba(255,255,255,.22);
-  animation: arrow-os-blackhole-core 820ms 40ms cubic-bezier(.22,.72,.12,1) both;
+    0 0 0 2px rgba(255,255,255,.26),
+    0 0 22px 8px rgba(255,255,255,.22),
+    0 0 90px 18px rgba(255,255,255,.08);
+  opacity: 0;
+  animation: arrow-os-bh-core 1180ms 90ms cubic-bezier(.18,.8,.12,1) both;
 }
 
 .arrow-os-blackhole-departure .arrow-os-transition-particle[data-direction="in"] {
-  animation: arrow-os-particle-collapse 620ms calc(80ms + var(--particle-delay)) cubic-bezier(.28,.02,.18,1) both;
+  animation: arrow-os-particle-collapse 980ms calc(110ms + var(--particle-delay)) cubic-bezier(.34,.02,.12,1) both;
 }
 
 .arrow-os-blackhole-departure p {
-  animation: arrow-os-blackhole-copy 900ms ease both;
-}
-
-@keyframes arrow-os-page-collapse {
-  0% {
-    transform: scale(1);
-    opacity: 1;
-  }
-  42% {
-    transform: scale(.86) rotate(-.4deg);
-    opacity: .92;
-  }
-  78% {
-    transform: scale(.16) rotate(-2deg);
-    opacity: .52;
-  }
-  100% {
-    transform: scale(.015) rotate(-4deg);
-    opacity: 0;
-  }
+  animation: arrow-os-blackhole-copy 1320ms ease both;
 }
 
 @keyframes arrow-os-blackhole-overlay {
-  0%,32% { background: rgba(0,0,0,0); }
-  72% { background: rgba(0,0,0,.68); }
+  0%,28% { background: rgba(0,0,0,0); }
+  58% { background: rgba(0,0,0,.12); }
+  82% { background: rgba(0,0,0,.78); }
   100% { background: #000; }
 }
 
-@keyframes arrow-os-blackhole-glow {
-  0% { transform: scale(.2); opacity: 0; }
-  28% { transform: scale(1.05); opacity: .9; }
-  70% { transform: scale(.72); opacity: .7; }
-  100% { transform: scale(.08); opacity: 0; }
+@keyframes arrow-os-gravity-vignette {
+  0%,22% { opacity: 0; transform: scale(1.08); }
+  54% { opacity: .36; }
+  100% { opacity: 1; transform: scale(1); }
 }
 
-@keyframes arrow-os-blackhole-core {
-  0% { transform: scale(.25); opacity: .25; }
-  24% { transform: scale(1.15); opacity: 1; }
-  72% { transform: scale(.82); opacity: 1; }
-  100% { transform: scale(.14); opacity: 1; }
+@keyframes arrow-os-bh-halo {
+  0% { transform: scale(.1); opacity: 0; }
+  24% { opacity: .2; }
+  62% { transform: scale(1.03); opacity: .84; }
+  100% { transform: scale(.92); opacity: .28; }
+}
+
+@keyframes arrow-os-bh-disk-main {
+  0% { transform: rotate(-8deg) scaleX(.16) scaleY(.12); opacity: 0; }
+  22% { opacity: .5; }
+  58% { transform: rotate(-8deg) scaleX(1.02) scaleY(.92); opacity: 1; }
+  82% { transform: rotate(-12deg) scaleX(.78) scaleY(.5); opacity: .9; }
+  100% { transform: rotate(-18deg) scaleX(.18) scaleY(.08); opacity: 0; }
+}
+
+@keyframes arrow-os-bh-disk-far {
+  0% { transform: rotate(-8deg) scale(.12,.06); opacity: 0; }
+  28% { opacity: .24; }
+  62% { transform: rotate(-8deg) scale(1,.38); opacity: .76; }
+  100% { transform: rotate(-14deg) scale(.18,.06); opacity: 0; }
+}
+
+@keyframes arrow-os-bh-lens-upper {
+  0% { transform: rotate(-12deg) scale(.16); opacity: 0; }
+  34% { opacity: .24; }
+  68% { transform: rotate(-12deg) scale(1.02); opacity: .95; }
+  100% { transform: rotate(-20deg) scale(.22); opacity: 0; }
+}
+
+@keyframes arrow-os-bh-lens-lower {
+  0% { transform: rotate(8deg) scale(.14); opacity: 0; }
+  38% { opacity: .16; }
+  70% { transform: rotate(8deg) scale(.94); opacity: .72; }
+  100% { transform: rotate(16deg) scale(.2); opacity: 0; }
+}
+
+@keyframes arrow-os-bh-photon-ring {
+  0% { transform: scale(.16); opacity: 0; }
+  30% { opacity: .45; }
+  64% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(.22); opacity: .15; }
+}
+
+@keyframes arrow-os-bh-core {
+  0% { transform: scale(.14); opacity: 0; }
+  30% { opacity: 1; }
+  64% { transform: scale(1); opacity: 1; }
+  100% { transform: scale(.16); opacity: 1; }
 }
 
 @keyframes arrow-os-particle-collapse {
   0% {
-    transform: translate(var(--particle-x),var(--particle-y)) scale(1);
+    transform: translate(var(--particle-x),var(--particle-y)) scale(var(--particle-stretch),.55);
     opacity: 0;
   }
-  18% { opacity: .9; }
-  82% { opacity: .72; }
+  10% { opacity: .96; }
+  54% {
+    opacity: .9;
+    filter: blur(.2px);
+  }
+  88% {
+    opacity: .8;
+  }
   100% {
-    transform: translate(0,0) scale(.18);
+    transform: translate(0,0) scale(.08,2.8);
     opacity: 0;
+    filter: blur(1.4px);
   }
 }
 
 @keyframes arrow-os-blackhole-copy {
-  0%,38% { opacity: 0; transform: translate(-50%,7px); }
-  54%,76% { opacity: .65; transform: translate(-50%,0); }
-  100% { opacity: 0; transform: translate(-50%,-3px); }
+  0%,34% { opacity: 0; transform: translate(-50%,8px); }
+  48%,72% { opacity: .72; transform: translate(-50%,0); }
+  100% { opacity: 0; transform: translate(-50%,-4px); }
 }
 
-/* Orbit -> center: reveal the destination through an outward particle field. */
+/* Orbit -> center: dense particle emergence ---------------------------- */
 
 .arrow-os-center-arrival {
   background: #000;
-  animation: arrow-os-center-arrival-overlay 900ms ease both;
+  animation: arrow-os-center-arrival-overlay 1260ms ease both;
 }
 
 .arrow-os-center-arrival-core,
+.arrow-os-center-shock,
 .arrow-os-center-arrival .arrow-os-particle-field {
   position: absolute;
   left: 50%;
@@ -835,54 +968,82 @@ html.arrow-os-blackhole-active body > :not(.arrow-os-handoff):not(script):not(st
 }
 
 .arrow-os-center-arrival-core {
-  z-index: 6;
-  width: 14px;
-  height: 14px;
-  margin: -7px;
+  z-index: 8;
+  width: 24px;
+  height: 24px;
+  margin: -12px;
   border-radius: 50%;
   background: #fff;
   box-shadow:
-    0 0 12px rgba(255,255,255,.76),
-    0 0 44px rgba(255,255,255,.24);
-  animation: arrow-os-center-core-release 620ms 50ms ease both;
+    0 0 14px rgba(255,255,255,.96),
+    0 0 48px rgba(255,255,255,.44),
+    0 0 110px rgba(255,255,255,.18);
+  animation: arrow-os-center-core-release 920ms 100ms ease both;
+}
+
+.arrow-os-center-shock {
+  z-index: 6;
+  width: 48px;
+  height: 48px;
+  margin: -24px;
+  border: 2px solid rgba(255,255,255,.72);
+  border-radius: 50%;
+  opacity: 0;
+}
+
+.arrow-os-center-shock.shock-a {
+  animation: arrow-os-center-shock 780ms 130ms cubic-bezier(.14,.76,.12,1) both;
+}
+
+.arrow-os-center-shock.shock-b {
+  animation: arrow-os-center-shock 900ms 210ms cubic-bezier(.14,.76,.12,1) both;
 }
 
 .arrow-os-center-arrival .arrow-os-transition-particle[data-direction="out"] {
-  animation: arrow-os-particle-release 610ms calc(70ms + var(--particle-delay)) cubic-bezier(.16,.74,.14,1) both;
+  animation: arrow-os-particle-release 900ms calc(120ms + var(--particle-delay)) cubic-bezier(.14,.76,.12,1) both;
 }
 
 .arrow-os-center-arrival p {
-  animation: arrow-os-center-copy 820ms ease both;
+  animation: arrow-os-center-copy 1160ms ease both;
 }
 
 @keyframes arrow-os-center-arrival-overlay {
-  0%,34% { background: #000; }
-  72% { background: rgba(0,0,0,.52); }
+  0%,30% { background: #000; }
+  62% { background: rgba(0,0,0,.72); }
+  82% { background: rgba(0,0,0,.22); }
   100% { background: rgba(0,0,0,0); }
 }
 
 @keyframes arrow-os-center-core-release {
-  0% { transform: scale(.15); opacity: 0; }
-  24% { transform: scale(1.1); opacity: 1; }
-  100% { transform: scale(.2); opacity: 0; }
+  0% { transform: scale(.08); opacity: 0; }
+  18% { transform: scale(1.3); opacity: 1; }
+  58% { transform: scale(.72); opacity: .84; }
+  100% { transform: scale(.08); opacity: 0; }
+}
+
+@keyframes arrow-os-center-shock {
+  0% { transform: scale(.12); opacity: 0; }
+  18% { opacity: .8; }
+  100% { transform: scale(22); opacity: 0; }
 }
 
 @keyframes arrow-os-particle-release {
   0% {
-    transform: translate(0,0) scale(.24);
+    transform: translate(0,0) scale(.22,2.8);
     opacity: 0;
   }
-  18% { opacity: 1; }
+  12% { opacity: 1; }
+  68% { opacity: .9; }
   100% {
-    transform: translate(var(--particle-x),var(--particle-y)) scale(.2);
+    transform: translate(var(--particle-x),var(--particle-y)) scale(var(--particle-stretch),.55);
     opacity: 0;
   }
 }
 
 @keyframes arrow-os-center-copy {
-  0%,18% { opacity: 0; transform: translate(-50%,6px); }
-  38%,68% { opacity: .55; transform: translate(-50%,0); }
-  100% { opacity: 0; transform: translate(-50%,-3px); }
+  0%,18% { opacity: 0; transform: translate(-50%,7px); }
+  34%,70% { opacity: .66; transform: translate(-50%,0); }
+  100% { opacity: 0; transform: translate(-50%,-4px); }
 }
 
 @media (max-width: 1180px) and (min-width: 681px) {
