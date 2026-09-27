@@ -3,7 +3,7 @@ import { expect, test } from '@playwright/test';
 async function openOrbit(page: import('@playwright/test').Page) {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {
-    sessionStorage.setItem('orbit-startup-seen', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
   });
   await page.goto('/');
 }
@@ -81,45 +81,38 @@ test('Navigator Enter selects the first result and moves focus to its world node
   await expect(relayNode).toBeFocused();
 });
 
-test('travel moves focus into the destination arrival screen', async ({ page }) => {
-  await openOrbit(page);
-
-  await page.keyboard.press('3');
-  const travel = page.getByRole('button', { name: 'Travel to Relay' });
-  await expect(travel).toBeVisible();
-
-  await travel.click();
-
-  const arrival = page.getByRole('region', { name: 'Relay arrival' });
-  const openRelay = page.getByRole('button', { name: 'Open Relay' });
-
-  await expect(arrival).toBeVisible();
-  await expect(arrival).toBeFocused();
-
-  await page.keyboard.press('Tab');
-  await expect(openRelay).toBeFocused();
-});
-
-test('Escape returns from a destination preview using the normal return path', async ({ page }) => {
-  await openOrbit(page);
-
-  await page.keyboard.press('3');
-  await page.getByRole('button', { name: 'Travel to Relay' }).click();
-  await expect(page.getByRole('region', { name: 'Relay arrival' })).toBeVisible();
-
-  await page.keyboard.press('Escape');
-
-  const core = page.getByRole('button', { name: /YOU ARE HERE Orbit/i });
-  await expect(core).toBeVisible();
-  await expect(core).toBeFocused();
-});
-
-test('staged destinations are labeled as previews rather than connected travel', async ({ page }) => {
+test('Waypoint is a connected fourth destination', async ({ page }) => {
   await openOrbit(page);
 
   await page.keyboard.press('4');
-  await expect(page.getByRole('button', { name: 'Preview W' })).toBeVisible();
-  await expect(page.getByText('preview only · route staged')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Waypoint' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Travel to Waypoint' })).toBeVisible();
+  await expect(page.getByText('route connected')).toBeVisible();
+});
+
+test('Navigator maps task language to Waypoint', async ({ page }) => {
+  await openOrbit(page);
+
+  await page.keyboard.press('Control+K');
+  const dialog = page.getByRole('dialog', { name: 'Orbit navigator' });
+  const search = dialog.getByRole('textbox', { name: 'Search ARROW destinations' });
+  await search.fill('brain dump');
+  await expect(dialog.getByRole('button', { name: /Waypoint/i })).toHaveCount(1);
+});
+
+test('dragging the world never selects interface text', async ({ page }) => {
+  await openOrbit(page);
+
+  const shell = page.locator('.world-shell');
+  const box = await shell.boundingBox();
+  expect(box).not.toBeNull();
+  await page.mouse.move(box!.x + box!.width * 0.36, box!.y + box!.height * 0.48);
+  await page.mouse.down();
+  await page.mouse.move(box!.x + box!.width * 0.72, box!.y + box!.height * 0.32, { steps: 10 });
+  await page.mouse.up();
+
+  expect(await page.evaluate(() => window.getSelection()?.toString() ?? '')).toBe('');
+  expect(await shell.evaluate(element => getComputedStyle(element).userSelect)).toBe('none');
 });
 
 test('Atlas and RAVIN are connected ARROW destinations', async ({ page }) => {
@@ -175,6 +168,7 @@ test('destination nodes remain inside the mobile viewport after rotation', async
 
 test('startup behaves as a real modal and Escape returns focus to Orbit', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
+  await page.addInitScript(() => localStorage.removeItem('orbit-startup-seen-v2'));
   await page.goto('/');
 
   const intro = page.getByRole('dialog', { name: 'Orbit introduction' });
@@ -201,7 +195,7 @@ test('viewport opts into full safe-area coverage', async ({ page }) => {
 test('reduced-motion incoming handoff clears the source query immediately', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'reduce' });
   await page.addInitScript(() => {
-    sessionStorage.setItem('orbit-startup-seen', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
   });
 
   await page.goto('/?from=relay');
