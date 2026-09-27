@@ -2,13 +2,14 @@ import { OrbitWorld } from '@/components/orbit-world';
 import { ArrowMarkIcon } from '@/components/orbit-icons';
 import { ARROW_DESTINATIONS } from '@/lib/arrow-map';
 import { StartupSequence } from '@/components/startup-sequence';
+import { ArrowAuthGate } from '@/components/arrow-auth-gate';
 
 export default function Home() {
   const destinationCount = ARROW_DESTINATIONS.length;
   const liveRouteCount = ARROW_DESTINATIONS.filter(destination => destination.href).length;
 
   return (
-    <>
+    <ArrowAuthGate>
       <StartupSequence />
       <main className="orbit-app">
         <header className="orbit-header">
@@ -34,6 +35,6 @@ export default function Home() {
           <OrbitWorld />
         </section>
       </main>
-    </>
+    </ArrowAuthGate>
   );
 }
