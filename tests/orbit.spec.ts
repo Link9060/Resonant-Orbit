@@ -311,10 +311,12 @@ test('Waypoint return reforms Orbit from a singularity and particles', async ({ 
 
   const shell = page.locator('.world-shell');
   await expect(shell).toHaveAttribute('data-incoming-from', 'waypoint');
-  await expect(page.locator('.incoming-singularity')).toBeVisible();
-  await expect(page.locator('.incoming-reform-particle')).toHaveCount(30);
+  await expect(page.locator('.incoming-bh-core')).toBeVisible();
+  await expect(page.locator('.incoming-bh-photon-ring')).toBeVisible();
+  await expect(page.locator('.incoming-bh-disk-main')).toBeVisible();
+  await expect(page.locator('.incoming-reform-canvas')).toBeVisible();
   await expect(page.locator('.incoming-craft')).toBeVisible();
-  await expect(page.locator('.world-canvas')).toHaveCSS('animation-duration', '1.05s');
+  await expect(page.locator('.world-canvas')).toHaveCSS('animation-duration', '1.28s');
 });
 
 test('reduced-motion incoming handoff clears the source query immediately', async ({ page }) => {
