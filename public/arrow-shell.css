@@ -729,14 +729,14 @@
   30% {
     transform:
       translate3d(var(--arrow-warp-bend-x),var(--arrow-warp-bend-y),0)
-      rotate(calc(var(--arrow-warp-rot) * .28))
+      rotate(var(--arrow-warp-rot-a))
       scale(.96,.98);
     opacity: .98;
   }
   70% {
     transform:
-      translate3d(calc(var(--arrow-warp-x) * .62),calc(var(--arrow-warp-y) * .62),0)
-      rotate(calc(var(--arrow-warp-rot) * .72))
+      translate3d(var(--arrow-warp-mid-x),var(--arrow-warp-mid-y),0)
+      rotate(var(--arrow-warp-rot-b))
       scale(.48,.72);
     opacity: .72;
   }
