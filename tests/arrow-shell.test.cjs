@@ -33,7 +33,7 @@ async function fixture(module = 'orbit', query = '') {
   return { w, dom, close: () => { observers.forEach(o => o.disconnect()); dom.window.close(); }, deliveries: () => deliveries, themes: () => themes };
 }
 
-for (const module of ['orbit', 'relay', 'atlas', 'ravin']) {
+for (const module of ['orbit', 'relay', 'atlas', 'ravin', 'waypoint']) {
   test(`${module}: Appearance settles and retains focus while changing every setting`, async () => {
     const f = await fixture(module);
     try {
