@@ -108,6 +108,26 @@ const destinationIndex = ARROW_DESTINATION_BY_ID;
 const VIEW_STORAGE_KEY = 'orbit-view-v2';
 const WAYPOINT_URL = 'https://link9060.github.io/Resonant-Waypoint/';
 const FLIGHT_DURATION_MS = 1000;
+const TRANSFER_PARTICLES = Array.from({ length: 26 }, (_, index) => {
+  const angle = (Math.PI * 2 * index) / 26 + (index % 2 ? 0.07 : -0.04);
+  const distance = 120 + (index % 7) * 42;
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+    delay: (index % 6) * 12,
+    size: 2 + (index % 3),
+  };
+});
+const REFORM_PARTICLES = Array.from({ length: 30 }, (_, index) => {
+  const angle = (Math.PI * 2 * index) / 30 + (index % 3) * 0.05;
+  const distance = 90 + (index % 8) * 34;
+  return {
+    x: Math.cos(angle) * distance,
+    y: Math.sin(angle) * distance,
+    delay: (index % 7) * 14,
+    size: 1.5 + (index % 4) * 0.75,
+  };
+});
 const EMPTY_FLIGHT_PATH: FlightPath = {
   startX: 0,
   startY: 0,
@@ -1533,18 +1553,43 @@ export function OrbitWorld() {
             <span className="travel-wake wake-one" />
             <span className="travel-wake wake-two" />
             <span className="travel-wake wake-three" />
-            <span className="travel-craft"><ArrowMarkIcon size={28} /></span>
+            <span className="travel-craft"><ArrowMarkIcon size={20} /></span>
+            <span className="travel-transfer-veil" />
+            <span className="travel-particle-burst">
+              {TRANSFER_PARTICLES.map((particle, index) => (
+                <span
+                  key={index}
+                  className="travel-transfer-particle"
+                  style={{
+                    '--burst-x': `${particle.x}px`,
+                    '--burst-y': `${particle.y}px`,
+                    '--burst-delay': `${particle.delay}ms`,
+                    '--burst-size': `${particle.size}px`,
+                  } as CSSProperties}
+                />
+              ))}
+            </span>
           </div>
         )}
 
         {incomingFrom && (
           <div className="incoming-flight-layer" aria-hidden="true">
-            <span className="incoming-arrival-ring ring-one" />
-            <span className="incoming-arrival-ring ring-two" />
-            <span className="incoming-trail trail-one" />
-            <span className="incoming-trail trail-two" />
-            <span className="incoming-trail trail-three" />
-            <span className="incoming-craft"><ArrowMarkIcon size={28} /></span>
+            <span className="incoming-singularity" />
+            <span className="incoming-reform-particles">
+              {REFORM_PARTICLES.map((particle, index) => (
+                <span
+                  key={index}
+                  className="incoming-reform-particle"
+                  style={{
+                    '--reform-x': `${particle.x}px`,
+                    '--reform-y': `${particle.y}px`,
+                    '--reform-delay': `${particle.delay}ms`,
+                    '--reform-size': `${particle.size}px`,
+                  } as CSSProperties}
+                />
+              ))}
+            </span>
+            <span className="incoming-craft"><ArrowMarkIcon size={20} /></span>
             <span className="incoming-source-label">
               returning from {destinationIndex.get(incomingFrom)?.name ?? incomingFrom}
             </span>
