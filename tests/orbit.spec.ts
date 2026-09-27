@@ -169,6 +169,32 @@ test('Navigator maps task language to Waypoint', async ({ page }) => {
   await expect(dialog.getByRole('button', { name: /Waypoint/i })).toHaveCount(1);
 });
 
+test('vertical drag moves the Orbit globe in the same direction as the pointer', async ({ page }) => {
+  await openOrbit(page);
+
+  const relayNode = page.locator('.destination-node').filter({ hasText: 'Relay' });
+  const before = await relayNode.boundingBox();
+  expect(before).not.toBeNull();
+
+  const shell = page.locator('.world-shell');
+  const shellBox = await shell.boundingBox();
+  expect(shellBox).not.toBeNull();
+
+  const x = shellBox!.x + shellBox!.width * 0.5;
+  const startY = shellBox!.y + shellBox!.height * 0.55;
+  const endY = startY - 110;
+
+  await page.mouse.move(x, startY);
+  await page.mouse.down();
+  await page.mouse.move(x, endY, { steps: 12 });
+  await page.mouse.up();
+  await page.waitForTimeout(180);
+
+  const after = await relayNode.boundingBox();
+  expect(after).not.toBeNull();
+  expect(after!.y).toBeLessThan(before!.y - 4);
+});
+
 test('dragging the world never selects interface text', async ({ page }) => {
   await openOrbit(page);
 
