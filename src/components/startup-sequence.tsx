@@ -4,7 +4,7 @@ import { ARROW_MARK_PATH } from '@/components/orbit-icons';
 import { readIncomingArrowSource } from '@/lib/arrow-map';
 import { useEffect, useRef, useState } from 'react';
 
-const STARTUP_SESSION_KEY = 'orbit-startup-seen';
+const STARTUP_STORAGE_KEY = 'orbit-startup-seen-v2';
 
 type Particle = {
   targetX: number;
@@ -282,7 +282,7 @@ export function StartupSequence() {
   };
 
   const dismissIntro = () => {
-    sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
+    localStorage.setItem(STARTUP_STORAGE_KEY, '1');
     setVisible(false);
     focusOrbitCore();
   };
@@ -293,14 +293,23 @@ export function StartupSequence() {
     );
 
     const resolveVisibility = () => {
+      const params = new URLSearchParams(window.location.search);
       const source = readIncomingArrowSource(window.location.search);
+      const forceIntro = params.get('intro') === '1';
       const shouldSkip =
-        Boolean(source) ||
-        motionQuery.matches ||
-        sessionStorage.getItem(STARTUP_SESSION_KEY) === '1';
+        !forceIntro &&
+        (Boolean(source) ||
+          motionQuery.matches ||
+          localStorage.getItem(STARTUP_STORAGE_KEY) === '1');
+
+      if (forceIntro) {
+        const url = new URL(window.location.href);
+        url.searchParams.delete('intro');
+        window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+      }
 
       if (source || motionQuery.matches) {
-        sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
+        localStorage.setItem(STARTUP_STORAGE_KEY, '1');
       }
 
       setReady(true);
@@ -356,7 +365,7 @@ export function StartupSequence() {
     if (!activated) return;
 
     const finishTimer = window.setTimeout(() => {
-      sessionStorage.setItem(STARTUP_SESSION_KEY, '1');
+      localStorage.setItem(STARTUP_STORAGE_KEY, '1');
       setFinished(true);
     }, 3550);
 
