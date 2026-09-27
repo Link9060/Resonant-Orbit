@@ -14,7 +14,8 @@
   };
 
   const ORBIT_URL = 'https://link9060.github.io/Resonant-Orbit/';
-  const VALID_MODULES = new Set(['relay', 'orbit', 'atlas', 'ravin']);
+  const WAYPOINT_URL = 'https://link9060.github.io/Resonant-Waypoint/';
+  const VALID_MODULES = new Set(['relay', 'orbit', 'atlas', 'ravin', 'waypoint']);
   const PANEL_LABELS = {
     notes: 'Notes',
     tasks: 'Tasks',
@@ -502,12 +503,20 @@
     });
   }
 
+  function ownerNote(tab, copy) {
+    const url = new URL(WAYPOINT_URL);
+    url.searchParams.set('from', state.activeModule || 'orbit');
+    url.searchParams.set('tab', tab);
+    return '<div class="arrow-os-owner-note"><span>WAYPOINT</span><p>' + copy + '</p><a href="' + escapeAttr(url.toString()) + '">Open Waypoint ↗</a></div>';
+  }
+
   function renderTasks() {
     const rawTasks = readJson(STORAGE.tasks, []);
     const tasks = Array.isArray(rawTasks)
       ? rawTasks.filter(task => task && typeof task.id === 'string' && typeof task.text === 'string').slice(0, 500)
       : [];
     state.panelBody.innerHTML =
+      ownerNote('today', 'Tasks are owned by Waypoint. This is the fast ARROW-wide view of the same list.') +
       '<form class="arrow-os-inline-form arrow-os-task-form">' +
         '<input type="text" maxlength="120" placeholder="Add a task..." aria-label="Task name" required />' +
         '<button type="submit" aria-label="Add task">' + icon('plus') + '</button>' +
@@ -553,6 +562,7 @@
       : [])
       .sort((a, b) => String(a.date + (a.time || '')).localeCompare(String(b.date + (b.time || ''))));
     state.panelBody.innerHTML =
+      ownerNote('calendar', 'Calendar is owned by Waypoint. Events created here stay in the same shared ARROW data.') +
       '<form class="arrow-os-calendar-form">' +
         '<input type="text" maxlength="100" placeholder="Event title" aria-label="Event title" required />' +
         '<div class="arrow-os-form-grid">' +
@@ -861,14 +871,20 @@
       '<div class="arrow-os-settings-card">' +
         '<span>ARROW local data</span>' +
         '<strong>' + tasks.length + ' tasks · ' + events.length + ' events · ' + links.length + ' links</strong>' +
-        '<small>' + notesLength + ' note characters. Stored in this browser and shared across the four GitHub Pages ARROW modules.</small>' +
+        '<small>' + notesLength + ' note characters. Browser-synced across ARROW centers on this device. Account cloud sync is not connected yet.</small>' +
       '</div>' +
       '<div class="arrow-os-settings-actions">' +
+        '<button type="button" data-settings-action="intro">Replay Orbit intro</button>' +
         '<button type="button" data-settings-action="export">Export ARROW data</button>' +
         '<label class="arrow-os-import">Import ARROW data<input type="file" accept="application/json" data-settings-action="import" /></label>' +
         '<button type="button" class="is-danger" data-settings-action="reset">Reset ARROW data</button>' +
       '</div>';
 
+    state.panelBody.querySelector('[data-settings-action="intro"]').addEventListener('click', () => {
+      const url = new URL(ORBIT_URL);
+      url.searchParams.set('intro', '1');
+      location.assign(url.toString());
+    });
     state.panelBody.querySelector('[data-settings-action="export"]').addEventListener('click', exportData);
     state.panelBody.querySelector('[data-settings-action="import"]').addEventListener('change', importData);
     state.panelBody.querySelector('[data-settings-action="reset"]').addEventListener('click', () => {
