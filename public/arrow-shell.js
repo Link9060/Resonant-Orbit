@@ -993,7 +993,15 @@
 
   function moduleOrbitControl(module) {
     const instance = [...state.instances].find(item => item.module === module);
-    return instance?.root?.querySelector('.arrow-os-orbit') || null;
+    if (!instance?.root) return null;
+
+    // On arrival the expanded Orbit item is hidden, but the ARROW trigger is
+    // visible. Land on the visible control so the final frame has a real
+    // on-screen destination instead of an invisible menu coordinate.
+    return (
+      instance.root.querySelector('.arrow-os-trigger') ||
+      instance.root.querySelector('.arrow-os-orbit')
+    );
   }
 
   function handoffPoint(element) {
