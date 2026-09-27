@@ -464,7 +464,7 @@ export function OrbitWorld() {
     }
   }, [travelPhase]);
 
-  useEffect(() => {
+  useLayoutEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const ui = uiRef.current;
       const target = event.target as HTMLElement | null;
