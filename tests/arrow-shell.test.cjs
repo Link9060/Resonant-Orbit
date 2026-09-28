@@ -74,7 +74,7 @@ test('public Relay can show ARROW controls while Orbit stays disabled', async ()
 });
 
 test('Escape from a non-Orbit center triggers the canonical return handoff', async () => {
-  const f = await fixture('relay');
+  const f = await fixture('relay', '', 'enabled', 'https://enterarrow.com/relay/');
   try {
     f.w.dispatchEvent(new f.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
     await delay(20);
