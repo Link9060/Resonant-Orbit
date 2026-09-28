@@ -5,9 +5,9 @@ const { JSDOM } = require('jsdom');
 const source = readFileSync(process.env.ARROW_SHELL_SOURCE || 'public/arrow-shell.js', 'utf8');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
-async function fixture(module = 'orbit', query = '', orbitAccess = 'enabled') {
+async function fixture(module = 'orbit', query = '', orbitAccess = 'enabled', baseUrl = 'https://link9060.github.io/test/') {
   const dom = new JSDOM(`<html><body><div data-arrow-os-shell data-module="${module}" data-orbit-access="${orbitAccess}"></div><div id="app"></div></body></html>`, {
-    url: 'https://link9060.github.io/test/' + query, runScripts: 'outside-only', pretendToBeVisual: true,
+    url: baseUrl + query, runScripts: 'outside-only', pretendToBeVisual: true,
   });
   const w = dom.window;
   w.matchMedia = () => ({ matches: false, addEventListener() {} });
@@ -70,6 +70,23 @@ test('public Relay can show ARROW controls while Orbit stays disabled', async ()
     orbit.click();
     await delay(20);
     assert.equal(f.w.document.querySelectorAll('.arrow-os-blackhole-departure').length, 0);
+  } finally { f.close(); }
+});
+
+test('Escape from a non-Orbit center triggers the canonical return handoff', async () => {
+  const f = await fixture('relay');
+  try {
+    f.w.dispatchEvent(new f.w.KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
+    await delay(20);
+    assert.equal(f.w.document.querySelectorAll('.arrow-os-blackhole-departure').length, 1);
+  } finally { f.close(); }
+});
+
+test('enterarrow.com settings exposes ARROW sign out', async () => {
+  const f = await fixture('relay', '', 'enabled', 'https://enterarrow.com/relay/');
+  try {
+    f.w.ArrowOS.openPanel('settings', 'relay');
+    assert.ok(f.w.document.querySelector('[data-settings-action="signout"]'));
   } finally { f.close(); }
 });
 
