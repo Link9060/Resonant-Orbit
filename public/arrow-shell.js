@@ -1322,7 +1322,7 @@
       instance.root.dataset.pinned = 'false';
       setOpen(instance, false);
     });
-  });
+  }, true);
 
   const repositionPanel = () => {
     if (state.activePanel) positionPanel(state.panelAnchor);
