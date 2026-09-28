@@ -13,8 +13,10 @@
     focusState: 'arrow_os_focus_state_v1',
   };
 
+  const ON_ENTERARROW = ['enterarrow.com', 'www.enterarrow.com'].includes(window.location.hostname);
   const ORBIT_URL = '/orbit/';
   const WAYPOINT_URL = '/waypoint/';
+  const SIGNOUT_URL = ON_ENTERARROW ? '/signout/' : '';
   const VALID_MODULES = new Set(['relay', 'orbit', 'atlas', 'ravin', 'waypoint']);
   const PANEL_LABELS = {
     notes: 'Notes',
@@ -889,6 +891,7 @@
         '<button type="button" data-settings-action="intro">Replay Orbit intro</button>' +
         '<button type="button" data-settings-action="export">Export ARROW data</button>' +
         '<label class="arrow-os-import">Import ARROW data<input type="file" accept="application/json" data-settings-action="import" /></label>' +
+        (SIGNOUT_URL ? '<button type="button" class="is-danger" data-settings-action="signout">Sign out of ARROW</button>' : '') +
         '<button type="button" class="is-danger" data-settings-action="reset">Reset ARROW data</button>' +
       '</div>';
 
@@ -899,6 +902,11 @@
     });
     state.panelBody.querySelector('[data-settings-action="export"]').addEventListener('click', exportData);
     state.panelBody.querySelector('[data-settings-action="import"]').addEventListener('change', importData);
+    const signoutButton = state.panelBody.querySelector('[data-settings-action="signout"]');
+    signoutButton?.addEventListener('click', () => {
+      location.assign(SIGNOUT_URL);
+    });
+
     state.panelBody.querySelector('[data-settings-action="reset"]').addEventListener('click', () => {
       if (!confirm('Reset ARROW notes, tasks, calendar events, links, appearance, and focus settings in this browser?')) return;
       Object.values(STORAGE).forEach(key => {
@@ -1290,10 +1298,25 @@
   document.addEventListener('pointerdown', closeEverythingOnOutsidePointer);
   window.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
+
+    const current = [...state.instances][0];
+    if (current && current.module !== 'orbit') {
+      event.preventDefault();
+      closePanel(false);
+      state.instances.forEach(instance => {
+        instance.pinned = false;
+        instance.root.dataset.pinned = 'false';
+        setOpen(instance, false);
+      });
+      launchToOrbit(current.module, moduleOrbitControl(current.module), current.orbitAccess);
+      return;
+    }
+
     if (state.activePanel) {
       closePanel();
       return;
     }
+
     state.instances.forEach(instance => {
       instance.pinned = false;
       instance.root.dataset.pinned = 'false';
