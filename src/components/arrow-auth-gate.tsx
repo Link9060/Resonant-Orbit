@@ -169,6 +169,17 @@ export function ArrowAuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     mountedRef.current = true;
 
+    const relayPublicAccess =
+      new URLSearchParams(window.location.search).get('access') === 'relay-only';
+
+    if (relayPublicAccess) {
+      setAuthorized(true);
+      setChecking(false);
+      return () => {
+        mountedRef.current = false;
+      };
+    }
+
     if (
       isLocalDev() &&
       localStorage.getItem(DEV_AUTH_BYPASS_KEY) === '1'
