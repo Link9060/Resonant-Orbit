@@ -348,10 +348,19 @@ export function OrbitWorld() {
   });
 
   const [accessMode] = useState<'full' | 'relay-only'>(() => {
-    if (typeof window === 'undefined') return 'full';
-    return new URLSearchParams(window.location.search).get('access') === 'relay-only'
-      ? 'relay-only'
-      : 'full';
+    if (typeof window === 'undefined') return 'relay-only';
+
+    // Public Orbit is intentionally Relay-only for now. Keep the unreleased
+    // ARROW destinations visible as greyed-out previews, but do not let public
+    // users focus, launch, or navigate into them yet.
+    const requestedRelayOnly =
+      new URLSearchParams(window.location.search).get('access') === 'relay-only';
+    const isLocalDevelopment =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '::1';
+
+    return requestedRelayOnly || !isLocalDevelopment ? 'relay-only' : 'full';
   });
   const relayOnlyAccess = accessMode === 'relay-only';
   const destinationEnabled = (destination: Destination) =>
