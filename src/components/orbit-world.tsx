@@ -602,6 +602,15 @@ export function OrbitWorld() {
         return;
       }
 
+      if (event.key === 'Enter' && ui.selectedId !== 'orbit') {
+        const travelButton = document.querySelector<HTMLButtonElement>('.travel-button:not(:disabled)');
+        if (travelButton) {
+          event.preventDefault();
+          travelButton.click();
+          return;
+        }
+      }
+
       if (event.key.toLowerCase() === 'o') {
         event.preventDefault();
         recenterWorld();
