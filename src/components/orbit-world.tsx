@@ -106,7 +106,7 @@ type TouchPoint = { x: number; y: number };
 const destinations = ARROW_DESTINATIONS;
 const destinationIndex = ARROW_DESTINATION_BY_ID;
 const VIEW_STORAGE_KEY = 'orbit-view-v2';
-const WAYPOINT_URL = 'https://link9060.github.io/Resonant-Waypoint/';
+const WAYPOINT_URL = '/waypoint/';
 const FLIGHT_DURATION_MS = 1000;
 const TRANSFER_PARTICLES = Array.from({ length: 26 }, (_, index) => {
   const angle = (Math.PI * 2 * index) / 26 + (index % 2 ? 0.07 : -0.04);
@@ -1284,7 +1284,7 @@ export function OrbitWorld() {
   const openDestination = (destination: Destination) => {
     if (!destination.href) return;
 
-    const url = new URL(destination.href);
+    const url = new URL(destination.href, window.location.origin);
     url.searchParams.set('from', 'orbit');
     window.location.assign(url.toString());
   };
@@ -1830,7 +1830,7 @@ export function OrbitWorld() {
                 disabled={relayOnlyAccess}
                 onClick={() => {
                   if (relayOnlyAccess) return;
-                  const url = new URL(WAYPOINT_URL);
+                  const url = new URL(WAYPOINT_URL, window.location.origin);
                   url.searchParams.set('from', 'orbit');
                   url.searchParams.set('tab', 'dump');
                   window.location.assign(url.toString());
