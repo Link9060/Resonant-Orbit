@@ -347,6 +347,16 @@ export function OrbitWorld() {
     lastY: 0,
   });
 
+  const [accessMode] = useState<'full' | 'relay-only'>(() => {
+    if (typeof window === 'undefined') return 'full';
+    return new URLSearchParams(window.location.search).get('access') === 'relay-only'
+      ? 'relay-only'
+      : 'full';
+  });
+  const relayOnlyAccess = accessMode === 'relay-only';
+  const destinationEnabled = (destination: Destination) =>
+    !relayOnlyAccess || destination.id === 'relay';
+
   const [selectedId, setSelectedId] = useState<DestinationId>('orbit');
   const [travelPhase, setTravelPhase] = useState<TravelPhase>('idle');
   const [travelId, setTravelId] = useState<Destination['id'] | null>(null);
@@ -598,7 +608,7 @@ export function OrbitWorld() {
         event.preventDefault();
         const shortcut = Number(event.key);
         const destination = destinations.find(item => item.shortcut === shortcut);
-        if (destination) focusDestination(destination, 0.8);
+        if (destination && destinationEnabled(destination)) focusDestination(destination, 0.8);
         return;
       }
 
@@ -908,10 +918,12 @@ export function OrbitWorld() {
             : projected.x < centerX - sideDeadzone ? 'left' : 'right';
 
         nodeSideRef.current[destination.id] = nextSide;
+        const available = destinationEnabled(destination);
         node.dataset.side = nextSide;
         node.dataset.backface = nextFront ? 'false' : 'true';
-        node.tabIndex = locked || !nextFront ? -1 : 0;
-        node.style.pointerEvents = locked || !nextFront ? 'none' : 'auto';
+        node.dataset.restricted = available ? 'false' : 'true';
+        node.tabIndex = locked || !nextFront || !available ? -1 : 0;
+        node.style.pointerEvents = locked || !nextFront || !available ? 'none' : 'auto';
 
         const link = linkRefs.current[destination.id];
         if (link) {
@@ -1048,7 +1060,7 @@ export function OrbitWorld() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
       window.cancelAnimationFrame(frame);
     };
-  }, [renderer, renderProfile]);
+  }, [accessMode, renderer, renderProfile]);
 
   const handlePointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
     if (interactionLocked) return;
@@ -1224,6 +1236,7 @@ export function OrbitWorld() {
   };
 
   const focusDestination = (destination: Destination, impulse = 1) => {
+    if (!destinationEnabled(destination)) return;
     if (uiRef.current.travelPhase !== 'idle' || uiRef.current.incomingFrom) return;
 
     const [x, y, z] = destination.anchor;
@@ -1449,7 +1462,7 @@ export function OrbitWorld() {
 
   const handleNavigatorKeyDown = (event: ReactKeyboardEvent<HTMLElement>) => {
     const results = Array.from(
-      navigatorRef.current?.querySelectorAll<HTMLButtonElement>('.navigator-result') ?? [],
+      navigatorRef.current?.querySelectorAll<HTMLButtonElement>('.navigator-result:not(:disabled)') ?? [],
     );
 
     if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
@@ -1470,10 +1483,11 @@ export function OrbitWorld() {
     if (
       event.key === 'Enter' &&
       document.activeElement === navigatorInputRef.current &&
-      filteredDestinations[0]
+      filteredDestinations.find(destinationEnabled)
     ) {
       event.preventDefault();
-      chooseFromNavigator(filteredDestinations[0]);
+      const firstAvailable = filteredDestinations.find(destinationEnabled);
+      if (firstAvailable) chooseFromNavigator(firstAvailable);
       return;
     }
 
@@ -1526,7 +1540,7 @@ export function OrbitWorld() {
           }
           if (!requestedFocus && saved.selectedId && saved.selectedId !== 'orbit') {
             const savedDestination = destinationIndex.get(saved.selectedId as Destination['id']);
-            if (savedDestination) setSelectedId(savedDestination.id);
+            if (savedDestination && destinationEnabled(savedDestination)) setSelectedId(savedDestination.id);
           }
         }
       } catch {}
@@ -1534,7 +1548,7 @@ export function OrbitWorld() {
 
     if (requestedFocus) {
       const destination = destinationIndex.get(requestedFocus);
-      if (destination) {
+      if (destination && destinationEnabled(destination)) {
         window.requestAnimationFrame(() => focusDestination(destination, 0.9));
       }
       const url = new URL(window.location.href);
@@ -1590,6 +1604,7 @@ export function OrbitWorld() {
       data-travel-destination={travelId ?? undefined}
       data-flight-behind={flightPath.behind ? 'true' : 'false'}
       data-incoming-from={incomingFrom ?? undefined}
+      data-access-mode={accessMode}
       style={flightStyle}
       onPointerMove={handlePointerMove}
       onPointerDown={handlePointerDown}
@@ -1695,13 +1710,13 @@ export function OrbitWorld() {
               <button
                 type="button"
                 key={destination.id}
-                className={`orbit-shortcut ${selectedId === destination.id ? 'is-active' : ''}`}
+                className={`orbit-shortcut ${selectedId === destination.id ? 'is-active' : ''} ${destinationEnabled(destination) ? '' : 'is-restricted'}`}
                 onClick={() => focusDestination(destination, 0.75)}
-                disabled={interactionLocked}
+                disabled={interactionLocked || !destinationEnabled(destination)}
                 aria-keyshortcuts={String(destination.shortcut)}
                 aria-pressed={selectedId === destination.id}
                 aria-label={`${destination.shortcut}: Focus ${destination.name}`}
-                title={`${destination.shortcut} · ${destination.name}`}
+                title={destinationEnabled(destination) ? `${destination.shortcut} · ${destination.name}` : `${destination.name} · unavailable in Relay public access`}
               >
                 <kbd>{destination.shortcut}</kbd>
                 <DestinationIcon id={destination.id} size={14} />
@@ -1723,10 +1738,14 @@ export function OrbitWorld() {
                 'destination-node',
                 selectedId === destination.id ? 'is-selected' : '',
                 travelId === destination.id ? 'is-travel-target' : '',
+                destinationEnabled(destination) ? '' : 'is-restricted',
               ].filter(Boolean).join(' ')}
               onClick={() => focusDestination(destination)}
+              disabled={!destinationEnabled(destination)}
               aria-pressed={selectedId === destination.id}
-              aria-label={`${destination.name}, ${destination.code}. ${destination.detail}`}
+              aria-label={destinationEnabled(destination)
+                ? `${destination.name}, ${destination.code}. ${destination.detail}`
+                : `${destination.name}, unavailable in Relay public access`}
             >
               <span className="node-pulse" />
               <span className="node-landmark" aria-hidden="true">
@@ -1808,7 +1827,9 @@ export function OrbitWorld() {
               <button
                 type="button"
                 className="focus-button"
+                disabled={relayOnlyAccess}
                 onClick={() => {
+                  if (relayOnlyAccess) return;
                   const url = new URL(WAYPOINT_URL);
                   url.searchParams.set('from', 'orbit');
                   url.searchParams.set('tab', 'dump');
@@ -1820,7 +1841,9 @@ export function OrbitWorld() {
               </button>
             )}
             <span className="handoff-state">
-              {selected ? (selected.href ? 'route connected' : 'preview only · route staged') : 'brain dump into Waypoint'}
+              {selected
+                ? (selected.href ? 'route connected' : 'preview only · route staged')
+                : relayOnlyAccess ? 'Waypoint unavailable in Relay public access' : 'brain dump into Waypoint'}
             </span>
           </div>
         </aside>
@@ -1943,8 +1966,9 @@ export function OrbitWorld() {
                 <button
                   type="button"
                   key={destination.id}
-                  className={`navigator-result ${selectedId === destination.id ? 'is-current' : ''}`}
+                  className={`navigator-result ${selectedId === destination.id ? 'is-current' : ''} ${destinationEnabled(destination) ? '' : 'is-restricted'}`}
                   aria-current={selectedId === destination.id ? 'true' : undefined}
+                  disabled={!destinationEnabled(destination)}
                   onClick={() => chooseFromNavigator(destination)}
                 >
                   <span className="navigator-index">0{destination.shortcut}</span>
@@ -1956,8 +1980,8 @@ export function OrbitWorld() {
                     <span>{destination.code}</span>
                   </span>
                   <span className="navigator-result-description">{destination.description}</span>
-                  <span className={`navigator-route ${destination.href ? 'is-live' : 'is-staged'}`}>
-                    {destination.href ? 'connected' : 'staged'}
+                  <span className={`navigator-route ${destinationEnabled(destination) && destination.href ? 'is-live' : 'is-staged'}`}>
+                    {destinationEnabled(destination) ? (destination.href ? 'connected' : 'staged') : 'locked'}
                   </span>
                   <TargetIcon size={15} />
                 </button>
