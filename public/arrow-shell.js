@@ -247,7 +247,8 @@
     mount.dataset.arrowOsMounted = 'true';
 
     const module = VALID_MODULES.has(mount.dataset.module) ? mount.dataset.module : 'relay';
-    const orbitEnabled = mount.dataset.orbitAccess !== 'disabled';
+    const orbitAccess = mount.dataset.orbitAccess || 'enabled';
+    const orbitEnabled = orbitAccess !== 'disabled';
     const root = document.createElement('div');
     root.className = 'arrow-os-root';
     root.dataset.module = module;
@@ -281,6 +282,7 @@
       mount,
       root,
       module,
+      orbitAccess,
       orbitEnabled,
       trigger: root.querySelector('.arrow-os-trigger'),
       content: root.querySelector('.arrow-os-content'),
@@ -344,7 +346,7 @@
         window.dispatchEvent(new CustomEvent('arrow:orbit-home'));
         return;
       }
-      launchToOrbit(module, orbitButton);
+      launchToOrbit(module, orbitButton, instance.orbitAccess);
     });
 
     root.querySelectorAll('[data-arrow-panel]').forEach(button => {
@@ -1171,11 +1173,12 @@
     });
   }
 
-  function launchToOrbit(module, anchor) {
+  function launchToOrbit(module, anchor, orbitAccess = 'enabled') {
     if (module === 'orbit' || state.departing) return;
     state.departing = true;
     const url = new URL(ORBIT_URL);
     url.searchParams.set('from', module);
+    if (orbitAccess === 'relay-only') url.searchParams.set('access', 'relay-only');
 
     if (motionReduced()) {
       location.assign(url.toString());
