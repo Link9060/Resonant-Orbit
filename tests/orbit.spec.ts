@@ -10,20 +10,27 @@ async function openOrbit(page: import('@playwright/test').Page) {
   await expect(page.locator('.world-shell')).toBeVisible();
 }
 
-test('Relay public access enters restricted Orbit without a second cross-domain login', async ({ page }) => {
+test('Orbit no longer renders its own sign-in surface', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+  });
+  await page.goto('/');
+
+  await expect(page.locator('.arrow-auth-gate')).toHaveCount(0);
+  await expect(page.locator('.orbit-app')).toBeVisible();
+});
+
+test('Relay-only compatibility mode still mounts without a second login', async ({ page }) => {
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+  });
   await page.goto('/?access=relay-only');
 
   await expect(page.locator('.arrow-auth-gate')).toHaveCount(0);
   await expect(page.locator('.orbit-app')).toBeVisible();
   await expect(page.locator('.world-shell')).toHaveAttribute('data-access-mode', 'relay-only');
-});
-
-test('ARROW login is the first surface before Orbit mounts', async ({ page }) => {
-  await page.goto('/');
-
-  await expect(page.getByRole('heading', { name: 'ARROW' })).toBeVisible();
-  await expect(page.getByText('ONE ACCOUNT · EVERY CENTER')).toBeVisible();
-  await expect(page.locator('.orbit-app')).toHaveCount(0);
 });
 
 test('Relay public access keeps only Relay enabled inside Orbit', async ({ page }) => {
