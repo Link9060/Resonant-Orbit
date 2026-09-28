@@ -13,8 +13,8 @@
     focusState: 'arrow_os_focus_state_v1',
   };
 
-  const ORBIT_URL = 'https://link9060.github.io/Resonant-Orbit/';
-  const WAYPOINT_URL = 'https://link9060.github.io/Resonant-Waypoint/';
+  const ORBIT_URL = '/orbit/';
+  const WAYPOINT_URL = '/waypoint/';
   const VALID_MODULES = new Set(['relay', 'orbit', 'atlas', 'ravin', 'waypoint']);
   const PANEL_LABELS = {
     notes: 'Notes',
@@ -893,7 +893,7 @@
       '</div>';
 
     state.panelBody.querySelector('[data-settings-action="intro"]').addEventListener('click', () => {
-      const url = new URL(ORBIT_URL);
+      const url = new URL(ORBIT_URL, window.location.origin);
       url.searchParams.set('intro', '1');
       location.assign(url.toString());
     });
