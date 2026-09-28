@@ -33,6 +33,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
         <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260928-enterarrow-shell-v1`} />
       </head>
       <body>
+        <Script src="/arrow-auth-guard.js?v=auth-v2" strategy="beforeInteractive" />
         {children}
         <Script
           src={`${arrowShellBase}/arrow-shell.js?v=20260928-enterarrow-shell-v1`}
