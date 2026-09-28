@@ -91,6 +91,17 @@ test('Navigator Enter selects the first result and moves focus to its world node
   await expect(relayNode).toBeFocused();
 });
 
+test('number shortcut followed by Enter launches that destination', async ({ page }) => {
+  await openOrbit(page);
+  await page.route('https://link9060.github.io/Resonant-Relay/**', route => route.abort());
+
+  await page.keyboard.press('3');
+  await expect(page.getByRole('button', { name: 'Travel to Relay' })).toBeVisible();
+
+  await page.keyboard.press('Enter');
+  await expect(page.locator('.travel-craft')).toBeVisible();
+});
+
 test('travel starts from the live craft pose and uses a one-second continuous animation', async ({ page }) => {
   await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.addInitScript(() => {
@@ -332,6 +343,26 @@ test('reduced-motion incoming handoff clears the source query immediately', asyn
   await expect(page.getByText('Everything starts here.')).toBeVisible();
 });
 
+
+test('expanded ARROW shell keeps Orbit fully inside the island', async ({ page }) => {
+  await openOrbit(page);
+
+  const trigger = page.locator('.arrow-os-trigger');
+  await trigger.click();
+
+  const island = page.locator('.arrow-os-island');
+  const orbit = page.locator('.arrow-os-orbit');
+  await expect(island).toBeVisible();
+  await expect(orbit).toBeVisible();
+
+  const islandBox = await island.boundingBox();
+  const orbitBox = await orbit.boundingBox();
+  expect(islandBox).not.toBeNull();
+  expect(orbitBox).not.toBeNull();
+
+  expect(orbitBox!.x).toBeGreaterThanOrEqual(islandBox!.x - 1);
+  expect(orbitBox!.x + orbitBox!.width).toBeLessThanOrEqual(islandBox!.x + islandBox!.width + 1);
+});
 
 test('canonical ARROW shell expands from the Orbit header', async ({ page }) => {
   await openOrbit(page);
