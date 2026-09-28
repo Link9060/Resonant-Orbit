@@ -1184,7 +1184,7 @@
   function launchToOrbit(module, anchor, orbitAccess = 'enabled') {
     if (module === 'orbit' || state.departing) return;
     state.departing = true;
-    const url = new URL(ORBIT_URL);
+    const url = new URL(ORBIT_URL, window.location.origin);
     url.searchParams.set('from', module);
     if (orbitAccess === 'relay-only') url.searchParams.set('access', 'relay-only');
 
