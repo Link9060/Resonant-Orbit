@@ -18,6 +18,41 @@ test('ARROW login is the first surface before Orbit mounts', async ({ page }) =>
   await expect(page.locator('.orbit-app')).toHaveCount(0);
 });
 
+test('Relay public access keeps only Relay enabled inside Orbit', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+  });
+  await page.goto('/?access=relay-only');
+  await expect(page.locator('.world-shell')).toHaveAttribute('data-access-mode', 'relay-only');
+
+  const quickRoutes = page.getByRole('navigation', { name: 'ARROW quick routes' });
+  const atlas = quickRoutes.getByRole('button', { name: /Atlas/i });
+  const ravin = quickRoutes.getByRole('button', { name: /RAVIN/i });
+  const relay = quickRoutes.getByRole('button', { name: /Relay/i });
+  const waypoint = quickRoutes.getByRole('button', { name: /Waypoint/i });
+
+  await expect(atlas).toBeDisabled();
+  await expect(ravin).toBeDisabled();
+  await expect(waypoint).toBeDisabled();
+  await expect(relay).toBeEnabled();
+
+  await page.keyboard.press('1');
+  await expect(page.getByRole('heading', { name: 'Your ARROW system' })).toBeVisible();
+
+  await page.keyboard.press('3');
+  await expect(page.getByRole('heading', { name: 'Relay' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Travel to Relay' })).toBeVisible();
+
+  await page.keyboard.press('Control+K');
+  const navigator = page.getByRole('dialog', { name: 'Orbit navigator' });
+  await expect(navigator.getByRole('button', { name: /Atlas/i })).toBeDisabled();
+  await expect(navigator.getByRole('button', { name: /RAVIN/i })).toBeDisabled();
+  await expect(navigator.getByRole('button', { name: /Waypoint/i })).toBeDisabled();
+  await expect(navigator.getByRole('button', { name: /Relay/i })).toBeEnabled();
+});
+
 test('quick-route rail exposes all four destinations and selected state', async ({ page }) => {
   await openOrbit(page);
 
