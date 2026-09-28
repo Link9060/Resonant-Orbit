@@ -57,7 +57,7 @@
 }
 
 .arrow-os-root[data-open="true"] .arrow-os-island {
-  width: min(690px, calc(100vw - 28px));
+  width: min(780px, calc(100vw - 28px));
   border-color: rgb(var(--arrow-os-fg) / .14);
   box-shadow:
     0 22px 64px rgba(0,0,0,.32),
