@@ -14,8 +14,15 @@ export const viewport: Viewport = {
   themeColor: '#050505',
 };
 
-const arrowShellBase =
-  process.env.NEXT_PUBLIC_ORBIT_DEPLOY_TARGET === 'github-pages'
+const configuredBasePath = (process.env.NEXT_PUBLIC_ORBIT_BASE_PATH || '').trim();
+const normalizeBasePath = (value: string) => {
+  if (!value || value === '/') return '';
+  return `/${value.replace(/^\/+|\/+$/g, '')}`;
+};
+
+const arrowShellBase = configuredBasePath
+  ? normalizeBasePath(configuredBasePath)
+  : process.env.NEXT_PUBLIC_ORBIT_DEPLOY_TARGET === 'github-pages'
     ? '/Resonant-Orbit'
     : '';
 
@@ -23,12 +30,12 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260927-arrow-shell-layout-v1`} />
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260928-enterarrow-shell-v1`} />
       </head>
       <body>
         {children}
         <Script
-          src={`${arrowShellBase}/arrow-shell.js?v=20260927-arrow-shell-layout-v1`}
+          src={`${arrowShellBase}/arrow-shell.js?v=20260928-enterarrow-shell-v1`}
           strategy="afterInteractive"
         />
       </body>
