@@ -124,6 +124,13 @@ async function getAuthClient() {
 }
 
 function currentRelayCallback() {
+  if (
+    window.location.hostname === 'enterarrow.com' ||
+    window.location.hostname === 'www.enterarrow.com'
+  ) {
+    return `${window.location.origin}/auth/callback/`;
+  }
+
   if (window.location.hostname === 'link9060.github.io') {
     return 'https://link9060.github.io/Resonant-Relay/auth/callback/';
   }
