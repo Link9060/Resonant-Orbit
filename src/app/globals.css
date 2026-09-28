@@ -2912,3 +2912,34 @@ input:focus-visible {
     opacity: 1;
   }
 }
+
+
+/* Relay public access: show the rest of ARROW as visible but unavailable. */
+.world-shell[data-access-mode="relay-only"] .destination-node.is-restricted {
+  --node-opacity: .16 !important;
+  --label-opacity: .34 !important;
+  opacity: .42;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.world-shell[data-access-mode="relay-only"] .destination-node.is-restricted .node-pulse {
+  opacity: .08;
+}
+
+.world-shell[data-access-mode="relay-only"] .orbit-shortcut.is-restricted,
+.world-shell[data-access-mode="relay-only"] .navigator-result.is-restricted {
+  opacity: .3;
+  filter: grayscale(1);
+  cursor: not-allowed;
+}
+
+.world-shell[data-access-mode="relay-only"] .orbit-shortcut.is-restricted:hover,
+.world-shell[data-access-mode="relay-only"] .navigator-result.is-restricted:hover {
+  transform: none;
+  background: transparent;
+}
+
+.world-shell[data-access-mode="relay-only"] .orbit-link {
+  opacity: .04 !important;
+}
