@@ -2044,7 +2044,15 @@ export function OrbitWorld() {
                   !entertainmentMode && travelId === destination.id ? 'is-travel-target' : '',
                   available ? '' : 'is-restricted',
                 ].filter(Boolean).join(' ')}
-                onClick={() => entertainmentMode ? openEntertainmentGame(game.id) : focusDestination(destination)}
+                onPointerDown={event => {
+                  if (entertainmentMode && event.button === 0) {
+                    event.stopPropagation();
+                    openEntertainmentGame(game.id);
+                  }
+                }}
+                onClick={() => {
+                  if (!entertainmentMode) focusDestination(destination);
+                }}
                 disabled={interactionLocked || !available}
                 aria-pressed={!entertainmentMode && selectedId === destination.id}
                 aria-label={entertainmentMode
