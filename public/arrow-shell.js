@@ -16,9 +16,17 @@
   const ON_ENTERARROW = ['enterarrow.com', 'www.enterarrow.com'].includes(window.location.hostname);
   const ORBIT_URL = ON_ENTERARROW ? '/orbit/' : 'https://link9060.github.io/Resonant-Orbit/';
   const WAYPOINT_URL = ON_ENTERARROW ? '/waypoint/' : 'https://link9060.github.io/Resonant-Waypoint/';
+  const RELAY_URL = ON_ENTERARROW ? '/relay/' : 'https://link9060.github.io/Resonant-Relay/';
+  const RAVIN_URL = ON_ENTERARROW ? '/ravin/' : 'https://link9060.github.io/Project-R.A.V.I.N.-1.1/';
   const SIGNOUT_URL = ON_ENTERARROW ? '/signout/' : '';
+
+  // Public client credentials only. User ownership is enforced by Supabase RLS.
+  const ARROW_SUPABASE_URL = 'https://cnorozrjugxpanpfmssa.supabase.co';
+  const ARROW_SUPABASE_KEY = 'sb_publishable_yVNPiB7opT0WRvBfKTZ2BA_s5bOQLRg';
+  const ARROW_AUTH_STORAGE_KEY = 'sb-cnorozrjugxpanpfmssa-auth-token';
   const VALID_MODULES = new Set(['relay', 'orbit', 'atlas', 'ravin', 'waypoint']);
   const PANEL_LABELS = {
+    ravin: 'RAVIN',
     notes: 'Notes',
     tasks: 'Tasks',
     focus: 'Focus',
@@ -91,6 +99,83 @@
       localStorage.setItem(key, value);
     } catch {}
     window.dispatchEvent(new CustomEvent('arrow-os:datachange', { detail: { key, value } }));
+  }
+
+  function readArrowSession() {
+    try {
+      const session = JSON.parse(localStorage.getItem(ARROW_AUTH_STORAGE_KEY) || 'null');
+      return session && typeof session.access_token === 'string' ? session : null;
+    } catch {
+      return null;
+    }
+  }
+
+  function saveArrowSession(session) {
+    try { localStorage.setItem(ARROW_AUTH_STORAGE_KEY, JSON.stringify(session)); } catch {}
+  }
+
+  async function refreshArrowSession(session) {
+    if (!session?.refresh_token) return null;
+    const response = await fetch(ARROW_SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+      method: 'POST',
+      headers: { apikey: ARROW_SUPABASE_KEY, 'content-type': 'application/json' },
+      body: JSON.stringify({ refresh_token: session.refresh_token }),
+    });
+    if (!response.ok) return null;
+    const fresh = await response.json();
+    const merged = { ...session, ...fresh, user: fresh.user || session.user };
+    saveArrowSession(merged);
+    return merged;
+  }
+
+  async function arrowData(pathname, options = {}, retry = true) {
+    let session = readArrowSession();
+    if (!session?.access_token) {
+      const error = new Error('Sign in to ARROW to use shared data.');
+      error.code = 'ARROW_AUTH_REQUIRED';
+      throw error;
+    }
+    if (session.expires_at && Number(session.expires_at) * 1000 < Date.now() + 30000) {
+      session = await refreshArrowSession(session) || session;
+    }
+
+    const headers = {
+      apikey: ARROW_SUPABASE_KEY,
+      Authorization: 'Bearer ' + session.access_token,
+      Accept: 'application/json',
+      ...(options.headers || {}),
+    };
+    if (options.body !== undefined) headers['content-type'] = 'application/json';
+
+    const response = await fetch(ARROW_SUPABASE_URL + pathname, {
+      method: options.method || 'GET',
+      headers,
+      body: options.body === undefined ? undefined : JSON.stringify(options.body),
+    });
+
+    if (response.status === 401 && retry) {
+      const fresh = await refreshArrowSession(session);
+      if (fresh) return arrowData(pathname, options, false);
+    }
+    if (!response.ok) {
+      const payload = await response.json().catch(() => null);
+      throw new Error(payload?.message || payload?.error || 'ARROW data could not load.');
+    }
+    if (response.status === 204) return null;
+    const text = await response.text();
+    return text ? JSON.parse(text) : null;
+  }
+
+  function currentArrowUserId() {
+    return readArrowSession()?.user?.id || null;
+  }
+
+  function sharedDataError(error) {
+    const signIn = error?.code === 'ARROW_AUTH_REQUIRED'
+      ? '<a href="' + escapeAttr(ORBIT_URL) + '">Open ARROW sign in ↗</a>'
+      : '';
+    return '<div class="arrow-os-empty"><strong>Shared ARROW data is unavailable.</strong><span>' +
+      escapeHtml(error?.message || 'Try again in a moment.') + '</span>' + signIn + '</div>';
   }
 
   function resolveTheme(choice) {
@@ -229,6 +314,7 @@
       links: '<path d="M9.5 14.5 14.5 9.5M8 16l-1.2 1.2a3.1 3.1 0 0 1-4.4-4.4L6.2 9a3.1 3.1 0 0 1 4.4 0M16 8l1.2-1.2a3.1 3.1 0 0 1 4.4 4.4L17.8 15a3.1 3.1 0 0 1-4.4 0" fill="none"/>',
       appearance: '<circle cx="12" cy="12" r="7.2" fill="none"/><path d="M12 4.8a7.2 7.2 0 0 0 0 14.4V4.8Z" fill="currentColor" stroke="none"/>',
       settings: '<circle cx="12" cy="12" r="3" fill="none"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18" fill="none"/>',
+      ravin: '<circle cx="12" cy="12" r="2.4"/><circle cx="12" cy="12" r="6.8" fill="none"/><path d="M12 2.5v2M21.5 12h-2M12 21.5v-2M2.5 12h2" fill="none"/>',
       plus: '<path d="M12 5v14M5 12h14" fill="none"/>',
       trash: '<path d="M6 7h12M9 7V5h6v2M8 9l.6 9h6.8L16 9" fill="none"/>',
       close: '<path d="m7 7 10 10M17 7 7 17" fill="none"/>',
@@ -261,6 +347,7 @@
         '<div class="arrow-os-content" aria-hidden="true">' +
           '<span class="arrow-os-module">' + module.toUpperCase() + '</span>' +
           '<button type="button" class="arrow-os-control arrow-os-orbit" aria-label="Orbit" title="Orbit">' + icon('orbit') + '<span>Orbit</span></button>' +
+          controlButton('ravin', 'RAVIN') +
           '<span class="arrow-os-divider" aria-hidden="true"></span>' +
           controlButton('notes', 'Notes') +
           controlButton('tasks', 'Tasks') +
@@ -491,6 +578,7 @@
 
   function renderPanel(name) {
     if (!state.panelBody) return;
+    if (name === 'ravin') renderRavin();
     if (name === 'notes') renderNotes();
     if (name === 'tasks') renderTasks();
     if (name === 'calendar') renderCalendar();
@@ -500,120 +588,223 @@
     if (name === 'settings') renderSettings();
   }
 
-  function renderNotes() {
-    const value = readString(STORAGE.notes, '');
-    state.panelBody.innerHTML =
-      '<label class="arrow-os-field">' +
-        '<span>Quick note</span>' +
-        '<textarea class="arrow-os-notes" rows="12" placeholder="Write anything you want available everywhere in ARROW..."></textarea>' +
-      '</label>' +
-      '<div class="arrow-os-panel-foot"><span class="arrow-os-save-state">Saved locally across ARROW</span><span>' + value.length + ' characters</span></div>';
+  function moduleRavinProfile(module) {
+    const profiles = {
+      orbit: {
+        line: 'RAVIN sees the whole ARROW system from here.',
+        prompts: ['What needs my attention across ARROW?', 'Find the most connected thing in my Field', 'Where should I go next?'],
+      },
+      relay: {
+        line: 'RAVIN can use your shared notes, tasks, calendar, and Field context without reading private Relay chats by default.',
+        prompts: ['What should I follow up on today?', 'Turn my current notes into next actions', 'What do I have coming up?'],
+      },
+      waypoint: {
+        line: 'RAVIN is in planning mode here: tasks, calendar, notes, plans, and direction.',
+        prompts: ['What is my best next move?', 'Help me organize what I need to do today', 'What am I forgetting this week?'],
+      },
+      atlas: {
+        line: 'RAVIN is in retrieval mode here: find, connect, and explain the knowledge in your Field.',
+        prompts: ['Find everything related to my current project', 'What connects these ideas?', 'Summarize my most relevant recent knowledge'],
+      },
+      ravin: {
+        line: 'Full RAVIN workspace. Ask across every RAVIN-readable part of ARROW.',
+        prompts: ['What changed across ARROW recently?', 'Pull together my current priorities', 'Search my Field for something useful'],
+      },
+    };
+    return profiles[module] || profiles.orbit;
+  }
 
-    const area = state.panelBody.querySelector('.arrow-os-notes');
-    area.value = value;
-    area.addEventListener('input', () => {
-      writeString(STORAGE.notes, area.value);
-      state.panelBody.querySelector('.arrow-os-panel-foot span:last-child').textContent = area.value.length + ' characters';
+  function ravinUrl(prompt = '') {
+    const url = new URL(RAVIN_URL, location.href);
+    const surface = state.activeModule || 'orbit';
+    url.searchParams.set('from', surface);
+    url.searchParams.set('surface', surface);
+    if (prompt) url.searchParams.set('prompt', prompt);
+    return url;
+  }
+
+  function renderRavin() {
+    const module = state.activeModule || 'orbit';
+    const profile = moduleRavinProfile(module);
+    state.panelBody.innerHTML =
+      '<div class="arrow-os-ravin-card">' +
+        '<div class="arrow-os-ravin-core" aria-hidden="true"></div>' +
+        '<div><span>RAVIN · ' + escapeHtml(module.toUpperCase()) + '</span><p>' + escapeHtml(profile.line) + '</p></div>' +
+      '</div>' +
+      '<div class="arrow-os-ravin-prompts">' +
+        profile.prompts.map(prompt => '<button type="button" data-ravin-prompt="' + escapeAttr(prompt) + '">' + escapeHtml(prompt) + '</button>').join('') +
+      '</div>' +
+      '<form class="arrow-os-ravin-form">' +
+        '<input type="text" maxlength="500" placeholder="Ask RAVIN from ' + escapeAttr(module) + '..." aria-label="Ask RAVIN" />' +
+        '<button type="submit">Ask ↗</button>' +
+      '</form>' +
+      '<div class="arrow-os-panel-foot"><span>Context follows you into RAVIN.</span><a href="' + escapeAttr(ravinUrl().toString()) + '">Open full RAVIN ↗</a></div>';
+
+    state.panelBody.querySelectorAll('[data-ravin-prompt]').forEach(button => {
+      button.addEventListener('click', () => location.assign(ravinUrl(button.dataset.ravinPrompt).toString()));
+    });
+    state.panelBody.querySelector('.arrow-os-ravin-form')?.addEventListener('submit', event => {
+      event.preventDefault();
+      const value = event.currentTarget.querySelector('input')?.value?.trim();
+      location.assign(ravinUrl(value || '').toString());
     });
   }
 
+  async function renderNotes() {
+    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared notes…</div>';
+    try {
+      const notes = await arrowData('/rest/v1/notes?select=id,title,content,is_pinned,updated_at&order=is_pinned.desc,updated_at.desc&limit=12');
+      if (state.activePanel !== 'notes') return;
+      state.panelBody.innerHTML =
+        '<div class="arrow-os-owner-note"><span>ONE NOTES LIBRARY</span><p>Relay edits the same notes that Field indexes and RAVIN can read.</p><a href="' + escapeAttr(new URL('notes', RELAY_URL).toString()) + '">Open full Notes ↗</a></div>' +
+        '<form class="arrow-os-note-form">' +
+          '<textarea rows="4" maxlength="4000" placeholder="Quick note — this saves to your shared ARROW notes…" aria-label="Quick note"></textarea>' +
+          '<button type="submit">Save shared note</button>' +
+        '</form>' +
+        '<div class="arrow-os-list">' +
+          (notes?.length ? notes.map(note => {
+            const blocks = Array.isArray(note.content) ? note.content : [];
+            const snippet = blocks.map(block => typeof block?.text === 'string' ? block.text.trim() : '').filter(Boolean).slice(0, 2).join(' · ');
+            return '<div class="arrow-os-list-row arrow-os-note-row"><div><strong>' + escapeHtml(note.title || 'Untitled') + '</strong><span>' + escapeHtml(snippet || 'Empty note') + '</span></div></div>';
+          }).join('') : panelEmpty('No notes yet.')) +
+        '</div>';
+
+      state.panelBody.querySelector('.arrow-os-note-form')?.addEventListener('submit', async event => {
+        event.preventDefault();
+        const area = event.currentTarget.querySelector('textarea');
+        const value = area?.value?.trim();
+        const userId = currentArrowUserId();
+        if (!value || !userId) return;
+        const title = value.split(/\n/)[0].slice(0, 80) || 'Quick note';
+        event.currentTarget.querySelector('button').disabled = true;
+        try {
+          await arrowData('/rest/v1/notes', {
+            method: 'POST',
+            headers: { Prefer: 'return=minimal' },
+            body: { user_id: userId, title, content: [{ id: id(), type: 'paragraph', text: value }], is_pinned: false },
+          });
+          renderNotes();
+        } catch (error) {
+          state.panelBody.innerHTML = sharedDataError(error);
+        }
+      });
+    } catch (error) {
+      if (state.activePanel === 'notes') state.panelBody.innerHTML = sharedDataError(error);
+    }
+  }
+
   function ownerNote(tab, copy) {
-    const url = new URL(WAYPOINT_URL);
+    const url = new URL(WAYPOINT_URL, location.href);
     url.searchParams.set('from', state.activeModule || 'orbit');
     url.searchParams.set('tab', tab);
     return '<div class="arrow-os-owner-note"><span>WAYPOINT</span><p>' + copy + '</p><a href="' + escapeAttr(url.toString()) + '">Open Waypoint ↗</a></div>';
   }
 
-  function renderTasks() {
-    const rawTasks = readJson(STORAGE.tasks, []);
-    const tasks = Array.isArray(rawTasks)
-      ? rawTasks.filter(task => task && typeof task.id === 'string' && typeof task.text === 'string').slice(0, 500)
-      : [];
-    state.panelBody.innerHTML =
-      ownerNote('today', 'Tasks are owned by Waypoint. This is the fast ARROW-wide view of the same list.') +
-      '<form class="arrow-os-inline-form arrow-os-task-form">' +
-        '<input type="text" maxlength="120" placeholder="Add a task..." aria-label="Task name" required />' +
-        '<button type="submit" aria-label="Add task">' + icon('plus') + '</button>' +
-      '</form>' +
-      '<div class="arrow-os-list">' +
-        (tasks.length ? tasks.map(task =>
-          '<div class="arrow-os-list-row ' + (task.done ? 'is-done' : '') + '" data-id="' + escapeAttr(task.id) + '">' +
-            '<label><input type="checkbox" ' + (task.done ? 'checked' : '') + ' /><span>' + escapeHtml(task.text) + '</span></label>' +
-            '<button type="button" class="arrow-os-row-delete" aria-label="Delete task">' + icon('trash') + '</button>' +
-          '</div>'
-        ).join('') : panelEmpty('No tasks yet.')) +
-      '</div>';
+  async function renderTasks() {
+    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared tasks…</div>';
+    try {
+      const tasks = await arrowData('/rest/v1/todos?select=id,title,due_on,completed,position,created_at&order=completed.asc,due_on.asc,position.asc,created_at.asc&limit=80');
+      if (state.activePanel !== 'tasks') return;
+      state.panelBody.innerHTML =
+        ownerNote('today', 'Waypoint is the planning view. Relay and RAVIN use this exact same task data.') +
+        '<form class="arrow-os-inline-form arrow-os-task-form">' +
+          '<input type="text" maxlength="120" placeholder="Add a task…" aria-label="Task name" required />' +
+          '<input type="date" aria-label="Due date" required />' +
+          '<button type="submit" aria-label="Add task">' + icon('plus') + '</button>' +
+        '</form>' +
+        '<div class="arrow-os-list">' +
+          (tasks?.length ? tasks.map(task =>
+            '<div class="arrow-os-list-row ' + (task.completed ? 'is-done' : '') + '" data-id="' + escapeAttr(task.id) + '">' +
+              '<label><input type="checkbox" ' + (task.completed ? 'checked' : '') + ' /><span>' + escapeHtml(task.title) + '<small>' + escapeHtml(task.due_on || '') + '</small></span></label>' +
+              '<button type="button" class="arrow-os-row-delete" aria-label="Delete task">' + icon('trash') + '</button>' +
+            '</div>'
+          ).join('') : panelEmpty('No tasks yet.')) +
+        '</div>';
 
-    state.panelBody.querySelector('.arrow-os-task-form').addEventListener('submit', event => {
-      event.preventDefault();
-      const input = event.currentTarget.querySelector('input');
-      const text = input.value.trim();
-      if (!text) return;
-      const next = [{ id: id(), text, done: false, createdAt: Date.now() }, ...tasks];
-      writeJson(STORAGE.tasks, next);
-      renderTasks();
-      state.panelBody.querySelector('.arrow-os-task-form input')?.focus();
-    });
-
-    state.panelBody.querySelectorAll('.arrow-os-list-row').forEach(row => {
-      const taskId = row.dataset.id;
-      row.querySelector('input').addEventListener('change', event => {
-        const next = tasks.map(task => task.id === taskId ? { ...task, done: event.target.checked } : task);
-        writeJson(STORAGE.tasks, next);
+      const form = state.panelBody.querySelector('.arrow-os-task-form');
+      form.querySelector('input[type="date"]').value = localDateInputValue();
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const [titleInput, dateInput] = form.querySelectorAll('input');
+        const userId = currentArrowUserId();
+        const title = titleInput.value.trim();
+        if (!title || !dateInput.value || !userId) return;
+        await arrowData('/rest/v1/todos', {
+          method: 'POST',
+          headers: { Prefer: 'return=minimal' },
+          body: { user_id: userId, title, due_on: dateInput.value },
+        });
         renderTasks();
       });
-      row.querySelector('.arrow-os-row-delete').addEventListener('click', () => {
-        writeJson(STORAGE.tasks, tasks.filter(task => task.id !== taskId));
-        renderTasks();
+
+      state.panelBody.querySelectorAll('.arrow-os-list-row').forEach(row => {
+        row.querySelector('input')?.addEventListener('change', async event => {
+          await arrowData('/rest/v1/todos?id=eq.' + encodeURIComponent(row.dataset.id), {
+            method: 'PATCH',
+            headers: { Prefer: 'return=minimal' },
+            body: { completed: event.target.checked },
+          });
+          renderTasks();
+        });
+        row.querySelector('.arrow-os-row-delete')?.addEventListener('click', async () => {
+          await arrowData('/rest/v1/todos?id=eq.' + encodeURIComponent(row.dataset.id), { method: 'DELETE' });
+          renderTasks();
+        });
       });
-    });
+    } catch (error) {
+      if (state.activePanel === 'tasks') state.panelBody.innerHTML = sharedDataError(error);
+    }
   }
 
-  function renderCalendar() {
-    const rawEvents = readJson(STORAGE.events, []);
-    const events = (Array.isArray(rawEvents)
-      ? rawEvents.filter(item => item && typeof item.id === 'string' && typeof item.title === 'string' && typeof item.date === 'string').slice(0, 500)
-      : [])
-      .sort((a, b) => String(a.date + (a.time || '')).localeCompare(String(b.date + (b.time || ''))));
-    state.panelBody.innerHTML =
-      ownerNote('calendar', 'Calendar is owned by Waypoint. Events created here stay in the same shared ARROW data.') +
-      '<form class="arrow-os-calendar-form">' +
-        '<input type="text" maxlength="100" placeholder="Event title" aria-label="Event title" required />' +
-        '<div class="arrow-os-form-grid">' +
-          '<input type="date" aria-label="Event date" required />' +
-          '<input type="time" aria-label="Event time" />' +
-        '</div>' +
-        '<button type="submit">Add event</button>' +
-      '</form>' +
-      '<div class="arrow-os-list arrow-os-events">' +
-        (events.length ? events.map(item =>
-          '<div class="arrow-os-list-row" data-id="' + escapeAttr(item.id) + '">' +
-            '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(formatEventDate(item.date, item.time)) + '</span></div>' +
-            '<button type="button" class="arrow-os-row-delete" aria-label="Delete event">' + icon('trash') + '</button>' +
-          '</div>'
-        ).join('') : panelEmpty('No ARROW events yet.')) +
-      '</div>';
+  async function renderCalendar() {
+    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared calendar…</div>';
+    try {
+      const events = await arrowData('/rest/v1/relay_calendar_events?select=id,title,event_date,is_all_day,start_time,end_time,details&order=event_date.asc,start_time.asc&limit=80');
+      if (state.activePanel !== 'calendar') return;
+      state.panelBody.innerHTML =
+        ownerNote('calendar', 'Waypoint is the planning view. This panel writes to the same calendar events Relay and RAVIN use.') +
+        '<form class="arrow-os-calendar-form">' +
+          '<input type="text" maxlength="100" placeholder="Event title" aria-label="Event title" required />' +
+          '<div class="arrow-os-form-grid">' +
+            '<input type="date" aria-label="Event date" required />' +
+            '<input type="time" aria-label="Event time" />' +
+          '</div>' +
+          '<button type="submit">Add shared event</button>' +
+        '</form>' +
+        '<div class="arrow-os-list arrow-os-events">' +
+          (events?.length ? events.map(item =>
+            '<div class="arrow-os-list-row" data-id="' + escapeAttr(item.id) + '">' +
+              '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(formatEventDate(item.event_date, item.start_time?.slice(0, 5) || '')) + '</span></div>' +
+              '<button type="button" class="arrow-os-row-delete" aria-label="Delete event">' + icon('trash') + '</button>' +
+            '</div>'
+          ).join('') : panelEmpty('No ARROW events yet.')) +
+        '</div>';
 
-    const form = state.panelBody.querySelector('.arrow-os-calendar-form');
-    form.querySelector('input[type="date"]').value = localDateInputValue();
-    form.addEventListener('submit', event => {
-      event.preventDefault();
-      const [titleInput, dateInput, timeInput] = form.querySelectorAll('input');
-      const title = titleInput.value.trim();
-      if (!title || !dateInput.value) return;
-      writeJson(STORAGE.events, [
-        ...events,
-        { id: id(), title, date: dateInput.value, time: timeInput.value || '', createdAt: Date.now() },
-      ]);
-      renderCalendar();
-    });
-
-    state.panelBody.querySelectorAll('.arrow-os-events .arrow-os-list-row').forEach(row => {
-      row.querySelector('.arrow-os-row-delete').addEventListener('click', () => {
-        writeJson(STORAGE.events, events.filter(item => item.id !== row.dataset.id));
+      const form = state.panelBody.querySelector('.arrow-os-calendar-form');
+      form.querySelector('input[type="date"]').value = localDateInputValue();
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const [titleInput, dateInput, timeInput] = form.querySelectorAll('input');
+        const userId = currentArrowUserId();
+        const title = titleInput.value.trim();
+        if (!title || !dateInput.value || !userId) return;
+        await arrowData('/rest/v1/relay_calendar_events', {
+          method: 'POST',
+          headers: { Prefer: 'return=minimal' },
+          body: { user_id: userId, title, event_date: dateInput.value, is_all_day: !timeInput.value, start_time: timeInput.value || null },
+        });
         renderCalendar();
       });
-    });
+
+      state.panelBody.querySelectorAll('.arrow-os-events .arrow-os-list-row').forEach(row => {
+        row.querySelector('.arrow-os-row-delete')?.addEventListener('click', async () => {
+          await arrowData('/rest/v1/relay_calendar_events?id=eq.' + encodeURIComponent(row.dataset.id), { method: 'DELETE' });
+          renderCalendar();
+        });
+      });
+    } catch (error) {
+      if (state.activePanel === 'calendar') state.panelBody.innerHTML = sharedDataError(error);
+    }
   }
 
   function renderLinks() {
