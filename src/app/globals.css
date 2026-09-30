@@ -3738,6 +3738,11 @@ button.command-connection-row:hover,
     display: none;
   }
 
+  .intro-intro .orbit-shortcuts,
+  .intro-collapsing .orbit-shortcuts {
+    top: calc(250px + env(safe-area-inset-top));
+  }
+
   .intro-command .orbit-shortcuts {
     top: calc(318px + env(safe-area-inset-top));
   }
