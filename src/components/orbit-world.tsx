@@ -1479,7 +1479,7 @@ export function OrbitWorld() {
   };
 
   const openEntertainmentGame = (gameId: EntertainmentGameId) => {
-    if (!entertainmentMode || interactionLocked) return;
+    if (!entertainmentModeRef.current) return;
     setActiveGame(gameId);
     activeGameRef.current = gameId;
   };
