@@ -2045,14 +2045,12 @@ export function OrbitWorld() {
                   available ? '' : 'is-restricted',
                 ].filter(Boolean).join(' ')}
                 onPointerDown={event => {
-                  if (entertainmentMode && event.button === 0) {
+                  if (entertainmentMode) {
                     event.stopPropagation();
                     openEntertainmentGame(game.id);
                   }
                 }}
-                onClick={() => {
-                  if (!entertainmentMode) focusDestination(destination);
-                }}
+                onClick={() => entertainmentMode ? openEntertainmentGame(game.id) : focusDestination(destination)}
                 disabled={interactionLocked || !available}
                 aria-pressed={!entertainmentMode && selectedId === destination.id}
                 aria-label={entertainmentMode
