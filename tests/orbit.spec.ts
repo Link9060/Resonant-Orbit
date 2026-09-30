@@ -578,7 +578,7 @@ test('double-clicking Orbit reveals the hidden entertainment world and returns c
   await expect(page.getByRole('button', { name: /3: Play Cipher/i })).toBeVisible();
   await expect(page.getByRole('button', { name: /4: Play Surge/i })).toBeVisible();
 
-  await page.getByRole('button', { name: /Flight, ARCADE/i }).click();
+  await page.getByRole('button', { name: /1: Play Flight/i }).click();
   await expect(page.getByRole('dialog', { name: 'Flight game' })).toBeVisible();
 
   await page.keyboard.press('Escape');
