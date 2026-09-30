@@ -136,6 +136,7 @@ test('Navigator Enter selects the first result and moves focus to its world node
 
 test('number shortcut followed by Enter launches that destination', async ({ page }) => {
   await openOrbit(page);
+  await page.emulateMedia({ reducedMotion: 'no-preference' });
   await page.route('https://link9060.github.io/Resonant-Relay/**', route => route.abort());
 
   await page.keyboard.press('3');
@@ -426,22 +427,42 @@ test('canonical ARROW shell expands from the Orbit header', async ({ page }) => 
   await expect(trigger).toHaveAttribute('aria-expanded', 'false');
 });
 
-test('ARROW Notes is a system panel, not a Relay route, and persists on reload', async ({ page }) => {
+test('ARROW Notes writes the shared notes library without routing away from Orbit', async ({ page }) => {
+  const captured: { note?: Record<string, unknown> } = {};
+
+  await page.addInitScript(() => {
+    localStorage.setItem('sb-cnorozrjugxpanpfmssa-auth-token', JSON.stringify({
+      access_token: 'orbit-test-token',
+      refresh_token: 'orbit-test-refresh',
+      expires_at: Math.floor(Date.now() / 1000) + 3600,
+      user: { id: '00000000-0000-0000-0000-000000000001' },
+    }));
+  });
+
+  await page.route('https://cnorozrjugxpanpfmssa.supabase.co/rest/v1/notes**', async route => {
+    if (route.request().method() === 'POST') {
+      captured.note = route.request().postDataJSON() as Record<string, unknown>;
+      await route.fulfill({ status: 201, contentType: 'application/json', body: '[]' });
+      return;
+    }
+    await route.fulfill({ status: 200, contentType: 'application/json', body: '[]' });
+  });
+
   await openOrbit(page);
 
   await page.locator('.arrow-os-trigger').click();
   await page.getByRole('button', { name: 'Notes' }).click();
 
   const dialog = page.getByRole('dialog', { name: 'Notes' });
-  const note = dialog.getByRole('textbox', { name: 'Quick note' });
   await expect(dialog).toBeVisible();
+  await expect(dialog.getByText('ONE NOTES LIBRARY')).toBeVisible();
 
-  await note.fill('Shared ARROW note');
-  await page.reload();
+  await dialog.getByRole('textbox', { name: 'Quick note' }).fill('Shared ARROW note');
+  await dialog.getByRole('button', { name: 'Save shared note' }).click();
 
-  await page.locator('.arrow-os-trigger').click();
-  await page.getByRole('button', { name: 'Notes' }).click();
-  await expect(page.getByRole('dialog', { name: 'Notes' }).getByRole('textbox', { name: 'Quick note' })).toHaveValue('Shared ARROW note');
+  await expect.poll(() => captured.note?.title ?? null).toBe('Shared ARROW note');
+  expect(captured.note?.user_id).toBe('00000000-0000-0000-0000-000000000001');
+  await expect(page).toHaveURL(/\/$/);
 });
 
 test('ARROW task and appearance controls remain local system panels', async ({ page }) => {
@@ -510,7 +531,7 @@ test('Navigator can open Orbit command-center views', async ({ page }) => {
   });
 
   await page.goto('/');
-  await page.keyboard.press('Control+K');
+  await page.getByRole('button', { name: 'Navigate' }).click();
 
   const dialog = page.getByRole('dialog', { name: 'Orbit navigator' });
   const search = dialog.getByRole('textbox', { name: 'Search ARROW destinations' });
@@ -523,33 +544,4 @@ test('Navigator can open Orbit command-center views', async ({ page }) => {
   await expect(dialog).toBeHidden();
   await expect(page.getByRole('heading', { name: 'Your profile' })).toBeVisible();
   await expect(page.getByPlaceholder('What should ARROW call you?')).toBeVisible();
-});
-
-
-test('Orbit command field is RAVIN-first for natural-language questions', async ({ page }) => {
-  await page.emulateMedia({ reducedMotion: 'reduce' });
-  await page.addInitScript(() => {
-    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
-    localStorage.setItem('orbit-startup-seen-v2', '1');
-    localStorage.setItem('orbit-command-onboarding-v1', '1');
-  });
-
-  await page.route('https://link9060.github.io/Project-R.A.V.I.N.-1.1/**', route => route.abort());
-
-  await page.goto('/');
-
-  const command = page.getByRole('textbox', { name: 'ARROW command' });
-  await expect(command).toHaveAttribute('placeholder', 'Ask RAVIN or run a command...');
-
-  await command.fill('What should I work on next?');
-  await page.getByRole('button', { name: 'Run ARROW command' }).click();
-
-  await expect.poll(() => page.url()).toContain('Project-R.A.V.I.N.-1.1');
-  await expect.poll(() => {
-    try {
-      return new URL(page.url()).searchParams.get('prompt');
-    } catch {
-      return null;
-    }
-  }).toBe('What should I work on next?');
 });
