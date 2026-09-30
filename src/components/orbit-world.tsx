@@ -42,6 +42,13 @@ import {
   OrbitCommandPanel,
 } from '@/components/orbit-command-panel';
 import {
+  ENTERTAINMENT_GAME_BY_SLOT,
+  ENTERTAINMENT_GAMES,
+  EntertainmentGameIcon,
+  EntertainmentOverlay,
+  type EntertainmentGameId,
+} from '@/components/orbit-entertainment';
+import {
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -301,6 +308,9 @@ export function OrbitWorld() {
   const shortcutRailRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const previousTravelPhaseRef = useRef<TravelPhase>('idle');
+  const entertainmentModeRef = useRef(false);
+  const activeGameRef = useRef<EntertainmentGameId | null>(null);
+  const entertainmentTimerRef = useRef<number | null>(null);
 
   const nodeRefs = useRef<Partial<Record<Destination['id'], HTMLButtonElement | null>>>({});
   const linkRefs = useRef<Partial<Record<Destination['id'], SVGLineElement | null>>>({});
@@ -383,6 +393,9 @@ export function OrbitWorld() {
     waypoint: 'direction clear',
   });
   const [introMode, setIntroMode] = useState<IntroMode>('loading');
+  const [entertainmentMode, setEntertainmentMode] = useState(false);
+  const [entertainmentTransition, setEntertainmentTransition] = useState<'idle' | 'entering' | 'leaving'>('idle');
+  const [activeGame, setActiveGame] = useState<EntertainmentGameId | null>(null);
 
   const renderer = useMemo(() => {
     const density =
@@ -400,7 +413,9 @@ export function OrbitWorld() {
     travelPhase !== 'idle' ||
     incomingFrom !== null ||
     navigatorOpen ||
-    introMode === 'collapsing';
+    introMode === 'collapsing' ||
+    activeGame !== null ||
+    entertainmentTransition !== 'idle';
 
   const beginReturnToOrbit = () => {
     const ui = uiRef.current;
@@ -426,6 +441,17 @@ export function OrbitWorld() {
   useEffect(() => {
     uiRef.current = { selectedId, travelPhase, travelId, incomingFrom, navigatorOpen };
   }, [incomingFrom, navigatorOpen, selectedId, travelId, travelPhase]);
+
+  useEffect(() => {
+    entertainmentModeRef.current = entertainmentMode;
+    activeGameRef.current = activeGame;
+  }, [activeGame, entertainmentMode]);
+
+  useEffect(() => () => {
+    if (entertainmentTimerRef.current !== null) {
+      window.clearTimeout(entertainmentTimerRef.current);
+    }
+  }, []);
 
   useEffect(() => {
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -592,6 +618,15 @@ export function OrbitWorld() {
       const isTyping =
         target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
 
+      if (event.key === 'Escape' && activeGameRef.current) {
+        event.preventDefault();
+        setActiveGame(null);
+        activeGameRef.current = null;
+        return;
+      }
+
+      if (activeGameRef.current) return;
+
       if (event.key === 'Escape' && ui.navigatorOpen) {
         event.preventDefault();
         setNavigatorOpen(false);
@@ -606,6 +641,26 @@ export function OrbitWorld() {
       }
 
       if (ui.incomingFrom || ui.travelPhase !== 'idle') return;
+
+      if (entertainmentModeRef.current) {
+        if (event.metaKey || event.ctrlKey || event.altKey || isTyping) return;
+
+        if (/^[1-4]$/.test(event.key)) {
+          event.preventDefault();
+          const game = ENTERTAINMENT_GAMES.find(item => item.shortcut === Number(event.key));
+          if (game) {
+            setActiveGame(game.id);
+            activeGameRef.current = game.id;
+          }
+          return;
+        }
+
+        if (event.key.toLowerCase() === 'o') {
+          event.preventDefault();
+          recenterWorld();
+        }
+        return;
+      }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -936,7 +991,7 @@ export function OrbitWorld() {
             : projected.x < centerX - sideDeadzone ? 'left' : 'right';
 
         nodeSideRef.current[destination.id] = nextSide;
-        const available = destinationEnabled(destination);
+        const available = entertainmentModeRef.current || destinationEnabled(destination);
         node.dataset.side = nextSide;
         node.dataset.backface = nextFront ? 'false' : 'true';
         node.dataset.restricted = available ? 'false' : 'true';
@@ -1423,6 +1478,35 @@ export function OrbitWorld() {
     );
   };
 
+  const openEntertainmentGame = (gameId: EntertainmentGameId) => {
+    if (!entertainmentModeRef.current) return;
+    setActiveGame(gameId);
+    activeGameRef.current = gameId;
+  };
+
+  const toggleEntertainmentMode = () => {
+    if (introMode !== 'command' || interactionLocked) return;
+
+    const entering = !entertainmentMode;
+    if (entertainmentTimerRef.current !== null) {
+      window.clearTimeout(entertainmentTimerRef.current);
+    }
+
+    setNavigatorOpen(false);
+    setNavigatorQuery('');
+    setSelectedId('orbit');
+    setEntertainmentTransition(entering ? 'entering' : 'leaving');
+    setEntertainmentMode(entering);
+    entertainmentModeRef.current = entering;
+    impulseRef.current = 1.18;
+
+    entertainmentTimerRef.current = window.setTimeout(() => {
+      setEntertainmentTransition('idle');
+      entertainmentTimerRef.current = null;
+      impulseRef.current = 0.48;
+    }, reducedMotionRef.current ? 40 : 880);
+  };
+
   const returnToOrbit = beginReturnToOrbit;
 
   const recenterWorld = () => {
@@ -1763,6 +1847,8 @@ export function OrbitWorld() {
         dragging ? 'is-dragging' : '',
         incomingFrom ? 'incoming-active' : '',
         navigatorOpen ? 'has-navigator' : '',
+        entertainmentMode ? 'entertainment-mode' : '',
+        entertainmentTransition !== 'idle' ? 'entertainment-' + entertainmentTransition : '',
         prefersReducedMotion ? 'reduce-motion' : '',
         `intro-${introMode}`,
         `render-${renderProfile}`,
@@ -1806,15 +1892,23 @@ export function OrbitWorld() {
           )}
 
           {introMode === 'command' && (
-            <OrbitCommandPanel
-              statuses={destinationStatus}
-              relayOnlyAccess={relayOnlyAccess}
-              onOpenNavigator={openNavigator}
-              onFocusDestination={focusCommandDestination}
-              onOpenModule={openCommandModule}
-              onQuickCapture={quickCapture}
-              onReplayIntro={replayOrbitIntro}
-            />
+            entertainmentMode ? (
+              <section className="entertainment-copy" aria-label="Orbit entertainment mode">
+                <p className="eyebrow">HIDDEN WORLD / PLAY MODE</p>
+                <h1>Give your life <strong>entertainment.</strong></h1>
+                <p>The same Orbit. Different destinations. Pick a signal and play.</p>
+              </section>
+            ) : (
+              <OrbitCommandPanel
+                statuses={destinationStatus}
+                relayOnlyAccess={relayOnlyAccess}
+                onOpenNavigator={openNavigator}
+                onFocusDestination={focusCommandDestination}
+                onOpenModule={openCommandModule}
+                onQuickCapture={quickCapture}
+                onReplayIntro={replayOrbitIntro}
+              />
+            )
           )}
         </div>
 
@@ -1824,6 +1918,12 @@ export function OrbitWorld() {
         />
 
         <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
+
+        {entertainmentTransition !== 'idle' && (
+          <div className="entertainment-switch-message" aria-live="polite">
+            {entertainmentTransition === 'entering' ? 'DIRECTION IS OVERRATED.' : 'ALRIGHT. BACK TO WORK.'}
+          </div>
+        )}
 
         <svg className="orbit-links" aria-hidden="true">
           {destinations.map(destination => (
@@ -1888,8 +1988,9 @@ export function OrbitWorld() {
           className={`orbit-core-label ${selectedId === 'orbit' ? 'is-active' : ''}`}
           disabled={interactionLocked}
           onClick={recenterWorld}
+          onDoubleClick={toggleEntertainmentMode}
         >
-          <span className="core-kicker">YOU ARE HERE</span>
+          <span className="core-kicker">{entertainmentMode ? 'PLAY MODE' : 'YOU ARE HERE'}</span>
           <span className="core-title">Orbit</span>
         </button>
 
@@ -1902,58 +2003,74 @@ export function OrbitWorld() {
         >
           <span className="orbit-shortcuts-label">Quick routes</span>
           <div className="orbit-shortcuts-list">
-            {destinations.map(destination => (
-              <button
-                type="button"
-                key={destination.id}
-                className={`orbit-shortcut ${selectedId === destination.id ? 'is-active' : ''} ${destinationEnabled(destination) ? '' : 'is-restricted'}`}
-                onClick={() => focusDestination(destination, 0.75)}
-                disabled={interactionLocked || !destinationEnabled(destination)}
-                aria-keyshortcuts={String(destination.shortcut)}
-                aria-pressed={selectedId === destination.id}
-                aria-label={`${destination.shortcut}: Focus ${destination.name}`}
-                title={destinationEnabled(destination) ? `${destination.shortcut} · ${destination.name}` : `${destination.name} · unavailable in Relay public access`}
-              >
-                <kbd>{destination.shortcut}</kbd>
-                <DestinationIcon id={destination.id} size={14} />
-                <span>{destination.name}</span>
-              </button>
-            ))}
+            {destinations.map(destination => {
+              const game = ENTERTAINMENT_GAME_BY_SLOT[destination.id];
+              const available = entertainmentMode || destinationEnabled(destination);
+              return (
+                <button
+                  type="button"
+                  key={destination.id}
+                  className={`orbit-shortcut ${!entertainmentMode && selectedId === destination.id ? 'is-active' : ''} ${available ? '' : 'is-restricted'}`}
+                  onClick={() => entertainmentMode ? openEntertainmentGame(game.id) : focusDestination(destination, 0.75)}
+                  disabled={interactionLocked || !available}
+                  aria-keyshortcuts={String(destination.shortcut)}
+                  aria-pressed={!entertainmentMode && selectedId === destination.id}
+                  aria-label={entertainmentMode ? `${destination.shortcut}: Play ${game.name}` : `${destination.shortcut}: Focus ${destination.name}`}
+                  title={entertainmentMode ? `${destination.shortcut} · ${game.name}` : (destinationEnabled(destination) ? `${destination.shortcut} · ${destination.name}` : `${destination.name} · unavailable in Relay public access`)}
+                >
+                  <kbd>{destination.shortcut}</kbd>
+                  {entertainmentMode ? <EntertainmentGameIcon id={game.id} size={14} /> : <DestinationIcon id={destination.id} size={14} />}
+                  <span>{entertainmentMode ? game.name : destination.name}</span>
+                </button>
+              );
+            })}
           </div>
         </nav>
 
         <div className="destination-layer">
-          {destinations.map(destination => (
-            <button
-              ref={node => {
-                nodeRefs.current[destination.id] = node;
-              }}
-              type="button"
-              key={destination.id}
-              className={[
-                'destination-node',
-                selectedId === destination.id ? 'is-selected' : '',
-                travelId === destination.id ? 'is-travel-target' : '',
-                destinationEnabled(destination) ? '' : 'is-restricted',
-              ].filter(Boolean).join(' ')}
-              onClick={() => focusDestination(destination)}
-              disabled={!destinationEnabled(destination)}
-              aria-pressed={selectedId === destination.id}
-              aria-label={destinationEnabled(destination)
-                ? `${destination.name}, ${destination.code}. ${destination.detail}`
-                : `${destination.name}, unavailable in Relay public access`}
-            >
-              <span className="node-pulse" />
-              <span className="node-landmark" aria-hidden="true">
-                <DestinationIcon id={destination.id} size={18} />
-              </span>
-              <span className="node-copy">
-                <span className="node-code">{destination.code}</span>
-                <strong>{destination.name}</strong>
-                <span className="node-status">{destinationStatus[destination.id]}</span>
-              </span>
-            </button>
-          ))}
+          {destinations.map(destination => {
+            const game = ENTERTAINMENT_GAME_BY_SLOT[destination.id];
+            const available = entertainmentMode || destinationEnabled(destination);
+            return (
+              <button
+                ref={node => {
+                  nodeRefs.current[destination.id] = node;
+                }}
+                type="button"
+                key={destination.id}
+                className={[
+                  'destination-node',
+                  !entertainmentMode && selectedId === destination.id ? 'is-selected' : '',
+                  !entertainmentMode && travelId === destination.id ? 'is-travel-target' : '',
+                  available ? '' : 'is-restricted',
+                ].filter(Boolean).join(' ')}
+                onPointerDown={event => {
+                  if (entertainmentMode) {
+                    event.stopPropagation();
+                    openEntertainmentGame(game.id);
+                  }
+                }}
+                onClick={() => entertainmentMode ? openEntertainmentGame(game.id) : focusDestination(destination)}
+                disabled={interactionLocked || !available}
+                aria-pressed={!entertainmentMode && selectedId === destination.id}
+                aria-label={entertainmentMode
+                  ? `${game.name}, ${game.code}. ${game.tagline}`
+                  : (destinationEnabled(destination)
+                    ? `${destination.name}, ${destination.code}. ${destination.detail}`
+                    : `${destination.name}, unavailable in Relay public access`)}
+              >
+                <span className="node-pulse" />
+                <span className="node-landmark" aria-hidden="true">
+                  {entertainmentMode ? <EntertainmentGameIcon id={game.id} size={18} /> : <DestinationIcon id={destination.id} size={18} />}
+                </span>
+                <span className="node-copy">
+                  <span className="node-code">{entertainmentMode ? game.code : destination.code}</span>
+                  <strong>{entertainmentMode ? game.name : destination.name}</strong>
+                  <span className="node-status">{entertainmentMode ? game.status : destinationStatus[destination.id]}</span>
+                </span>
+              </button>
+            );
+          })}
         </div>
 
         <aside
@@ -2095,11 +2212,21 @@ export function OrbitWorld() {
         <div className="stage-footer">
           <span><RotateWorldIcon size={13} /> drag to rotate</span>
           <span><SearchIcon size={13} /> Navigator</span>
-          <span>1–4 quick routes</span>
+          <span>{entertainmentMode ? '1–4 games' : '1–4 quick routes'}</span>
         </div>
       </div>
 
-      {navigatorOpen && travelPhase === 'idle' && !incomingFrom && (
+      {activeGame && (
+        <EntertainmentOverlay
+          gameId={activeGame}
+          onClose={() => {
+            setActiveGame(null);
+            activeGameRef.current = null;
+          }}
+        />
+      )}
+
+      {navigatorOpen && travelPhase === 'idle' && !incomingFrom && !entertainmentMode && (
         <div
           className="orbit-navigator-backdrop"
           role="presentation"
