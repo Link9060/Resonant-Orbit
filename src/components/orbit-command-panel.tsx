@@ -235,6 +235,11 @@ export function OrbitCommandPanel({
       }
     }
 
+    if (!relayOnlyAccess) {
+      onOpenModule('ravin', { prompt: raw });
+      return;
+    }
+
     onOpenNavigator(raw);
     setCommand('');
   };
@@ -291,7 +296,7 @@ export function OrbitCommandPanel({
             <input
               value={command}
               onChange={event => setCommand(event.target.value)}
-              placeholder="Ask ARROW or run a command..."
+              placeholder="Ask RAVIN or run a command..."
               aria-label="ARROW command"
             />
             <button type="submit" aria-label="Run ARROW command">
