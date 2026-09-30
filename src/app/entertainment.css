@@ -30,9 +30,7 @@
 }
 
 @keyframes entertainment-node-swap {
-  0% { opacity: .9; filter: blur(0); }
-  38% { opacity: 0; transform: scale(.7); filter: blur(5px); }
-  62% { opacity: 0; transform: scale(.72); filter: blur(5px); }
+  0%, 42% { opacity: 0; filter: blur(5px); }
   100% { opacity: 1; filter: blur(0); }
 }
 
