@@ -553,3 +553,40 @@ test('Orbit command field is RAVIN-first for natural-language questions', async 
     }
   }).toBe('What should I work on next?');
 });
+
+
+test('double-clicking Orbit reveals the hidden entertainment world and returns cleanly', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.setItem('orbit-command-onboarding-v1', '1');
+  });
+
+  await page.goto('/');
+
+  const world = page.locator('.world-shell');
+  const core = page.getByRole('button', { name: /YOU ARE HERE Orbit/i });
+  await expect(page.locator('.orbit-command-panel')).toBeVisible();
+
+  await core.dblclick();
+
+  await expect(world).toHaveClass(/entertainment-mode/);
+  await expect(page.getByRole('heading', { name: /Give your life entertainment/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /1: Play Flight/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /2: Play Orbit/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /3: Play Cipher/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /4: Play Surge/i })).toBeVisible();
+
+  await page.getByRole('button', { name: /Flight, ARCADE/i }).click();
+  await expect(page.getByRole('dialog', { name: 'Flight game' })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Flight game' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: /PLAY MODE Orbit/i }).dblclick();
+
+  await expect(world).not.toHaveClass(/entertainment-mode/);
+  await expect(page.locator('.orbit-command-panel')).toBeVisible();
+  await expect(page.getByRole('button', { name: /1: Focus Atlas/i })).toBeVisible();
+});
