@@ -428,7 +428,7 @@ test('canonical ARROW shell expands from the Orbit header', async ({ page }) => 
 });
 
 test('ARROW Notes writes the shared notes library without routing away from Orbit', async ({ page }) => {
-  let createdNote: Record<string, unknown> | null = null;
+  const captured: { note?: Record<string, unknown> } = {};
 
   await page.addInitScript(() => {
     localStorage.setItem('sb-cnorozrjugxpanpfmssa-auth-token', JSON.stringify({
@@ -441,7 +441,7 @@ test('ARROW Notes writes the shared notes library without routing away from Orbi
 
   await page.route('https://cnorozrjugxpanpfmssa.supabase.co/rest/v1/notes**', async route => {
     if (route.request().method() === 'POST') {
-      createdNote = route.request().postDataJSON() as Record<string, unknown>;
+      captured.note = route.request().postDataJSON() as Record<string, unknown>;
       await route.fulfill({ status: 201, contentType: 'application/json', body: '[]' });
       return;
     }
@@ -460,8 +460,8 @@ test('ARROW Notes writes the shared notes library without routing away from Orbi
   await dialog.getByRole('textbox', { name: 'Quick note' }).fill('Shared ARROW note');
   await dialog.getByRole('button', { name: 'Save shared note' }).click();
 
-  await expect.poll(() => createdNote?.title ?? null).toBe('Shared ARROW note');
-  expect(createdNote?.user_id).toBe('00000000-0000-0000-0000-000000000001');
+  await expect.poll(() => captured.note?.title ?? null).toBe('Shared ARROW note');
+  expect(captured.note?.user_id).toBe('00000000-0000-0000-0000-000000000001');
   await expect(page).toHaveURL(/\/$/);
 });
 
