@@ -1280,3 +1280,167 @@ html[data-arrow-experience="glass"] .arrow-os-panel {
 .arrow-os-owner-note a:focus-visible {
   color: rgb(var(--arrow-os-fg));
 }
+
+
+/* ---------- RAVIN everywhere + shared data ---------- */
+.arrow-os-ravin-card {
+  display: flex;
+  align-items: center;
+  gap: 13px;
+  padding: 14px;
+  border: 1px solid var(--arrow-panel-border);
+  border-radius: 14px;
+  background: var(--arrow-panel-soft);
+}
+
+.arrow-os-ravin-card > div:last-child {
+  min-width: 0;
+}
+
+.arrow-os-ravin-card span {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 9px;
+  font-weight: 760;
+  letter-spacing: .14em;
+  color: var(--arrow-panel-muted);
+}
+
+.arrow-os-ravin-card p {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.55;
+  color: var(--arrow-panel-fg);
+}
+
+.arrow-os-ravin-core {
+  width: 28px;
+  height: 28px;
+  flex: 0 0 28px;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  position: relative;
+  opacity: .9;
+  box-shadow: 0 0 18px color-mix(in srgb, currentColor 20%, transparent);
+}
+
+.arrow-os-ravin-core::before {
+  content: "";
+  position: absolute;
+  inset: 9px;
+  border-radius: inherit;
+  background: currentColor;
+  box-shadow: 0 0 10px currentColor;
+}
+
+.arrow-os-ravin-prompts {
+  display: grid;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.arrow-os-ravin-prompts button {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid var(--arrow-panel-border);
+  border-radius: 10px;
+  background: transparent;
+  color: var(--arrow-panel-fg);
+  text-align: left;
+  font: inherit;
+  font-size: 11px;
+  cursor: pointer;
+}
+
+.arrow-os-ravin-prompts button:hover,
+.arrow-os-ravin-prompts button:focus-visible {
+  background: var(--arrow-panel-soft);
+}
+
+.arrow-os-ravin-form,
+.arrow-os-note-form {
+  display: flex;
+  gap: 7px;
+  margin-top: 10px;
+}
+
+.arrow-os-ravin-form input,
+.arrow-os-note-form textarea {
+  min-width: 0;
+  flex: 1;
+  border: 1px solid var(--arrow-panel-border);
+  border-radius: 10px;
+  background: var(--arrow-panel-input);
+  color: var(--arrow-panel-fg);
+  font: inherit;
+  font-size: 12px;
+  outline: none;
+}
+
+.arrow-os-ravin-form input {
+  height: 38px;
+  padding: 0 11px;
+}
+
+.arrow-os-note-form textarea {
+  min-height: 84px;
+  resize: vertical;
+  padding: 10px 11px;
+}
+
+.arrow-os-ravin-form button,
+.arrow-os-note-form button {
+  align-self: stretch;
+  border: 0;
+  border-radius: 10px;
+  padding: 0 12px;
+  background: var(--arrow-panel-fg);
+  color: var(--arrow-panel-bg);
+  font: inherit;
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.arrow-os-note-form {
+  flex-direction: column;
+}
+
+.arrow-os-note-form button {
+  min-height: 36px;
+}
+
+.arrow-os-loading {
+  padding: 28px 10px;
+  text-align: center;
+  font-size: 11px;
+  color: var(--arrow-panel-muted);
+}
+
+.arrow-os-note-row > div,
+.arrow-os-list-row label span {
+  min-width: 0;
+}
+
+.arrow-os-list-row label span small {
+  display: block;
+  margin-top: 2px;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--arrow-panel-muted);
+}
+
+.arrow-os-empty strong,
+.arrow-os-empty span,
+.arrow-os-empty a {
+  display: block;
+}
+
+.arrow-os-empty span {
+  margin-top: 4px;
+}
+
+.arrow-os-empty a {
+  margin-top: 8px;
+  color: inherit;
+}
