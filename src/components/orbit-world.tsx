@@ -1554,7 +1554,7 @@ export function OrbitWorld() {
     {
       id: 'capture',
       label: 'Quick capture',
-      detail: 'Send a thought, task, or brain dump to Waypoint.',
+      detail: 'Capture a thought, task, or brain dump without leaving your flow.',
       search: 'capture brain dump task remember waypoint',
       disabled: relayOnlyAccess,
       run: () => quickCapture(),
@@ -2166,6 +2166,31 @@ export function OrbitWorld() {
             )}
 
             <div className="navigator-results">
+              {filteredDestinations.map(destination => (
+                <button
+                  type="button"
+                  key={destination.id}
+                  className={`navigator-result ${selectedId === destination.id ? 'is-current' : ''} ${destinationEnabled(destination) ? '' : 'is-restricted'}`}
+                  aria-current={selectedId === destination.id ? 'true' : undefined}
+                  disabled={!destinationEnabled(destination)}
+                  onClick={() => chooseFromNavigator(destination)}
+                >
+                  <span className="navigator-index">0{destination.shortcut}</span>
+                  <span className="navigator-result-icon" aria-hidden="true">
+                    <DestinationIcon id={destination.id} size={18} />
+                  </span>
+                  <span className="navigator-result-copy">
+                    <strong>{destination.name}</strong>
+                    <span>{destination.code}</span>
+                  </span>
+                  <span className="navigator-result-description">{destination.description}</span>
+                  <span className={`navigator-route ${destinationEnabled(destination) && destination.href ? 'is-live' : 'is-staged'}`}>
+                    {destinationEnabled(destination) ? (destination.href ? 'connected' : 'staged') : 'locked'}
+                  </span>
+                  <TargetIcon size={15} />
+                </button>
+              ))}
+
               {navigatorActions.map(action => (
                 <button
                   type="button"
@@ -2192,34 +2217,10 @@ export function OrbitWorld() {
                   <ArrowUpRightIcon size={13} />
                 </button>
               ))}
-              {filteredDestinations.map(destination => (
-                <button
-                  type="button"
-                  key={destination.id}
-                  className={`navigator-result ${selectedId === destination.id ? 'is-current' : ''} ${destinationEnabled(destination) ? '' : 'is-restricted'}`}
-                  aria-current={selectedId === destination.id ? 'true' : undefined}
-                  disabled={!destinationEnabled(destination)}
-                  onClick={() => chooseFromNavigator(destination)}
-                >
-                  <span className="navigator-index">0{destination.shortcut}</span>
-                  <span className="navigator-result-icon" aria-hidden="true">
-                    <DestinationIcon id={destination.id} size={18} />
-                  </span>
-                  <span className="navigator-result-copy">
-                    <strong>{destination.name}</strong>
-                    <span>{destination.code}</span>
-                  </span>
-                  <span className="navigator-result-description">{destination.description}</span>
-                  <span className={`navigator-route ${destinationEnabled(destination) && destination.href ? 'is-live' : 'is-staged'}`}>
-                    {destinationEnabled(destination) ? (destination.href ? 'connected' : 'staged') : 'locked'}
-                  </span>
-                  <TargetIcon size={15} />
-                </button>
-              ))}
 
-              {filteredDestinations.length === 0 && (
+              {filteredDestinations.length === 0 && navigatorActions.length === 0 && (
                 <div className="navigator-empty">
-                  No ARROW destination matches “{navigatorQuery}”.
+                  No ARROW destination or command matches “{navigatorQuery}”.
                 </div>
               )}
             </div>
