@@ -991,7 +991,7 @@ export function OrbitWorld() {
             : projected.x < centerX - sideDeadzone ? 'left' : 'right';
 
         nodeSideRef.current[destination.id] = nextSide;
-        const available = destinationEnabled(destination);
+        const available = entertainmentModeRef.current || destinationEnabled(destination);
         node.dataset.side = nextSide;
         node.dataset.backface = nextFront ? 'false' : 'true';
         node.dataset.restricted = available ? 'false' : 'true';
