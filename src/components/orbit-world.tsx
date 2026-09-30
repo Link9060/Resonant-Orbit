@@ -38,6 +38,10 @@ import {
   ZoomOutIcon,
 } from '@/components/orbit-icons';
 import {
+  IntroParticleCollapse,
+  OrbitCommandPanel,
+} from '@/components/orbit-command-panel';
+import {
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -53,6 +57,7 @@ type Destination = ArrowDestination;
 type DestinationId = OrbitSelectionId;
 type TravelPhase = 'idle' | 'launching' | 'preview' | 'returning';
 type RenderProfile = 'high' | 'balanced' | 'low';
+type IntroMode = 'loading' | 'intro' | 'collapsing' | 'command';
 
 type RotationState = {
   yaw: number;
@@ -106,6 +111,7 @@ type TouchPoint = { x: number; y: number };
 const destinations = ARROW_DESTINATIONS;
 const destinationIndex = ARROW_DESTINATION_BY_ID;
 const VIEW_STORAGE_KEY = 'orbit-view-v2';
+const ONBOARDING_STORAGE_KEY = 'orbit-command-onboarding-v1';
 const WAYPOINT_URL = 'https://link9060.github.io/Resonant-Waypoint/';
 const FLIGHT_DURATION_MS = 1000;
 const TRANSFER_PARTICLES = Array.from({ length: 26 }, (_, index) => {
@@ -376,6 +382,7 @@ export function OrbitWorld() {
     relay: 'communication ready',
     waypoint: 'direction clear',
   });
+  const [introMode, setIntroMode] = useState<IntroMode>('loading');
 
   const renderer = useMemo(() => {
     const density =
@@ -392,7 +399,8 @@ export function OrbitWorld() {
   const interactionLocked =
     travelPhase !== 'idle' ||
     incomingFrom !== null ||
-    navigatorOpen;
+    navigatorOpen ||
+    introMode === 'collapsing';
 
   const beginReturnToOrbit = () => {
     const ui = uiRef.current;
@@ -469,6 +477,16 @@ export function OrbitWorld() {
       window.removeEventListener('storage', refreshDestinationStatus);
       window.removeEventListener('arrow-os:datachange', refreshDestinationStatus as EventListener);
     };
+  }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+    const forceIntro = params.get('intro') === '1';
+    let hasSeenIntro = false;
+    try {
+      hasSeenIntro = localStorage.getItem(ONBOARDING_STORAGE_KEY) === '1';
+    } catch {}
+    setIntroMode(forceIntro || !hasSeenIntro ? 'intro' : 'command');
   }, []);
 
   useEffect(() => {
@@ -1427,6 +1445,93 @@ export function OrbitWorld() {
     impulseRef.current = 0.7;
   };
 
+  const openNavigator = (query = '') => {
+    pointerRef.current.inside = false;
+    setNavigatorQuery(query);
+    setNavigatorOpen(true);
+  };
+
+  const persistIntroComplete = () => {
+    try {
+      localStorage.setItem(ONBOARDING_STORAGE_KEY, '1');
+    } catch {}
+
+    const url = new URL(window.location.href);
+    if (url.searchParams.get('intro') === '1') {
+      url.searchParams.delete('intro');
+      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    }
+
+    setIntroMode('command');
+    impulseRef.current = 0.82;
+  };
+
+  const dismissOrbitIntro = () => {
+    if (introMode !== 'intro') return;
+    if (reducedMotionRef.current) {
+      persistIntroComplete();
+      return;
+    }
+    setIntroMode('collapsing');
+    impulseRef.current = 1.08;
+  };
+
+  const replayOrbitIntro = () => {
+    try {
+      localStorage.removeItem(ONBOARDING_STORAGE_KEY);
+    } catch {}
+    setIntroMode('intro');
+    recenterWorld();
+  };
+
+  const focusCommandDestination = (id: Destination['id']) => {
+    const destination = destinationIndex.get(id);
+    if (!destination || !destinationEnabled(destination)) return;
+    focusDestination(destination, 0.84);
+  };
+
+  const openCommandModule = (
+    id: Destination['id'],
+    params?: Record<string, string>,
+  ) => {
+    const destination = destinationIndex.get(id);
+    if (!destination || !destinationEnabled(destination) || !destination.href) return;
+    const url = new URL(destination.href);
+    url.searchParams.set('from', 'orbit');
+    Object.entries(params ?? {}).forEach(([key, value]) => {
+      if (value) url.searchParams.set(key, value);
+    });
+    window.location.assign(url.toString());
+  };
+
+  const quickCapture = (text?: string) => {
+    if (relayOnlyAccess) return;
+    const url = new URL(WAYPOINT_URL);
+    url.searchParams.set('from', 'orbit');
+    url.searchParams.set('tab', 'dump');
+    if (text) {
+      try {
+        localStorage.setItem('arrow_waypoint_pending_capture_v1', text);
+      } catch {}
+      url.searchParams.set('capture', text);
+    }
+    window.location.assign(url.toString());
+  };
+
+  const showCommandView = (view: 'profile' | 'system' | 'connections' | 'settings') => {
+    if (introMode !== 'command') persistIntroComplete();
+    window.setTimeout(() => {
+      window.dispatchEvent(new CustomEvent('orbit:command-view', { detail: { view } }));
+    }, 0);
+  };
+
+  const openArrowSystemPanel = (name: string) => {
+    const api = (window as Window & {
+      ArrowOS?: { openPanel?: (panel: string, module?: string) => void };
+    }).ArrowOS;
+    api?.openPanel?.(name, 'orbit');
+  };
+
   const filteredDestinations = destinations.filter(destination => {
     const query = navigatorQuery.trim().toLowerCase();
     if (!query) return true;
@@ -1443,6 +1548,63 @@ export function OrbitWorld() {
       .toLowerCase()
       .includes(query);
   });
+
+  const navigatorActionQuery = navigatorQuery.trim().toLowerCase();
+  const navigatorActions = [
+    {
+      id: 'capture',
+      label: 'Quick capture',
+      detail: 'Send a thought, task, or brain dump to Waypoint.',
+      search: 'capture brain dump task remember waypoint',
+      disabled: relayOnlyAccess,
+      run: () => quickCapture(),
+    },
+    {
+      id: 'profile',
+      label: 'Profile settings',
+      detail: 'Your name, presence, and ARROW account controls.',
+      search: 'profile account me presence available school away',
+      disabled: false,
+      run: () => showCommandView('profile'),
+    },
+    {
+      id: 'connections',
+      label: 'Connections',
+      detail: 'See how accounts, calendar, files, and messaging connect.',
+      search: 'connections integrations sync calendar files relay account',
+      disabled: false,
+      run: () => showCommandView('connections'),
+    },
+    {
+      id: 'appearance',
+      label: 'Appearance',
+      detail: 'Theme, motion, accent, and ARROW experience.',
+      search: 'appearance theme motion accent experience',
+      disabled: false,
+      run: () => openArrowSystemPanel('appearance'),
+    },
+    {
+      id: 'focus',
+      label: 'Start focus',
+      detail: 'Open the ARROW focus timer and attention controls.',
+      search: 'focus timer attention session',
+      disabled: false,
+      run: () => openArrowSystemPanel('focus'),
+    },
+    {
+      id: 'system',
+      label: 'System status',
+      detail: 'Review every ARROW center from Orbit.',
+      search: 'system status modules centers atlas ravin relay waypoint',
+      disabled: false,
+      run: () => showCommandView('system'),
+    },
+  ].filter(action =>
+    navigatorActionQuery &&
+    `${action.label} ${action.detail} ${action.search}`
+      .toLowerCase()
+      .includes(navigatorActionQuery),
+  );
 
   const chooseFromNavigator = (destination: Destination) => {
     restoreNavigatorFocusRef.current = false;
@@ -1482,12 +1644,15 @@ export function OrbitWorld() {
 
     if (
       event.key === 'Enter' &&
-      document.activeElement === navigatorInputRef.current &&
-      filteredDestinations.find(destinationEnabled)
+      document.activeElement === navigatorInputRef.current
     ) {
-      event.preventDefault();
-      const firstAvailable = filteredDestinations.find(destinationEnabled);
-      if (firstAvailable) chooseFromNavigator(firstAvailable);
+      const firstResult = navigatorRef.current?.querySelector<HTMLButtonElement>(
+        '.navigator-result:not(:disabled)',
+      );
+      if (firstResult) {
+        event.preventDefault();
+        firstResult.click();
+      }
       return;
     }
 
@@ -1599,6 +1764,7 @@ export function OrbitWorld() {
         incomingFrom ? 'incoming-active' : '',
         navigatorOpen ? 'has-navigator' : '',
         prefersReducedMotion ? 'reduce-motion' : '',
+        `intro-${introMode}`,
         `render-${renderProfile}`,
       ].filter(Boolean).join(' ')}
       data-travel-destination={travelId ?? undefined}
@@ -1619,13 +1785,43 @@ export function OrbitWorld() {
         aria-hidden={navigatorOpen ? true : undefined}
         inert={navigatorOpen ? true : undefined}
       >
-        <div ref={stageCopyRef} className="stage-copy">
-          <p className="eyebrow">CENTRAL WORLD</p>
-          <h1>Everything starts here.</h1>
-          <p className="stage-description">
-            Move through ARROW as one connected system. The sphere is the map; each signal is a destination.
-          </p>
+        <div ref={stageCopyRef} className="orbit-left-zone">
+          {introMode !== 'loading' && introMode !== 'command' && (
+            <section className={`stage-copy orbit-intro-card ${introMode === 'collapsing' ? 'is-collapsing' : ''}`}>
+              <p className="eyebrow">CENTRAL WORLD</p>
+              <h1>Everything starts here.</h1>
+              <p className="stage-description">
+                Move through ARROW as one connected system. The sphere is the map; each signal is a destination.
+              </p>
+              <button
+                type="button"
+                className="orbit-intro-enter"
+                onClick={dismissOrbitIntro}
+                disabled={introMode === 'collapsing'}
+              >
+                <span>Enter Orbit</span>
+                <span aria-hidden="true">✓</span>
+              </button>
+            </section>
+          )}
+
+          {introMode === 'command' && (
+            <OrbitCommandPanel
+              statuses={destinationStatus}
+              relayOnlyAccess={relayOnlyAccess}
+              onOpenNavigator={openNavigator}
+              onFocusDestination={focusCommandDestination}
+              onOpenModule={openCommandModule}
+              onQuickCapture={quickCapture}
+              onReplayIntro={replayOrbitIntro}
+            />
+          )}
         </div>
+
+        <IntroParticleCollapse
+          active={introMode === 'collapsing'}
+          onComplete={persistIntroComplete}
+        />
 
         <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
 
@@ -1799,10 +1995,7 @@ export function OrbitWorld() {
             </button>
             <button
               type="button"
-              onClick={() => {
-                pointerRef.current.inside = false;
-                setNavigatorOpen(true);
-              }}
+              onClick={() => openNavigator()}
               disabled={interactionLocked}
               title={usesCommandKey ? 'Open ARROW Navigator (⌘K)' : 'Open ARROW Navigator (Ctrl+K)'}
               aria-keyshortcuts="Meta+K Control+K"
@@ -1828,13 +2021,7 @@ export function OrbitWorld() {
                 type="button"
                 className="focus-button"
                 disabled={relayOnlyAccess}
-                onClick={() => {
-                  if (relayOnlyAccess) return;
-                  const url = new URL(WAYPOINT_URL);
-                  url.searchParams.set('from', 'orbit');
-                  url.searchParams.set('tab', 'dump');
-                  window.location.assign(url.toString());
-                }}
+                onClick={() => quickCapture()}
               >
                 <PulseIcon size={14} />
                 Quick capture
@@ -1933,8 +2120,8 @@ export function OrbitWorld() {
           >
             <div className="navigator-heading">
               <div>
-                <p>ARROW NAVIGATOR</p>
-                <h2>Where to?</h2>
+                <p>ARROW COMMAND</p>
+                <h2>What do you want to do?</h2>
               </div>
               <button
                 type="button"
@@ -1955,13 +2142,56 @@ export function OrbitWorld() {
                 ref={navigatorInputRef}
                 value={navigatorQuery}
                 onChange={event => setNavigatorQuery(event.target.value)}
-                placeholder="Search ARROW destinations"
+                placeholder="Search ARROW or run a command"
                 aria-label="Search ARROW destinations"
               />
               <kbd>/</kbd>
             </label>
 
+            {introMode === 'command' && !navigatorQuery.trim() && (
+              <div className="navigator-command-chips" aria-label="Suggested ARROW commands">
+                <button type="button" onClick={() => quickCapture()} disabled={relayOnlyAccess}>
+                  <PulseIcon size={13} /> Capture
+                </button>
+                <button type="button" onClick={() => showCommandView('profile')}>
+                  <CoreIcon size={13} /> Profile
+                </button>
+                <button type="button" onClick={() => showCommandView('connections')}>
+                  <SearchIcon size={13} /> Connections
+                </button>
+                <button type="button" onClick={() => openArrowSystemPanel('appearance')}>
+                  <TargetIcon size={13} /> Appearance
+                </button>
+              </div>
+            )}
+
             <div className="navigator-results">
+              {navigatorActions.map(action => (
+                <button
+                  type="button"
+                  key={action.id}
+                  className="navigator-result navigator-command-result"
+                  disabled={action.disabled}
+                  onClick={() => {
+                    restoreNavigatorFocusRef.current = false;
+                    setNavigatorOpen(false);
+                    setNavigatorQuery('');
+                    window.setTimeout(action.run, 0);
+                  }}
+                >
+                  <span className="navigator-index">CMD</span>
+                  <span className="navigator-result-icon" aria-hidden="true">
+                    <CommandIcon size={15} />
+                  </span>
+                  <span className="navigator-result-copy">
+                    <strong>{action.label}</strong>
+                    <span>ORBIT</span>
+                  </span>
+                  <span className="navigator-result-description">{action.detail}</span>
+                  <span className="navigator-route is-live">command</span>
+                  <ArrowUpRightIcon size={13} />
+                </button>
+              ))}
               {filteredDestinations.map(destination => (
                 <button
                   type="button"
