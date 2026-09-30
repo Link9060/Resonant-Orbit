@@ -1057,7 +1057,7 @@
 
 @media (max-width: 1180px) and (min-width: 681px) {
   .arrow-os-root[data-open="true"] .arrow-os-island {
-    width: min(470px,calc(100vw - 28px));
+    width: min(520px,calc(100vw - 28px));
   }
 
   .arrow-os-control span {
