@@ -524,3 +524,32 @@ test('Navigator can open Orbit command-center views', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Your profile' })).toBeVisible();
   await expect(page.getByPlaceholder('What should ARROW call you?')).toBeVisible();
 });
+
+
+test('Orbit command field is RAVIN-first for natural-language questions', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.setItem('orbit-command-onboarding-v1', '1');
+  });
+
+  await page.route('https://link9060.github.io/Project-R.A.V.I.N.-1.1/**', route => route.abort());
+
+  await page.goto('/');
+
+  const command = page.getByRole('textbox', { name: 'ARROW command' });
+  await expect(command).toHaveAttribute('placeholder', 'Ask RAVIN or run a command...');
+
+  await command.fill('What should I work on next?');
+  await page.getByRole('button', { name: 'Run ARROW command' }).click();
+
+  await expect.poll(() => page.url()).toContain('Project-R.A.V.I.N.-1.1');
+  await expect.poll(() => {
+    try {
+      return new URL(page.url()).searchParams.get('prompt');
+    } catch {
+      return null;
+    }
+  }).toBe('What should I work on next?');
+});
