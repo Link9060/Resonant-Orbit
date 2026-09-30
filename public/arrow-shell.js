@@ -1,9 +1,6 @@
 (() => {
   if (window.ArrowOS) { window.ArrowOS.mountAll(); return; }
   const STORAGE = {
-    notes: 'arrow_os_notes_v1',
-    tasks: 'arrow_os_tasks_v1',
-    events: 'arrow_os_events_v1',
     links: 'arrow_os_links_v1',
     theme: 'arrow_os_theme_v1',
     motion: 'arrow_os_motion_v1',
