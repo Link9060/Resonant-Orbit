@@ -161,6 +161,12 @@
       const payload = await response.json().catch(() => null);
       throw new Error(payload?.message || payload?.error || 'ARROW data could not load.');
     }
+
+    if ((options.method || 'GET').toUpperCase() !== 'GET') {
+      try { localStorage.setItem('arrow_shared_data_ping_v1', String(Date.now())); } catch {}
+      window.dispatchEvent(new CustomEvent('arrow:planning-changed'));
+    }
+
     if (response.status === 204) return null;
     const text = await response.text();
     return text ? JSON.parse(text) : null;
@@ -656,7 +662,7 @@
       const notes = await arrowData('/rest/v1/notes?select=id,title,content,is_pinned,updated_at&order=is_pinned.desc,updated_at.desc&limit=12');
       if (state.activePanel !== 'notes') return;
       state.panelBody.innerHTML =
-        '<div class="arrow-os-owner-note"><span>ONE NOTES LIBRARY</span><p>Relay edits the same notes that Field indexes and RAVIN can read.</p><a href="' + escapeAttr(new URL('notes', RELAY_URL).toString()) + '">Open full Notes ↗</a></div>' +
+        '<div class="arrow-os-owner-note"><span>ONE NOTES LIBRARY</span><p>Relay edits the same notes that Field indexes and RAVIN can read.</p><a href="' + escapeAttr(new URL('notes', new URL(RELAY_URL, location.href)).toString()) + '">Open full Notes ↗</a></div>' +
         '<form class="arrow-os-note-form">' +
           '<textarea rows="4" maxlength="4000" placeholder="Quick note — this saves to your shared ARROW notes…" aria-label="Quick note"></textarea>' +
           '<button type="submit">Save shared note</button>' +
@@ -1522,6 +1528,11 @@
   window.visualViewport?.addEventListener('resize', repositionPanel);
 
   window.addEventListener('storage', event => {
+    if (event.key === 'arrow_shared_data_ping_v1') {
+      if (['notes', 'tasks', 'calendar'].includes(state.activePanel)) renderPanel(state.activePanel);
+      window.dispatchEvent(new CustomEvent('arrow:planning-changed'));
+      return;
+    }
     if (!Object.values(STORAGE).includes(event.key)) return;
     if (event.key === STORAGE.theme) applyTheme(getThemeChoice(), false);
     if (event.key === STORAGE.motion) applyMotion(getMotionChoice(), false);
