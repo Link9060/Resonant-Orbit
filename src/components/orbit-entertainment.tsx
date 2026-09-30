@@ -203,7 +203,7 @@ function OrbitGame() {
   };
 
   const dotStyle = {
-    '--orbit-game-radius': String(radius) + '%',
+    '--orbit-game-radius': String(radius * 2.35) + 'px',
     '--orbit-game-angle': String(angle) + 'rad',
   } as CSSProperties;
 
