@@ -222,6 +222,12 @@
 .arrow-os-panel {
   --arrow-os-bg: 8 8 10;
   --arrow-os-fg: 250 250 251;
+  --arrow-panel-border: rgb(var(--arrow-os-fg) / .12);
+  --arrow-panel-soft: rgb(var(--arrow-os-fg) / .035);
+  --arrow-panel-fg: rgb(var(--arrow-os-fg));
+  --arrow-panel-input: rgb(var(--arrow-os-fg) / .055);
+  --arrow-panel-bg: rgb(var(--arrow-os-bg));
+  --arrow-panel-muted: rgb(var(--arrow-os-fg) / .42);
   position: fixed;
   z-index: 2147483000;
   display: flex;
