@@ -461,3 +461,66 @@ test('ARROW task and appearance controls remain local system panels', async ({ p
   await expect(page.getByRole('button', { name: 'Balanced' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Dark' })).toBeVisible();
 });
+
+
+test('first Orbit visit converts the intro into the command center', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.removeItem('orbit-command-onboarding-v1');
+  });
+
+  await page.goto('/');
+
+  await expect(page.getByText('Everything starts here.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Enter Orbit' })).toBeVisible();
+  await expect(page.locator('.orbit-command-panel')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Enter Orbit' }).click();
+
+  await expect(page.locator('.orbit-command-panel')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'ARROW command' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() =>
+    localStorage.getItem('orbit-command-onboarding-v1'),
+  )).toBe('1');
+});
+
+test('returning Orbit users land directly in the command center', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.setItem('orbit-command-onboarding-v1', '1');
+  });
+
+  await page.goto('/');
+
+  await expect(page.locator('.orbit-command-panel')).toBeVisible();
+  await expect(page.getByText('Everything starts here.')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'ARROW command' })).toBeVisible();
+});
+
+test('Navigator can open Orbit command-center views', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.setItem('orbit-command-onboarding-v1', '1');
+  });
+
+  await page.goto('/');
+  await page.keyboard.press('Control+K');
+
+  const dialog = page.getByRole('dialog', { name: 'Orbit navigator' });
+  const search = dialog.getByRole('textbox', { name: 'Search ARROW destinations' });
+  await search.fill('profile');
+
+  const command = dialog.getByRole('button', { name: /Profile settings/i });
+  await expect(command).toBeVisible();
+  await command.click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Your profile' })).toBeVisible();
+  await expect(page.getByPlaceholder('What should ARROW call you?')).toBeVisible();
+});
