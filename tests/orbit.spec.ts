@@ -468,3 +468,132 @@ test('ARROW task and appearance controls remain local system panels', async ({ p
   await expect(page.getByRole('button', { name: 'Balanced' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Dark' })).toBeVisible();
 });
+
+
+test('first Orbit visit converts the intro into the command center', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.removeItem('orbit-command-onboarding-v1');
+  });
+
+  await page.goto('/');
+
+  await expect(page.getByText('Everything starts here.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Enter Orbit' })).toBeVisible();
+  await expect(page.locator('.orbit-command-panel')).toHaveCount(0);
+
+  await page.getByRole('button', { name: 'Enter Orbit' }).click();
+
+  await expect(page.locator('.orbit-command-panel')).toBeVisible();
+  await expect(page.getByRole('textbox', { name: 'ARROW command' })).toBeVisible();
+  await expect.poll(() => page.evaluate(() =>
+    localStorage.getItem('orbit-command-onboarding-v1'),
+  )).toBe('1');
+});
+
+test('returning Orbit users land directly in the command center', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.setItem('orbit-command-onboarding-v1', '1');
+  });
+
+  await page.goto('/');
+
+  await expect(page.locator('.orbit-command-panel')).toBeVisible();
+  await expect(page.getByText('Everything starts here.')).toHaveCount(0);
+  await expect(page.getByRole('textbox', { name: 'ARROW command' })).toBeVisible();
+});
+
+test('Navigator can open Orbit command-center views', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.setItem('orbit-command-onboarding-v1', '1');
+  });
+
+  await page.goto('/');
+  await page.keyboard.press('Control+K');
+
+  const dialog = page.getByRole('dialog', { name: 'Orbit navigator' });
+  const search = dialog.getByRole('textbox', { name: 'Search ARROW destinations' });
+  await search.fill('profile');
+
+  const command = dialog.getByRole('button', { name: /Profile settings/i });
+  await expect(command).toBeVisible();
+  await command.click();
+
+  await expect(dialog).toBeHidden();
+  await expect(page.getByRole('heading', { name: 'Your profile' })).toBeVisible();
+  await expect(page.getByPlaceholder('What should ARROW call you?')).toBeVisible();
+});
+
+
+test('Orbit command field is RAVIN-first for natural-language questions', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.setItem('orbit-command-onboarding-v1', '1');
+  });
+
+  await page.route('https://link9060.github.io/Project-R.A.V.I.N.-1.1/**', route => route.abort());
+
+  await page.goto('/');
+
+  const command = page.getByRole('textbox', { name: 'ARROW command' });
+  await expect(command).toHaveAttribute('placeholder', 'Ask RAVIN or run a command...');
+
+  await command.fill('What should I work on next?');
+  await page.getByRole('button', { name: 'Run ARROW command' }).click();
+
+  await expect.poll(() => page.url()).toContain('Project-R.A.V.I.N.-1.1');
+  await expect.poll(() => {
+    try {
+      return new URL(page.url()).searchParams.get('prompt');
+    } catch {
+      return null;
+    }
+  }).toBe('What should I work on next?');
+});
+
+
+test('double-clicking Orbit reveals the hidden entertainment world and returns cleanly', async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+    localStorage.setItem('orbit-command-onboarding-v1', '1');
+  });
+
+  await page.goto('/');
+
+  const world = page.locator('.world-shell');
+  const core = page.getByRole('button', { name: /YOU ARE HERE Orbit/i });
+  await expect(page.locator('.orbit-command-panel')).toBeVisible();
+
+  await core.dblclick();
+
+  await expect(world).toHaveClass(/entertainment-mode/);
+  await expect(page.getByRole('heading', { name: /Give your life entertainment/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /1: Play Flight/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /2: Play Orbit/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /3: Play Cipher/i })).toBeVisible();
+  await expect(page.getByRole('button', { name: /4: Play Surge/i })).toBeVisible();
+
+  await page.getByRole('button', { name: /1: Play Flight/i }).click();
+  await expect(page.getByRole('dialog', { name: 'Flight game' })).toBeVisible();
+
+  await page.keyboard.press('Escape');
+  await expect(page.getByRole('dialog', { name: 'Flight game' })).toHaveCount(0);
+
+  await page.getByRole('button', { name: /PLAY MODE Orbit/i }).dblclick();
+
+  await expect(world).not.toHaveClass(/entertainment-mode/);
+  await expect(page.locator('.orbit-command-panel')).toBeVisible();
+  await expect(page.getByRole('button', { name: /1: Focus Atlas/i })).toBeVisible();
+});

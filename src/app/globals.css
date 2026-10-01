@@ -2258,16 +2258,20 @@ input:focus-visible {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  *,
-  *::before,
-  *::after {
+@media (prefers-reduced-motion: reduce) {:root:not([data-arrow-motion="full"]) *,:root:not([data-arrow-motion="full"]) *::before,:root:not([data-arrow-motion="full"]) *::after{
     animation-duration: 1ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 1ms !important;
     scroll-behavior: auto !important;
   }
 }
+:root[data-arrow-motion="reduce"] *,:root[data-arrow-motion="reduce"] *::before,:root[data-arrow-motion="reduce"] *::after{
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+    scroll-behavior: auto !important;
+  }
+
 
 
 /* Touch + safe area polish ------------------------------------------------ */
@@ -2849,11 +2853,14 @@ input:focus-visible {
   }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .arrow-auth-checking span {
+@media (prefers-reduced-motion: reduce) {:root:not([data-arrow-motion="full"]) .arrow-auth-checking span{
     animation: none;
   }
 }
+:root[data-arrow-motion="reduce"] .arrow-auth-checking span{
+    animation: none;
+  }
+
 
 
 .world-shell[data-flight-behind='true'].travel-launching .travel-craft {
@@ -2943,3 +2950,842 @@ input:focus-visible {
 .world-shell[data-access-mode="relay-only"] .orbit-link {
   opacity: .04 !important;
 }
+
+
+/* Orbit command center ---------------------------------------------------- */
+
+.orbit-left-zone {
+  position: absolute;
+  z-index: 32;
+  left: 32px;
+  top: calc(112px + env(safe-area-inset-top));
+  width: min(340px, calc(100vw - 64px));
+  max-height: calc(100dvh - 154px - env(safe-area-inset-top));
+  pointer-events: auto;
+  transition:
+    opacity 280ms ease,
+    transform 380ms cubic-bezier(.16, 1, .3, 1),
+    filter 280ms ease;
+}
+
+.world-shell:not(.travel-idle) .orbit-left-zone,
+.world-shell.incoming-active .orbit-left-zone {
+  opacity: 0;
+  transform: translateX(-10px);
+  pointer-events: none;
+}
+
+.orbit-left-zone .stage-copy {
+  position: static;
+  left: auto;
+  top: auto;
+  width: 100%;
+  pointer-events: auto;
+}
+
+.orbit-intro-card {
+  transform-origin: 18% 38%;
+}
+
+.orbit-intro-card.is-collapsing {
+  animation: orbit-intro-dissolve 260ms cubic-bezier(.4, 0, 1, 1) both;
+  pointer-events: none;
+}
+
+.orbit-intro-enter {
+  display: inline-flex;
+  min-height: 38px;
+  align-items: center;
+  gap: 9px;
+  margin-top: 20px;
+  padding: 0 12px 0 14px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.82);
+  cursor: pointer;
+  font-size: 10px;
+  font-weight: 620;
+  letter-spacing: .01em;
+  transition:
+    transform 160ms ease,
+    border-color 160ms ease,
+    background 160ms ease,
+    color 160ms ease;
+}
+
+.orbit-intro-enter span:last-child {
+  display: grid;
+  width: 19px;
+  height: 19px;
+  place-items: center;
+  border-radius: 50%;
+  background: #f5f5f5;
+  color: #090909;
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.orbit-intro-enter:hover,
+.orbit-intro-enter:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.28);
+  background: rgba(255,255,255,.08);
+  color: #fff;
+}
+
+.orbit-intro-enter:disabled {
+  cursor: default;
+  opacity: .25;
+}
+
+.orbit-intro-particles {
+  position: absolute;
+  z-index: 42;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.orbit-intro-particles.is-active {
+  opacity: 1;
+}
+
+.orbit-command-panel {
+  position: relative;
+  width: 100%;
+  max-height: calc(100dvh - 154px - env(safe-area-inset-top));
+  overflow-x: hidden;
+  overflow-y: auto;
+  padding: 1px 4px 10px 0;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255,255,255,.12) transparent;
+  animation: orbit-command-enter 520ms cubic-bezier(.16, 1, .3, 1) both;
+}
+
+.orbit-command-panel::-webkit-scrollbar {
+  width: 5px;
+}
+
+.orbit-command-panel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: rgba(255,255,255,.12);
+}
+
+.command-panel-head {
+  display: flex;
+  min-height: 48px;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 1px 2px 10px;
+}
+
+.command-panel-head p,
+.command-section-title > span,
+.command-field > span,
+.command-info-card > span,
+.command-system-card > div > span {
+  margin: 0;
+  color: rgba(255,255,255,.31);
+  font-size: 8px;
+  font-weight: 700;
+  letter-spacing: .17em;
+  text-transform: uppercase;
+}
+
+.command-panel-head h2 {
+  margin: 6px 0 0;
+  font-size: 25px;
+  font-weight: 410;
+  line-height: 1;
+  letter-spacing: -.045em;
+}
+
+.command-online {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding-top: 5px;
+  color: rgba(255,255,255,.34);
+  font-size: 8px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.command-online i,
+.command-status-dot,
+.command-connection-row > i {
+  width: 5px;
+  height: 5px;
+  flex: 0 0 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.8);
+  box-shadow: 0 0 10px rgba(255,255,255,.38);
+}
+
+.command-back {
+  display: inline-flex;
+  min-height: 30px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 7px;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  background: transparent;
+  color: rgba(255,255,255,.42);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.command-back:hover,
+.command-back:focus-visible {
+  border-color: rgba(255,255,255,.08);
+  background: rgba(255,255,255,.04);
+  color: #fff;
+}
+
+.command-account-strip {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 32px minmax(0,1fr) 16px;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 4px;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.command-account-strip:hover {
+  background: linear-gradient(90deg, rgba(255,255,255,.035), transparent);
+}
+
+.command-avatar {
+  display: grid;
+  width: 30px;
+  height: 30px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 50%;
+  background: rgba(255,255,255,.035);
+  color: rgba(255,255,255,.82);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.command-account-strip > span:nth-child(2),
+.command-module-copy,
+.command-connection-row > span:nth-child(2),
+.command-settings-row > span {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.command-account-strip strong,
+.command-module-copy strong,
+.command-connection-row strong,
+.command-settings-row strong,
+.command-system-card strong,
+.command-info-card strong {
+  font-size: 10px;
+  font-weight: 590;
+  letter-spacing: -.01em;
+}
+
+.command-account-strip small,
+.command-module-copy small,
+.command-connection-row small,
+.command-settings-row small,
+.command-system-card small,
+.command-info-card small,
+.command-recent small {
+  overflow: hidden;
+  color: rgba(255,255,255,.34);
+  font-size: 8px;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+}
+
+.command-entry {
+  display: flex;
+  min-height: 43px;
+  align-items: center;
+  gap: 9px;
+  margin: 12px 0 14px;
+  padding: 0 7px 0 11px;
+  border: 1px solid rgba(255,255,255,.11);
+  border-radius: 12px;
+  background: rgba(255,255,255,.028);
+  color: rgba(255,255,255,.38);
+  box-shadow: inset 0 1px rgba(255,255,255,.02);
+  transition: border-color 150ms ease, background 150ms ease;
+}
+
+.command-entry:focus-within {
+  border-color: rgba(255,255,255,.24);
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.78);
+}
+
+.command-entry input {
+  min-width: 0;
+  flex: 1;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: rgba(255,255,255,.92);
+  font-size: 10px;
+}
+
+.command-entry input::placeholder {
+  color: rgba(255,255,255,.27);
+}
+
+.command-entry button {
+  display: grid;
+  width: 28px;
+  height: 28px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(255,255,255,.035);
+  color: rgba(255,255,255,.5);
+  cursor: pointer;
+}
+
+.command-entry button:hover {
+  color: #fff;
+  background: rgba(255,255,255,.08);
+}
+
+.command-section {
+  margin-top: 13px;
+}
+
+.command-section-title {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 22px;
+  padding: 0 2px;
+}
+
+.command-section-title button {
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.28);
+  cursor: pointer;
+  font-size: 8px;
+}
+
+.command-section-title button:hover {
+  color: rgba(255,255,255,.72);
+}
+
+.command-quick-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 4px;
+  margin-top: 5px;
+}
+
+.command-quick-grid button {
+  display: flex;
+  min-width: 0;
+  min-height: 47px;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 10px;
+  background: rgba(255,255,255,.018);
+  color: rgba(255,255,255,.48);
+  cursor: pointer;
+  font-size: 8px;
+  transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
+}
+
+.command-quick-grid button:hover,
+.command-quick-grid button:focus-visible {
+  transform: translateY(-1px);
+  border-color: rgba(255,255,255,.15);
+  background: rgba(255,255,255,.045);
+  color: rgba(255,255,255,.9);
+}
+
+.command-quick-grid button:disabled {
+  transform: none;
+  cursor: default;
+  opacity: .24;
+}
+
+.command-link-glyph {
+  font-size: 16px;
+  line-height: 12px;
+}
+
+.command-module-list {
+  margin-top: 2px;
+  border-top: 1px solid rgba(255,255,255,.06);
+}
+
+.command-module-row {
+  display: grid;
+  width: 100%;
+  min-height: 42px;
+  grid-template-columns: 28px minmax(0,1fr) 8px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 4px;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.05);
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  text-align: left;
+}
+
+.command-module-row:hover {
+  background: linear-gradient(90deg, rgba(255,255,255,.035), transparent);
+}
+
+.command-module-icon {
+  display: grid;
+  width: 27px;
+  height: 27px;
+  flex: 0 0 27px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 50%;
+  color: rgba(255,255,255,.62);
+}
+
+.command-recent {
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  padding-bottom: 5px;
+}
+
+.command-recent > button {
+  display: grid;
+  width: 100%;
+  grid-template-columns: 72px minmax(0,1fr);
+  gap: 8px;
+  padding: 5px 2px;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.56);
+  cursor: pointer;
+  font-size: 8px;
+  text-align: left;
+}
+
+.command-recent > button:hover {
+  color: #fff;
+}
+
+.command-settings-link {
+  display: flex;
+  width: 100%;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 8px;
+  padding: 0 3px;
+  border: 0;
+  background: transparent;
+  color: rgba(255,255,255,.34);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.command-settings-link:hover {
+  color: rgba(255,255,255,.84);
+}
+
+.command-subview {
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+  padding-top: 3px;
+  animation: command-subview-in 260ms cubic-bezier(.16,1,.3,1) both;
+}
+
+.command-field {
+  display: flex;
+  flex-direction: column;
+  gap: 7px;
+  padding: 10px 0;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+
+.command-field input {
+  min-height: 39px;
+  padding: 0 11px;
+  border: 1px solid rgba(255,255,255,.09);
+  border-radius: 10px;
+  outline: 0;
+  background: rgba(255,255,255,.025);
+  color: rgba(255,255,255,.9);
+  font-size: 10px;
+}
+
+.command-field input:focus {
+  border-color: rgba(255,255,255,.22);
+}
+
+.command-presence-grid {
+  display: grid;
+  grid-template-columns: repeat(2,minmax(0,1fr));
+  gap: 4px;
+}
+
+.command-presence-grid button {
+  display: flex;
+  min-height: 35px;
+  align-items: center;
+  gap: 7px;
+  padding: 0 9px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 9px;
+  background: rgba(255,255,255,.015);
+  color: rgba(255,255,255,.4);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.command-presence-grid button i {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: rgba(255,255,255,.28);
+}
+
+.command-presence-grid button.is-active {
+  border-color: rgba(255,255,255,.18);
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.9);
+}
+
+.command-presence-grid button.is-active i {
+  background: #fff;
+  box-shadow: 0 0 9px rgba(255,255,255,.4);
+}
+
+.command-info-card {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  padding: 12px;
+  border: 1px solid rgba(255,255,255,.07);
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(255,255,255,.025), transparent 70%);
+}
+
+.command-info-card strong {
+  font-size: 12px;
+}
+
+.command-info-card small {
+  white-space: normal;
+  line-height: 1.5;
+}
+
+.command-system-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.command-system-card {
+  display: grid;
+  grid-template-columns: 31px minmax(0,1fr) auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 53px;
+  padding: 6px 7px;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+
+.command-system-card > div {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.command-system-card button {
+  min-height: 29px;
+  padding: 0 8px;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 8px;
+  background: rgba(255,255,255,.025);
+  color: rgba(255,255,255,.5);
+  cursor: pointer;
+  font-size: 8px;
+}
+
+.command-system-card button:hover {
+  background: rgba(255,255,255,.06);
+  color: #fff;
+}
+
+.command-system-card.is-restricted {
+  opacity: .3;
+}
+
+.command-system-card.is-restricted button {
+  cursor: default;
+}
+
+.command-connection-row,
+.command-settings-row {
+  display: grid;
+  width: 100%;
+  min-height: 48px;
+  align-items: center;
+  gap: 9px;
+  padding: 5px 4px;
+  border: 0;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+  background: transparent;
+  color: inherit;
+  text-align: left;
+}
+
+button.command-connection-row,
+.command-settings-row {
+  cursor: pointer;
+}
+
+button.command-connection-row:hover,
+.command-settings-row:hover {
+  background: linear-gradient(90deg, rgba(255,255,255,.032), transparent);
+}
+
+.command-connection-row {
+  grid-template-columns: 31px minmax(0,1fr) 14px;
+}
+
+.command-settings-row {
+  grid-template-columns: minmax(0,1fr) 16px;
+}
+
+.command-connection-icon {
+  display: grid;
+  width: 29px;
+  height: 29px;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.08);
+  border-radius: 9px;
+  color: rgba(255,255,255,.58);
+  font-size: 8px;
+  font-weight: 650;
+}
+
+.command-connection-row:disabled {
+  cursor: default;
+  opacity: .26;
+}
+
+.command-notice {
+  position: sticky;
+  left: 0;
+  right: 0;
+  bottom: 3px;
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid rgba(255,255,255,.1);
+  border-radius: 9px;
+  background: rgba(13,13,13,.94);
+  color: rgba(255,255,255,.68);
+  box-shadow: 0 12px 30px rgba(0,0,0,.36);
+  font-size: 9px;
+}
+
+.navigator-command-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin: 0 14px 7px;
+}
+
+.navigator-command-chips button {
+  display: inline-flex;
+  min-height: 31px;
+  align-items: center;
+  gap: 6px;
+  padding: 0 9px;
+  border: 1px solid rgba(255,255,255,.075);
+  border-radius: 999px;
+  background: rgba(255,255,255,.022);
+  color: rgba(255,255,255,.42);
+  cursor: pointer;
+  font-size: 9px;
+}
+
+.navigator-command-chips button:hover,
+.navigator-command-chips button:focus-visible {
+  border-color: rgba(255,255,255,.16);
+  background: rgba(255,255,255,.05);
+  color: rgba(255,255,255,.85);
+}
+
+.navigator-command-chips button:disabled {
+  cursor: default;
+  opacity: .26;
+}
+
+.navigator-command-result {
+  box-shadow: inset 2px 0 rgba(255,255,255,.16);
+}
+
+.navigator-command-result .navigator-index {
+  letter-spacing: .04em;
+}
+
+@keyframes orbit-command-enter {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+    filter: blur(6px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: blur(0);
+  }
+}
+
+@keyframes command-subview-in {
+  from { opacity: 0; transform: translateX(9px); }
+  to { opacity: 1; transform: none; }
+}
+
+@keyframes orbit-intro-dissolve {
+  0% { opacity: 1; transform: none; filter: blur(0); }
+  55% { opacity: .5; transform: translateX(6px) scale(.985); filter: blur(1px); }
+  100% { opacity: 0; transform: translateX(18px) scale(.94); filter: blur(5px); }
+}
+
+@media (max-height: 760px) and (min-width: 681px) {
+  .orbit-left-zone {
+    top: calc(88px + env(safe-area-inset-top));
+    max-height: calc(100dvh - 116px - env(safe-area-inset-top));
+  }
+
+  .orbit-command-panel {
+    max-height: calc(100dvh - 116px - env(safe-area-inset-top));
+  }
+
+  .command-recent {
+    display: none;
+  }
+}
+
+@media (max-width: 680px) {
+  .orbit-left-zone {
+    top: calc(76px + env(safe-area-inset-top));
+    left: max(12px, calc(env(safe-area-inset-left) + 6px));
+    width: calc(100vw - max(24px, calc(env(safe-area-inset-left) + env(safe-area-inset-right) + 12px)));
+    max-height: 226px;
+  }
+
+  .orbit-left-zone .stage-copy {
+    text-align: center;
+  }
+
+  .orbit-intro-enter {
+    margin-left: auto;
+    margin-right: auto;
+  }
+
+  .orbit-command-panel {
+    max-height: 226px;
+    padding-right: 2px;
+    background:
+      linear-gradient(180deg, rgba(5,5,5,.93), rgba(5,5,5,.72) 72%, transparent);
+    border-radius: 0 0 16px 16px;
+  }
+
+  .command-panel-head {
+    min-height: 42px;
+  }
+
+  .command-panel-head h2 {
+    font-size: 21px;
+  }
+
+  .command-account-strip {
+    padding-top: 5px;
+    padding-bottom: 5px;
+  }
+
+  .command-entry {
+    min-height: 39px;
+    margin: 8px 0;
+  }
+
+  .command-quick-grid button {
+    min-height: 42px;
+  }
+
+  .command-module-list,
+  .command-recent {
+    display: none;
+  }
+
+  .intro-intro .orbit-shortcuts,
+  .intro-collapsing .orbit-shortcuts {
+    top: calc(250px + env(safe-area-inset-top));
+  }
+
+  .intro-command .orbit-shortcuts {
+    top: calc(318px + env(safe-area-inset-top));
+  }
+
+  .orbit-intro-card + * {
+    margin-top: 0;
+  }
+}
+
+.world-shell.reduce-motion .orbit-command-panel,
+.world-shell.reduce-motion .command-subview,
+.world-shell.reduce-motion .orbit-intro-card.is-collapsing {
+  animation: none;
+}
+.orbit-extra-location { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; gap:8px; align-items:center; max-width:155px; padding:8px 10px; border:1px solid rgba(180,187,203,.28); background:rgba(14,17,23,.85); color:#f2f3f7; border-radius:12px; cursor:pointer; backdrop-filter:blur(12px); text-align:left; }
+.orbit-extra-location kbd { display:grid; place-items:center; width:24px; height:24px; border:1px solid #ffffff25; border-radius:50%; font-size:14px; flex-shrink:0; }
+.orbit-extra-location strong { font-size:14px; font-weight:500; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.orbit-extra-location small { font-size:12px; display:block; color:#a9afbe; max-width:105px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.orbit-smart-location { border-color:var(--arrow-accent-color,#869bdb); }
+.orbit-location-tools { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); z-index:30; text-align:center; }
+.orbit-location-tools button,.orbit-location-editor button { border:1px solid #ffffff22; border-radius:8px; padding:8px 12px; color:inherit; background:#ffffff0c; cursor:pointer; font-size:14px; }
+.orbit-location-tools p { font-size:12px; }
+.orbit-location-editor { position:absolute; z-index:60; right:18px; top:90px; width:min(380px,calc(100% - 36px)); max-height:calc(100% - 120px); overflow:auto; padding:22px; border:1px solid #ffffff24; background:#11141bea; color:#f2f3f7; border-radius:18px; backdrop-filter:blur(24px); }
+.orbit-location-editor header { display:flex; justify-content:space-between; align-items:center; }
+.orbit-location-editor h2 { font-size:20px; margin:0; }
+.orbit-location-editor p { color:#abb2c1; font-size:14px; line-height:1.6; }
+.orbit-location-editor form,.orbit-location-editor label { display:grid; gap:8px; font-size:14px; }
+.orbit-location-editor form { gap:16px; margin-top:16px; }
+.orbit-location-editor input,.orbit-location-editor select { background:#1b202a; color:inherit; border:1px solid #ffffff25; border-radius:8px; padding:12px; width:100%; }
+.orbit-pin-row { display:flex; gap:10px; padding:12px 0; align-items:center; }
+.orbit-pin-row span { flex:1; }
+.orbit-ship-control { display:grid; place-items:center; width:44px;height:44px; padding:0; border:1px solid #ffffff25; border-radius:50%; background:#11182770; color:inherit; cursor:pointer; pointer-events:auto; }
+.craft-orbit { pointer-events:auto; }
+:root[data-arrow-theme="light"] .orbit-app { background:#edf0f5; color:#171b25; }
+:root[data-arrow-theme="light"] .orbit-command-panel { background:#ffffffed; color:#171b25; border-color:#171b2525; }
+:root[data-arrow-theme="light"] :is(.orbit-extra-location,.orbit-location-editor) { background:#fffffff0; color:#171b25; border-color:#171b2530; }
+:root[data-arrow-theme="light"] .orbit-extra-location small { color:#566071; }
+:root[data-arrow-theme="light"] :is(.orbit-location-editor input,.orbit-location-editor select) { background:#eef1f6; color:#171b25; }
+@media(max-width:680px) { .orbit-extra-location { padding:6px; max-width:115px; } .orbit-extra-location small { display:none; } .orbit-extra-location strong { max-width:75px; font-size:12px; } }

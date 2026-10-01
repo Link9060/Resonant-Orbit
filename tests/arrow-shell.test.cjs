@@ -13,6 +13,22 @@ async function fixture(module = 'orbit', query = '', orbitAccess = 'enabled', ba
   w.matchMedia = () => ({ matches: false, addEventListener() {} });
   w.confirm = () => true;
   w.localStorage.setItem('arrow_os_theme_v1', 'dark');
+  w.localStorage.setItem('sb-cnorozrjugxpanpfmssa-auth-token', JSON.stringify({
+    access_token: 'test-access-token',
+    refresh_token: 'test-refresh-token',
+    expires_at: Math.floor(Date.now() / 1000) + 3600,
+    user: { id: '00000000-0000-0000-0000-000000000001', email: 'test@example.com' }
+  }));
+  w.__fetchCalls = [];
+  w.fetch = async (url, options = {}) => {
+    w.__fetchCalls.push({ url: String(url), options });
+    return {
+      ok: true,
+      status: (options.method || 'GET').toUpperCase() === 'DELETE' ? 204 : 200,
+      async json() { return []; },
+      async text() { return '[]'; }
+    };
+  };
   // Cap runaway observer delivery so the old crash fails instead of hanging CI.
   const NativeObserver = w.MutationObserver;
   const observers = [];
@@ -136,15 +152,14 @@ test('route remount and duplicate script retain exactly one mounted control', as
   } finally { f.close(); }
 });
 
-test('calendar imported text is escaped and settings accepts malformed stored lists', async () => {
+test('calendar uses shared ARROW data and ignores legacy local HTML', async () => {
   const f = await fixture();
   try {
-    f.w.localStorage.setItem('arrow_os_events_v1', JSON.stringify([{id:'test', title:'test', date:'<img src=x onerror=alert(1)>'}]));
+    f.w.localStorage.setItem('arrow_os_events_v1', JSON.stringify([{id:'legacy', title:'legacy', date:'<img src=x onerror=alert(1)>'}]));
     f.w.ArrowOS.openPanel('calendar', 'orbit');
+    await delay(15);
     assert.equal(f.w.document.querySelectorAll('.arrow-os-panel img').length, 0);
-    f.w.localStorage.setItem('arrow_os_tasks_v1', '{}');
-    f.w.ArrowOS.openPanel('settings', 'orbit');
-    assert.ok(!f.w.document.querySelector('.arrow-os-panel').textContent.includes('undefined tasks'));
+    assert.ok(f.w.__fetchCalls.some(call => call.url.includes('/rest/v1/relay_calendar_events')));
   } finally { f.close(); }
 });
 
@@ -160,13 +175,43 @@ test('reset restores accent and experience as well as theme and motion', async (
   } finally { f.close(); }
 });
 
-test('a settings change in another tab preserves an unfinished task', async () => {
+test('a settings change in another tab preserves an unfinished shared task draft', async () => {
   const f = await fixture();
   try {
     f.w.ArrowOS.openPanel('tasks', 'orbit');
-    const input = f.w.document.querySelector('.arrow-os-task-form input');
+    await delay(15);
+    const input = f.w.document.querySelector('.arrow-os-task-form input[type="text"]');
+    assert.ok(input);
     input.value = 'Unfinished draft';
     f.w.dispatchEvent(new f.w.StorageEvent('storage', {key:'arrow_os_theme_v1',newValue:'light'}));
-    assert.equal(f.w.document.querySelector('.arrow-os-task-form input').value, 'Unfinished draft');
+    assert.equal(f.w.document.querySelector('.arrow-os-task-form input[type="text"]').value, 'Unfinished draft');
   } finally { f.close(); }
 });
+
+test('RAVIN is available everywhere and carries the active surface', async () => {
+  const f = await fixture('waypoint');
+  try {
+    f.w.ArrowOS.openPanel('ravin', 'waypoint');
+    const panel = f.w.document.querySelector('.arrow-os-panel');
+    assert.match(panel.textContent, /RAVIN/);
+    assert.match(panel.textContent, /planning mode/i);
+    const full = [...panel.querySelectorAll('a')].find(link => /Open full RAVIN/.test(link.textContent));
+    assert.ok(full);
+    assert.match(full.href, /surface=waypoint/);
+    assert.match(full.href, /from=waypoint/);
+  } finally { f.close(); }
+});
+
+test('tasks panel reads the canonical Supabase todos table', async () => {
+  const f = await fixture('relay');
+  try {
+    f.w.ArrowOS.openPanel('tasks', 'relay');
+    await delay(15);
+    assert.ok(f.w.__fetchCalls.some(call => call.url.includes('/rest/v1/todos')));
+    assert.doesNotMatch(f.w.document.querySelector('.arrow-os-panel').textContent, /Saved locally/);
+  } finally { f.close(); }
+});
+
+test('Full motion overrides an OS reduced-motion preference',async()=>{const f=await fixture();try{f.w.matchMedia=()=>({matches:true,addEventListener(){}});f.w.ArrowOS.applyMotion('full',true);assert.equal(f.w.document.documentElement.dataset.arrowMotion,'full');f.w.ArrowOS.applyMotion('system',true);assert.equal(f.w.document.documentElement.dataset.arrowMotion,'reduce');}finally{f.close();}});
+test('Support submits a location-scoped request through the existing RPC',async()=>{const f=await fixture('atlas');try{f.w.ArrowOS.openPanel('support','atlas');await delay(30);const form=f.w.document.querySelector('#arrow-support-form');form.querySelector('[name="subject"]').value='Map issue';form.querySelector('[name="description"]').value='Could not zoom';form.dispatchEvent(new f.w.Event('submit',{bubbles:true,cancelable:true}));await delay(30);const call=f.w.__fetchCalls.find(c=>c.url.endsWith('/rpc/submit_staff_request'));assert.ok(call);const body=JSON.parse(call.options.body);assert.equal(body.p_metadata.module,'atlas');assert.equal(body.p_subject,'[atlas] Map issue');}finally{f.close();}});
+test('Nonstaff users cannot see or call account controls',async()=>{const f=await fixture();try{f.w.ArrowOS.openPanel('moderation','orbit');await delay(30);assert.match(f.w.document.querySelector('.arrow-os-panel-body').textContent,/Staff access is required/);assert.ok(!f.w.__fetchCalls.some(c=>c.url.endsWith('/rpc/admin_list_users_v2')));}finally{f.close();}});

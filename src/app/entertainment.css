@@ -1,0 +1,575 @@
+/* Hidden Orbit entertainment mode. Kept separate from the core ARROW stylesheet. */
+
+.world-shell.entertainment-mode .world-inspector {
+  opacity: 0;
+  transform: translateY(10px);
+  pointer-events: none;
+}
+
+.world-shell.entertainment-mode .orbit-link {
+  stroke: rgba(255,255,255,.2);
+  stroke-dasharray: 2 7;
+}
+
+.world-shell.entertainment-mode .destination-node .node-landmark {
+  border-color: rgba(255,255,255,.38);
+  background: rgba(14,14,14,.9);
+  box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 0 24px rgba(255,255,255,.08);
+}
+
+.world-shell.entertainment-mode .destination-node:hover .node-landmark,
+.world-shell.entertainment-mode .destination-node:focus-visible .node-landmark {
+  background: #f3f3f3;
+  color: #090909;
+  box-shadow: 0 0 42px rgba(255,255,255,.28);
+}
+
+.world-shell.entertainment-entering .destination-node,
+.world-shell.entertainment-leaving .destination-node {
+  animation: entertainment-node-swap .88s cubic-bezier(.2,.75,.2,1) both;
+}
+
+@keyframes entertainment-node-swap {
+  0%, 42% { opacity: 0; filter: blur(5px); }
+  100% { opacity: 1; filter: blur(0); }
+}
+
+.entertainment-copy {
+  width: min(390px, 100%);
+  padding: 22px 0;
+  animation: entertainment-copy-in .55s .28s both;
+}
+
+.entertainment-copy .eyebrow {
+  margin: 0 0 10px;
+  color: #8f8f8f;
+  font-size: 9px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.entertainment-copy h1 {
+  margin: 0;
+  font-size: clamp(34px, 4.2vw, 62px);
+  line-height: .98;
+  letter-spacing: -.045em;
+  font-weight: 300;
+}
+
+.entertainment-copy h1 strong {
+  display: block;
+  font-weight: 760;
+}
+
+.entertainment-copy > p:last-child {
+  max-width: 340px;
+  margin: 18px 0 0;
+  color: #9d9d9d;
+  font-size: 13px;
+  line-height: 1.65;
+}
+
+@keyframes entertainment-copy-in {
+  from { opacity: 0; transform: translateY(12px); }
+  to { opacity: 1; transform: none; }
+}
+
+.entertainment-switch-message {
+  position: absolute;
+  z-index: 80;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  padding: 14px 18px;
+  color: #f6f6f6;
+  background: rgba(0,0,0,.9);
+  border: 1px solid rgba(255,255,255,.14);
+  font-size: clamp(12px, 1.3vw, 17px);
+  font-weight: 650;
+  letter-spacing: .18em;
+  white-space: nowrap;
+  pointer-events: none;
+  animation: entertainment-message .88s ease both;
+}
+
+@keyframes entertainment-message {
+  0% { opacity: 0; transform: translate(-50%,-50%) scale(.94); }
+  18%, 72% { opacity: 1; transform: translate(-50%,-50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%,-50%) scale(1.04); }
+}
+
+.ent-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 140;
+  display: grid;
+  place-items: center;
+  padding: max(72px, env(safe-area-inset-top)) 28px max(28px, env(safe-area-inset-bottom));
+  background: rgba(0,0,0,.9);
+  animation: ent-overlay-in .24s ease-out both;
+}
+
+@keyframes ent-overlay-in {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.ent-overlay-shell {
+  width: min(900px, 100%);
+  max-height: min(760px, calc(100dvh - 110px));
+  overflow: auto;
+  background: #070707;
+  border: 1px solid rgba(255,255,255,.16);
+  box-shadow: 0 24px 100px rgba(0,0,0,.6);
+}
+
+.ent-overlay-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 28px;
+  padding: 24px 26px 20px;
+  border-bottom: 1px solid rgba(255,255,255,.1);
+}
+
+.ent-overlay-header p {
+  margin: 0 0 8px;
+  color: #858585;
+  font-size: 9px;
+  letter-spacing: .18em;
+}
+
+.ent-overlay-header h2 {
+  margin: 0;
+  font-size: clamp(36px, 5vw, 64px);
+  line-height: 1;
+  letter-spacing: -.045em;
+  font-weight: 720;
+}
+
+.ent-overlay-header > div > span {
+  display: block;
+  margin-top: 10px;
+  color: #a8a8a8;
+  font-size: 13px;
+}
+
+.ent-close {
+  flex: 0 0 auto;
+  width: 42px;
+  height: 42px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: #0d0d0d;
+  color: #ddd;
+  font-size: 26px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.ent-close:hover,
+.ent-close:focus-visible {
+  background: #f2f2f2;
+  color: #090909;
+}
+
+.ent-game-body {
+  padding: 22px 26px 24px;
+}
+
+.ent-game-hud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 9px;
+  margin-bottom: 14px;
+}
+
+.ent-game-hud span {
+  padding: 7px 9px;
+  border: 1px solid rgba(255,255,255,.11);
+  color: #7e7e7e;
+  font-size: 9px;
+  letter-spacing: .14em;
+}
+
+.ent-game-hud b {
+  color: #f0f0f0;
+  font-weight: 700;
+}
+
+.ent-game-help {
+  margin: 14px 0 0;
+  color: #868686;
+  font-size: 11px;
+  line-height: 1.55;
+}
+
+.ent-game-actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 16px;
+}
+
+.ent-game-actions button {
+  min-width: 170px;
+  min-height: 44px;
+  border: 1px solid rgba(255,255,255,.2);
+  background: #ececec;
+  color: #090909;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .13em;
+  cursor: pointer;
+}
+
+.ent-overlay-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  padding: 14px 26px;
+  border-top: 1px solid rgba(255,255,255,.08);
+  color: #656565;
+  font-size: 8px;
+  letter-spacing: .14em;
+}
+
+/* Flight */
+.flight-field {
+  position: relative;
+  height: min(350px, 43vh);
+  min-height: 260px;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.12);
+  background:
+    linear-gradient(90deg, rgba(255,255,255,.028) 1px, transparent 1px),
+    linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+    #030303;
+  background-size: 44px 44px;
+  cursor: ns-resize;
+  touch-action: none;
+}
+
+.flight-field::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, transparent 60%, rgba(255,255,255,.025));
+  pointer-events: none;
+}
+
+.flight-craft {
+  position: absolute;
+  z-index: 3;
+  left: 18%;
+  transform: translate(-50%,-50%);
+  color: #fff;
+  transition: top .09s linear;
+  filter: drop-shadow(0 0 10px rgba(255,255,255,.28));
+}
+
+.flight-craft svg {
+  transform: rotate(0deg);
+}
+
+.flight-trail {
+  position: absolute;
+  right: 18px;
+  top: 50%;
+  width: 90px;
+  height: 1px;
+  transform: translateY(-50%);
+  background: linear-gradient(90deg, rgba(255,255,255,.55), transparent);
+}
+
+.flight-gate {
+  position: absolute;
+  z-index: 2;
+  right: 16%;
+  width: 14px;
+  height: 0;
+  transition: top .42s cubic-bezier(.2,.7,.2,1);
+}
+
+.flight-gate .gate-upper,
+.flight-gate .gate-lower {
+  position: absolute;
+  left: 0;
+  width: 14px;
+  height: 420px;
+  background: linear-gradient(90deg, #7e7e7e, #f2f2f2 50%, #676767);
+  box-shadow: 0 0 18px rgba(255,255,255,.12);
+}
+
+.flight-gate .gate-upper { bottom: 48px; }
+.flight-gate .gate-lower { top: 48px; }
+
+.gate-target {
+  position: absolute;
+  left: 50%;
+  top: 0;
+  width: 92px;
+  height: 92px;
+  transform: translate(-50%,-50%);
+  border: 1px solid rgba(255,255,255,.2);
+  border-radius: 50%;
+}
+
+.flight-result {
+  position: absolute;
+  left: 50%;
+  bottom: 15px;
+  transform: translateX(-50%);
+  color: #9d9d9d;
+  font-size: 9px;
+  letter-spacing: .18em;
+}
+
+/* Orbit */
+.orbit-game-field {
+  position: relative;
+  width: min(430px, 72vw);
+  aspect-ratio: 1;
+  margin: 6px auto 0;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.04), transparent 58%);
+}
+
+.orbit-safe-band {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 62%;
+  height: 62%;
+  transform: translate(-50%,-50%);
+  border: 16px solid rgba(255,255,255,.08);
+  border-radius: 50%;
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), 0 0 0 1px rgba(255,255,255,.08);
+}
+
+.orbit-game-core {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%,-50%);
+  color: #fff;
+  filter: drop-shadow(0 0 16px rgba(255,255,255,.25));
+}
+
+.orbit-game-dot {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 0 18px rgba(255,255,255,.65);
+  transform:
+    translate(-50%,-50%)
+    rotate(var(--orbit-game-angle))
+    translateX(var(--orbit-game-radius));
+  transform-origin: center;
+}
+
+.orbit-game-readout {
+  position: absolute;
+  left: 50%;
+  bottom: 8%;
+  transform: translateX(-50%);
+  color: #777;
+  font-size: 9px;
+  letter-spacing: .16em;
+  white-space: nowrap;
+}
+
+.orbit-game-field.is-lost .orbit-game-dot {
+  background: #777;
+  box-shadow: none;
+}
+
+/* Cipher */
+.cipher-display {
+  min-height: 160px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 14px;
+  padding: 28px 18px;
+  border: 1px solid rgba(255,255,255,.1);
+  background: #030303;
+}
+
+.cipher-display span {
+  display: grid;
+  place-items: center;
+  width: 54px;
+  height: 62px;
+  border: 1px solid rgba(255,255,255,.13);
+  color: #f5f5f5;
+  font-size: 27px;
+  font-weight: 300;
+}
+
+.cipher-display span.is-filled {
+  background: rgba(255,255,255,.07);
+}
+
+.cipher-feedback {
+  margin: 13px 0;
+  color: #8c8c8c;
+  text-align: center;
+  font-size: 9px;
+  letter-spacing: .17em;
+}
+
+.cipher-pad {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(44px, 1fr));
+  gap: 8px;
+}
+
+.cipher-pad button {
+  min-height: 58px;
+  border: 1px solid rgba(255,255,255,.13);
+  background: #0b0b0b;
+  color: #eaeaea;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+.cipher-pad button:hover:not(:disabled),
+.cipher-pad button:focus-visible:not(:disabled) {
+  background: #ededed;
+  color: #0a0a0a;
+}
+
+.cipher-pad button:disabled {
+  opacity: .28;
+}
+
+/* Surge */
+.surge-pad {
+  min-height: min(360px, 44vh);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: #030303;
+  color: #858585;
+  cursor: pointer;
+  outline: none;
+  user-select: none;
+}
+
+.surge-pad svg {
+  transition: transform .15s ease, color .15s ease, filter .15s ease;
+}
+
+.surge-pad strong {
+  font-size: clamp(26px, 4vw, 48px);
+  letter-spacing: -.025em;
+}
+
+.surge-pad span {
+  font-size: 9px;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.surge-pad.is-go {
+  background: #f3f3f3;
+  color: #090909;
+}
+
+.surge-pad.is-go svg {
+  transform: scale(1.22);
+  filter: drop-shadow(0 0 18px rgba(0,0,0,.18));
+}
+
+.surge-pad.is-early {
+  color: #b9b9b9;
+  background: #101010;
+}
+
+.surge-ravin {
+  margin: 14px 0 0;
+  text-align: center;
+  color: #b2b2b2;
+  font-size: 11px;
+}
+
+/* Make the four normal anchors feel like game landmarks without changing Orbit geometry. */
+.entertainment-mode .destination-node .node-code {
+  color: #8b8b8b;
+}
+
+.entertainment-mode .destination-node .node-status {
+  color: #777;
+}
+
+.entertainment-mode .orbit-shortcuts-label {
+  color: #9a9a9a;
+}
+
+@media (max-width: 700px) {
+  .ent-overlay {
+    padding: max(64px, env(safe-area-inset-top)) 12px max(12px, env(safe-area-inset-bottom));
+  }
+
+  .ent-overlay-shell {
+    max-height: calc(100dvh - 78px);
+  }
+
+  .ent-overlay-header {
+    padding: 18px 18px 16px;
+  }
+
+  .ent-game-body {
+    padding: 16px 18px 18px;
+  }
+
+  .ent-overlay-footer {
+    padding: 12px 18px;
+    flex-direction: column;
+    gap: 5px;
+  }
+
+  .cipher-pad {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .cipher-display {
+    min-height: 130px;
+    gap: 8px;
+  }
+
+  .cipher-display span {
+    width: 43px;
+    height: 50px;
+    font-size: 22px;
+  }
+
+  .entertainment-copy h1 {
+    font-size: 38px;
+  }
+
+  .entertainment-switch-message {
+    font-size: 10px;
+    letter-spacing: .12em;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {:root:not([data-arrow-motion="full"]) .world-shell.entertainment-entering .destination-node,:root:not([data-arrow-motion="full"]) .world-shell.entertainment-leaving .destination-node,:root:not([data-arrow-motion="full"]) .entertainment-switch-message,:root:not([data-arrow-motion="full"]) .entertainment-copy,:root:not([data-arrow-motion="full"]) .ent-overlay{
+    animation-duration: .01ms !important;
+  }:root:not([data-arrow-motion="full"]) .flight-craft,:root:not([data-arrow-motion="full"]) .flight-gate{
+    transition: none;
+  }
+}
+:root[data-arrow-motion="reduce"] .world-shell.entertainment-entering .destination-node,:root[data-arrow-motion="reduce"] .world-shell.entertainment-leaving .destination-node,:root[data-arrow-motion="reduce"] .entertainment-switch-message,:root[data-arrow-motion="reduce"] .entertainment-copy,:root[data-arrow-motion="reduce"] .ent-overlay{
+    animation-duration: .01ms !important;
+  }:root[data-arrow-motion="reduce"] .flight-craft,:root[data-arrow-motion="reduce"] .flight-gate{
+    transition: none;
+  }
+

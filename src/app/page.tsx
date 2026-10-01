@@ -24,7 +24,7 @@ export default function Home() {
 
           <div className="orbit-header-right">
             <div className="header-meta" aria-label="Orbit route summary">
-              <span>{destinationCount} nodes</span>
+              <span>{destinationCount + 6} locations</span>
               <span>{liveRouteCount} connected</span>
             </div>
             <div data-arrow-os-shell data-module="orbit" suppressHydrationWarning />
