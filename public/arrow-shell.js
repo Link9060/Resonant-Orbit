@@ -1778,7 +1778,7 @@
     requestAnimationFrame(() => {
       mountAll();
       const panel = new URLSearchParams(location.search).get('panel');
-      if (location.pathname.startsWith('/orbit') && ['support','moderation'].includes(panel)) openPanel(panel,'orbit');
+      if ((location.pathname.startsWith('/orbit') || BETA_BASE && location.pathname.startsWith(BETA_BASE+'/orbit/')) && ['support','moderation'].includes(panel)) openPanel(panel,'orbit');
     });
     // Ignore panel rendering, chat tokens, counters and other unrelated DOM updates.
     let mountFrame = 0;
