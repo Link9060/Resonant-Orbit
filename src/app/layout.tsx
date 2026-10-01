@@ -21,23 +21,23 @@ const normalizeBasePath = (value: string) => {
   return `/${value.replace(/^\/+|\/+$/g, '')}`;
 };
 
-const arrowShellBase = configuredBasePath
+const arrowShellBase = process.env.NEXT_PUBLIC_ARROW_SHELL_BASE || (configuredBasePath
   ? normalizeBasePath(configuredBasePath)
   : process.env.NEXT_PUBLIC_ORBIT_DEPLOY_TARGET === 'github-pages'
     ? '/Resonant-Orbit'
-    : '';
+    : '');
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href={`/arrow-shell.css?v=20261001`} />
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=beta-repair-1`} />
       </head>
       <body>
-        <Script src="/arrow-auth-guard.js?v=auth-v2" strategy="beforeInteractive" />
+        {!arrowShellBase.startsWith("/Resonant-Relay/arrow") && <Script src="/arrow-auth-guard.js?v=auth-v2" strategy="beforeInteractive" />}
         {children}
         <Script
-          src={`/arrow-shell.js?v=20261001`}
+          src={`${arrowShellBase}/arrow-shell.js?v=beta-repair-1`}
           strategy="afterInteractive"
         />
       </body>

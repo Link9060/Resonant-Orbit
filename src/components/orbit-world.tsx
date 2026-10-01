@@ -367,11 +367,20 @@ export function OrbitWorld() {
   const [accessMode, setAccessMode] = useState<'full' | 'relay-only'>('relay-only');
   useEffect(() => {
     const host = window.location.hostname;
-    const arrowWorkspace = host === 'enterarrow.com' || host === 'www.enterarrow.com';
+    const arrowWorkspace = host === 'enterarrow.com' || host === 'www.enterarrow.com' || host === 'link9060.github.io' && location.pathname.startsWith('/Resonant-Relay/arrow/');
     const localDevelopment = ['localhost', '127.0.0.1', '::1'].includes(host);
     const relayPreview = new URLSearchParams(window.location.search).get('access') === 'relay-only';
     // ARROW exposes every center; the separate public preview retains Relay access.
     setAccessMode(!relayPreview && (arrowWorkspace || localDevelopment) ? 'full' : 'relay-only');
+  }, []);
+  useEffect(() => {
+    const restore = (event: PageTransitionEvent) => {
+      if(!event.persisted)return;
+      timersRef.current.forEach(timer=>window.clearTimeout(timer));timersRef.current=[];
+      setTravelPhase('idle');setTravelId(null);setFlightPath({...EMPTY_FLIGHT_PATH});setIncomingFrom(null);
+      uiRef.current.travelPhase='idle';uiRef.current.travelId=null;uiRef.current.incomingFrom=null;
+    };
+    window.addEventListener('pageshow',restore);return()=>window.removeEventListener('pageshow',restore);
   }, []);
   const relayOnlyAccess = accessMode === 'relay-only';
   const destinationEnabled = (destination: Destination) =>
@@ -1378,7 +1387,8 @@ export function OrbitWorld() {
   const openDestination = (destination: Destination) => {
     if (!destination.href) return;
 
-    const url = new URL(destination.href, window.location.origin);
+    const resolve=(window as Window & {ArrowOS?:{resolveHref?:(href:string)=>string}}).ArrowOS?.resolveHref;
+    const url = new URL(resolve?resolve(destination.href):destination.href, window.location.origin);
     url.searchParams.set('from', 'orbit');
     window.location.assign(url.toString());
   };

@@ -226,3 +226,24 @@ test('concurrent shared panels refresh an expired session once',async()=>{
 test('moderator controls expose project queues without owner account tools',async()=>{
  const f=await fixture();try{f.w.fetch=async(url)=>({ok:true,status:200,text:async()=>String(url).includes('/profiles?')?'[{"role":"moderator","banned_at":null}]':'[]',json:async()=>String(url).includes('/profiles?')?[{role:'moderator',banned_at:null}]:[]});f.w.ArrowOS.openPanel('moderation','orbit');await delay(30);assert.ok(f.w.document.querySelector('[data-queue="reports"]'));assert.ok(f.w.document.querySelector('[data-queue="email"]'));assert.equal(f.w.document.querySelector('[data-queue="users"]'),null);assert.equal(f.w.document.querySelector('[data-queue="audit"]'),null);}finally{f.close();}
 });
+
+test('Back restores controls after a center departure and permits another navigation',async()=>{
+ const f=await fixture('orbit','','enabled','https://enterarrow.com/orbit/');try{
+  f.w.HTMLCanvasElement.prototype.getContext=()=>null;
+  f.w.ArrowOS.navigate('/waypoint/','orbit');await delay(25);
+  assert.equal(f.w.document.querySelectorAll('.arrow-os-blackhole-departure').length,1);
+  f.w.dispatchEvent(new f.w.PageTransitionEvent('pageshow',{persisted:true}));
+  assert.equal(f.w.document.querySelectorAll('.arrow-os-handoff').length,0);
+  assert.equal(f.w.document.querySelectorAll('.arrow-os-gravity-target').length,0);
+  assert.equal(f.w.document.documentElement.classList.contains('arrow-os-blackhole-active'),false);
+  f.w.ArrowOS.navigate('/atlas/','orbit');assert.equal(f.w.document.querySelectorAll('.arrow-os-blackhole-departure').length,1);
+  f.w.dispatchEvent(new f.w.PageTransitionEvent('pageshow',{persisted:true}));
+ }finally{f.close();}
+});
+
+test('beta navigation stays in beta for every module and preserves deep links',async()=>{
+ const f=await fixture('relay','','enabled','https://link9060.github.io/Resonant-Relay/');try{
+  for(const [input,expected] of [['/orbit/','/Resonant-Relay/arrow/orbit/'],['/waypoint/?tab=calendar&item=123','/Resonant-Relay/arrow/waypoint/?tab=calendar&item=123'],['/relay/notes/','/Resonant-Relay/notes/'],['https://enterarrow.com/ravin/?surface=atlas','/Resonant-Relay/arrow/ravin/?surface=atlas'],['https://link9060.github.io/Resonant-Field/','/Resonant-Relay/arrow/atlas/']])assert.equal(new URL(f.w.ArrowOS.resolveHref(input)).pathname+new URL(f.w.ArrowOS.resolveHref(input)).search,expected);
+  assert.equal(f.w.ArrowOS.resolveHref('https://example.com/'),'https://example.com/');
+ }finally{f.close();}
+});

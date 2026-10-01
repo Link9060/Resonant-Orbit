@@ -10,12 +10,27 @@
     focusState: 'arrow_os_focus_state_v1',
   };
 
+  const BETA_BASE = location.hostname === 'link9060.github.io' && location.pathname.startsWith('/Resonant-Relay/') ? '/Resonant-Relay/arrow' : '';
+  function resolveHref(href) {
+    const url=new URL(href,location.origin);
+    if(!BETA_BASE)return url.toString();
+    const aliases={'Resonant-Orbit':'orbit','Resonant-Waypoint':'waypoint','Resonant-Field':'atlas','Project-R.A.V.I.N.-1.1':'ravin'};
+    if(url.hostname==='link9060.github.io'){const first=url.pathname.split('/')[1];if(aliases[first])url.pathname='/'+aliases[first]+url.pathname.slice(first.length+1);}
+    if((url.origin===location.origin || ['enterarrow.com','www.enterarrow.com','link9060.github.io'].includes(url.hostname)) && /^\/(orbit|relay|ravin|atlas|waypoint)(\/|$)/.test(url.pathname)) {
+      const path=url.pathname.startsWith('/relay')?'/Resonant-Relay'+url.pathname.slice(6):BETA_BASE+url.pathname;
+      return new URL(path+url.search+url.hash,location.origin).toString();
+    }
+    return url.toString();
+  }
+
   const ON_ENTERARROW = ['enterarrow.com', 'www.enterarrow.com'].includes(window.location.hostname);
-  const ORBIT_URL = ON_ENTERARROW ? '/orbit/' : 'https://link9060.github.io/Resonant-Orbit/';
-  const WAYPOINT_URL = ON_ENTERARROW ? '/waypoint/' : 'https://link9060.github.io/Resonant-Waypoint/';
-  const RELAY_URL = ON_ENTERARROW ? '/relay/' : 'https://link9060.github.io/Resonant-Relay/';
-  const RAVIN_URL = ON_ENTERARROW ? '/ravin/' : 'https://link9060.github.io/Project-R.A.V.I.N.-1.1/';
+  const ORBIT_URL = BETA_BASE ? BETA_BASE+'/orbit/' : ON_ENTERARROW ? '/orbit/' : 'https://link9060.github.io/Resonant-Orbit/';
+  const WAYPOINT_URL = BETA_BASE ? BETA_BASE+'/waypoint/' : ON_ENTERARROW ? '/waypoint/' : 'https://link9060.github.io/Resonant-Waypoint/';
+  const RELAY_URL = BETA_BASE ? '/Resonant-Relay/' : ON_ENTERARROW ? '/relay/' : 'https://link9060.github.io/Resonant-Relay/';
+  const RAVIN_URL = BETA_BASE ? BETA_BASE+'/ravin/' : ON_ENTERARROW ? '/ravin/' : 'https://link9060.github.io/Project-R.A.V.I.N.-1.1/';
   const SIGNOUT_URL = ON_ENTERARROW ? '/signout/' : '';
+
+  document.addEventListener('click', event => {if(!BETA_BASE)return;const link=event.target.closest?.('a[href]');if(link)link.href=resolveHref(link.href);},true);
 
   // Public client credentials only. User ownership is enforced by Supabase RLS.
   const ARROW_SUPABASE_URL = 'https://cnorozrjugxpanpfmssa.supabase.co';
@@ -342,6 +357,7 @@
     if (mount.dataset.arrowOsMounted === 'true') return;
     mount.dataset.arrowOsMounted = 'true';
 
+    // eslint-disable-next-line @next/next/no-assign-module-variable -- Browser-only ARROW center identifier.
     const module = VALID_MODULES.has(mount.dataset.module) ? mount.dataset.module : 'relay';
     const orbitAccess = mount.dataset.orbitAccess || 'enabled';
     const orbitEnabled = orbitAccess !== 'disabled';
@@ -609,6 +625,7 @@
   const rpc = (name, body) => arrowData('/rest/v1/rpc/' + name, { method: 'POST', body });
 
   async function renderSupport() {
+    // eslint-disable-next-line @next/next/no-assign-module-variable -- Browser-only ARROW center identifier.
     const module = state.activeModule || 'orbit';
     state.panelBody.innerHTML = '<p class="arrow-os-panel-copy">Support for every ARROW location. Track replies and status here.</p>' +
       '<form class="arrow-os-form" id="arrow-support-form">' +
@@ -737,6 +754,16 @@
   }
 
   async function nextMove() {
+    if(BETA_BASE){
+      const [tasks,events,plans]=await Promise.all([
+        arrowData('/rest/v1/todos?select=id,title,due_on,completed,position,scheduled_on,scheduled_start&limit=500'),
+        arrowData('/rest/v1/relay_calendar_events?select=id,title,event_date,start_time,end_time,source_key&limit=500'),
+        arrowData('/rest/v1/waypoint_items?status=eq.active&select=id,title,source_key,due_date,due_time,depends_on,why,status&limit=100')
+      ]);
+      const {planningCandidates}=await import(BETA_BASE+'/next-move.js?v=beta-repair-1');
+      const candidates=planningCandidates({tasks,events,plans,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone});
+      return {next:candidates[0]||null,source:'calendar',generated_at:new Date().toISOString()};
+    }
     const session = readArrowSession();
     if (!session) throw new Error('Sign in to see what is next.');
     const fresh = session.expires_at * 1000 < Date.now() + 30000 ? await refreshArrowSession(session) || session : session;
@@ -744,6 +771,16 @@
     const result = await response.json();
     if (!response.ok) throw new Error(result.error || 'RAVIN could not load your next move.');
     return result;
+  }
+
+  async function previewPlan(start,end){
+    if(!BETA_BASE)throw new Error('This preview is available in ARROW Beta.');
+    const [tasks,events]=await Promise.all([
+      arrowData('/rest/v1/todos?select=id,title,due_on,completed,position,estimated_minutes,scheduled_on,scheduled_start&limit=500'),
+      arrowData('/rest/v1/relay_calendar_events?select=id,title,event_date,start_time,end_time,is_all_day,source_key&limit=500')
+    ]);
+    const {buildSchedule}=await import(BETA_BASE+'/autoPlanner.js?v=beta-repair-1');
+    return {...buildSchedule({tasks,events,start,end,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone}),source:'calendar',can_apply:false};
   }
 
   function moduleRavinProfile(module) {
@@ -782,6 +819,7 @@
   }
 
   function renderRavin() {
+    // eslint-disable-next-line @next/next/no-assign-module-variable -- Browser-only ARROW center identifier.
     const module = state.activeModule || 'orbit';
     const profile = moduleRavinProfile(module);
     state.panelBody.innerHTML =
@@ -1530,11 +1568,25 @@
     });
   }
 
+  let handoffTimer = null;
+  function resetHandoff() {
+    if(handoffTimer!==null){clearTimeout(handoffTimer);handoffTimer=null;}
+    state.departing=false;
+    document.documentElement.classList.remove('arrow-os-blackhole-active');
+    document.querySelectorAll('.arrow-os-handoff').forEach(node=>node.remove());
+    document.querySelectorAll('.arrow-os-gravity-target').forEach(node=>{
+      node.classList.remove('arrow-os-gravity-target');
+      [...node.style].filter(key=>key.startsWith('--arrow-warp-')).forEach(key=>node.style.removeProperty(key));
+    });
+  }
+  window.addEventListener('pageshow',event=>{if(event.persisted)resetHandoff();});
+  window.addEventListener('pagehide',()=>{if(handoffTimer!==null){clearTimeout(handoffTimer);handoffTimer=null;}});
+
   function launchToOrbit(module, anchor, orbitAccess = 'enabled', destination = null) {
     if ((module === 'orbit' && !destination) || state.departing) return;
-    const url = new URL(destination || ORBIT_URL, window.location.origin);
-    if (destination && !ON_ENTERARROW) { location.assign(url.toString()); return; }
-    if (destination && (url.origin !== location.origin || !/^\/(orbit|relay|ravin|atlas|waypoint)(\/|$)/.test(url.pathname))) return;
+    const url = new URL(resolveHref(destination || ORBIT_URL), window.location.origin);
+    if (destination && !ON_ENTERARROW && !BETA_BASE) { location.assign(url.toString()); return; }
+    if (destination && (url.origin !== location.origin || !(/^\/(orbit|relay|ravin|atlas|waypoint)(\/|$)/.test(url.pathname) || BETA_BASE && (url.pathname.startsWith(BETA_BASE+'/') || url.pathname.startsWith('/Resonant-Relay/'))))) return;
     state.departing = true;
     url.searchParams.set('from', module);
     if (orbitAccess === 'relay-only') url.searchParams.set('access', 'relay-only');
@@ -1573,7 +1625,7 @@
       warpPageIntoSingularity(point);
     });
 
-    setTimeout(() => location.assign(url.toString()), 1380);
+    handoffTimer = setTimeout(() => {handoffTimer=null;location.assign(url.toString());}, 1380);
   }
 
   function receiveFromOrbit(module) {
@@ -1755,6 +1807,8 @@
     applyAccent,
     applyExperienceChoice,
     launchToOrbit,
+    resolveHref,
+    previewPlan,
     navigate: (href, module = 'orbit') => launchToOrbit(module, null, 'enabled', href),
     data: arrowData,
     staffRole,
