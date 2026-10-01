@@ -1478,3 +1478,11 @@ html[data-arrow-experience="glass"] .arrow-os-panel {
 :root[data-arrow-motion="reduce"] *, :root[data-arrow-motion="reduce"] *::before, :root[data-arrow-motion="reduce"] *::after { animation-duration:.001ms!important; animation-iteration-count:1!important; transition-duration:.001ms!important; scroll-behavior:auto!important; }
 
 .arrow-os-root,.arrow-os-panel { --arrow-os-surface:rgb(var(--arrow-os-bg)); --arrow-os-glass:rgb(var(--arrow-os-bg) / .76); --arrow-os-border:rgb(var(--arrow-os-fg) / .16); --arrow-os-ink:rgb(var(--arrow-os-fg)); --arrow-os-dim:rgb(var(--arrow-os-fg) / .65); }
+
+.arrow-os-panel:has([data-queue]) {width:min(760px,calc(100vw - 24px));}
+.arrow-os-panel:has([data-queue]) .arrow-os-segmented {flex-wrap:wrap;}
+.arrow-staff-paging {display:flex;gap:12px;align-items:center;margin-top:14px;}
+.arrow-staff-paging button {padding:8px 14px;background:var(--arrow-os-surface);color:inherit;border:1px solid var(--arrow-os-border);border-radius:8px;cursor:pointer;}
+.arrow-staff-paging button:disabled {opacity:.4;cursor:default;}
+.arrow-os-support-row pre {white-space:pre-wrap;overflow-wrap:anywhere;font:13px/1.6 ui-monospace,monospace;}
+.arrow-staff-thread {display:grid;gap:10px;border-top:1px solid var(--arrow-os-border);padding-top:12px;}

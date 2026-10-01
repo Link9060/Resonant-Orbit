@@ -115,16 +115,19 @@
 
   async function refreshArrowSession(session) {
     if (!session?.refresh_token) return null;
-    const response = await fetch(ARROW_SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
-      method: 'POST',
-      headers: { apikey: ARROW_SUPABASE_KEY, 'content-type': 'application/json' },
-      body: JSON.stringify({ refresh_token: session.refresh_token }),
-    });
-    if (!response.ok) return null;
-    const fresh = await response.json();
-    const merged = { ...session, ...fresh, user: fresh.user || session.user };
-    saveArrowSession(merged);
-    return merged;
+    if (window.__arrowSessionRefreshPromise) return window.__arrowSessionRefreshPromise;
+    window.__arrowSessionRefreshPromise = (async () => {
+      const response = await fetch(ARROW_SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
+        method: 'POST', headers: { apikey: ARROW_SUPABASE_KEY, 'content-type': 'application/json' },
+        body: JSON.stringify({ refresh_token: session.refresh_token }),
+      });
+      if (!response.ok) return null;
+      const fresh = await response.json();
+      const merged = { ...session, ...fresh, user: fresh.user || session.user };
+      saveArrowSession(merged); return merged;
+    })();
+    try { return await window.__arrowSessionRefreshPromise; }
+    finally { window.__arrowSessionRefreshPromise = null; }
   }
 
   async function arrowData(pathname, options = {}, retry = true) {
@@ -599,8 +602,8 @@
   async function staffRole() {
     const userId = currentArrowUserId();
     if (!userId) return 'user';
-    const rows = await arrowData('/rest/v1/profiles?id=eq.' + encodeURIComponent(userId) + '&select=role');
-    return rows?.[0]?.role || 'user';
+    const rows = await arrowData('/rest/v1/profiles?id=eq.' + encodeURIComponent(userId) + '&select=role,banned_at');
+    return rows?.[0]?.banned_at ? 'user' : rows?.[0]?.role || 'user';
   }
 
   const rpc = (name, body) => arrowData('/rest/v1/rpc/' + name, { method: 'POST', body });
@@ -611,8 +614,8 @@
       '<form class="arrow-os-form" id="arrow-support-form">' +
       '<label>Location<select name="module">' + [...VALID_MODULES].map(m => '<option ' + (m === module ? 'selected' : '') + '>' + m + '</option>').join('') + '</select></label>' +
       '<label>Request<select name="type"><option value="bug_report">Something is broken</option><option value="safety_report">Safety or abuse</option><option value="feature_request">Feature idea</option><option value="privacy_request">Privacy or data</option><option value="general_feedback">Other feedback</option></select></label>' +
-      '<label>Subject<input name="subject" required maxlength="160" /></label>' +
-      '<label>Details<textarea name="description" required maxlength="10000" rows="5" placeholder="What happened, and what did you expect?"></textarea></label>' +
+      '<label>Subject<input name="subject" required minlength="3" maxlength="105" /></label>' +
+      '<label>Details<textarea name="description" required minlength="10" maxlength="5000" rows="5" placeholder="What happened, and what did you expect?"></textarea></label>' +
       '<button type="submit">Send to ARROW support</button><p role="status" id="arrow-support-status"></p></form><div id="arrow-support-history"></div>';
     const form = state.panelBody.querySelector('form');
     const history = state.panelBody.querySelector('#arrow-support-history');
@@ -646,10 +649,15 @@
       if (!['moderator', 'admin', 'owner'].includes(role)) {
         state.panelBody.innerHTML = panelEmpty('Staff access is required. For help, open ARROW support.'); return;
       }
-      state.panelBody.innerHTML = '<p class="arrow-os-panel-copy">ARROW staff · ' + escapeHtml(role) + '</p><div class="arrow-os-segmented"><button data-queue="requests">Support</button><button data-queue="reports">Reports</button>' + (role !== 'moderator' ? '<button data-queue="users">Accounts</button>' : '') + '</div><label class="arrow-os-form">Filter<input id="arrow-staff-search" type="search" placeholder="Search this queue" /></label><div id="arrow-staff-queue"></div>';
+      state.panelBody.innerHTML = '<p class="arrow-os-panel-copy">ARROW staff · ' + escapeHtml(role) + '</p><div class="arrow-os-segmented"><button data-queue="requests">Support</button><button data-queue="email">Inbox</button><button data-queue="reports">Reports</button>' + (role !== 'moderator' ? '<button data-queue="users">Accounts</button>' : '') + (role === 'owner' ? '<button data-queue="overview">Overview</button><button data-queue="audit">Audit</button><button data-queue="beta">Beta access</button>' : '') + '</div><label class="arrow-os-form">Filter<input id="arrow-staff-search" type="search" placeholder="Search this queue" /></label><div id="arrow-staff-queue"></div>';
       const host = state.panelBody.querySelector('#arrow-staff-queue');
       const search = state.panelBody.querySelector('#arrow-staff-search');
-      let active = 'requests'; let records = [];
+      let active = 'requests'; let records = []; let offset = 0; let loadVersion = 0;
+      const paging = document.createElement('div'); paging.className = 'arrow-staff-paging';
+      const previous = document.createElement('button'); previous.textContent = 'Previous'; previous.type = 'button';
+      const nextPage = document.createElement('button'); nextPage.textContent = 'Next'; nextPage.type = 'button';
+      const pageLabel = document.createElement('span'); paging.append(previous,pageLabel,nextPage); host.after(paging);
+      previous.onclick = () => load(active, Math.max(0, offset - 100)); nextPage.onclick = () => load(active, offset + 100);
       async function action(name, body, button) {
         button.disabled = true;
         try { await rpc(name, body); await load(active); }
@@ -664,22 +672,43 @@
         visible.forEach(row => {
           const article = document.createElement('article'); article.className = 'arrow-os-support-row';
           const title = document.createElement('strong');
-          title.textContent = row.subject || row.reason || row.display_name || row.email || 'Account'; article.append(title);
+          title.textContent = row.subject || row.reason || row.action || row.display_name || row.email || 'Account'; article.append(title);
           const detail = document.createElement('p');
           detail.textContent = active === 'users' ? [row.email, row.role, row.banned_at ? 'Banned' : 'Active'].filter(Boolean).join(' · ') : [row.metadata?.module || (active === 'reports' ? 'relay' : 'arrow'), row.status, row.description || row.details].filter(Boolean).join(' · '); article.append(detail);
-          if (active !== 'users') {
+          if (active === 'email') {
+            const open=document.createElement('button');open.type='button';open.textContent='Open thread';article.append(open);
+            open.onclick=async()=>{open.disabled=true;try{const messages=await arrowData('/rest/v1/support_email_messages?thread_id=eq.'+encodeURIComponent(row.id)+'&select=id,direction,from_email,text_body,created_at&order=created_at.asc&limit=200');const thread=document.createElement('section');thread.className='arrow-staff-thread';for(const message of messages){const copy=document.createElement('p');copy.style.whiteSpace='pre-wrap';copy.textContent=(message.direction==='outbound'?'Support':message.from_email)+' · '+new Date(message.created_at).toLocaleString()+'\n'+(message.text_body||'(No text body)');thread.append(copy);}
+              if(role!=='moderator'){const reply=document.createElement('textarea');reply.placeholder='Reply to '+row.sender_email;reply.maxLength=10000;thread.append(reply);const send=document.createElement('button');send.type='button';send.textContent='Send reply';send.onclick=async()=>{if(!reply.value.trim()||!confirm('Send this reply to '+row.sender_email+'?'))return;send.disabled=true;try{await arrowData('/functions/v1/support-email',{method:'POST',body:{action:'reply',threadId:row.id,text:reply.value.trim()}});reply.value='';await load('email',offset);}catch(error){thread.append(Object.assign(document.createElement('p'),{textContent:error.message}));}finally{send.disabled=false;}};thread.append(send);
+              const status=document.createElement('select');for(const value of ['new','open','pending','closed']){const option=document.createElement('option');option.value=value;option.textContent=value;option.selected=value===row.status;status.append(option);}thread.append(status);const save=document.createElement('button');save.textContent='Save status';save.onclick=()=>action('staff_update_support_thread',{p_thread_id:row.id,p_status:status.value,p_assigned_to:null},save);thread.append(save);}
+              article.append(thread);open.remove();}catch(error){article.append(Object.assign(document.createElement('p'),{textContent:error.message}));open.disabled=false;}};
+          } else if (active === 'audit') {
+            const info = document.createElement('p'); info.textContent = [row.actor_name || row.actor_email, row.target_name || row.target_email, new Date(row.created_at).toLocaleString()].filter(Boolean).join(' · ');article.append(info);
+            const details = document.createElement('details');const summary = document.createElement('summary');summary.textContent='Action details';const copy=document.createElement('pre');copy.textContent=JSON.stringify(row.metadata||{},null,2);details.append(summary,copy);article.append(details);
+          } else if (active === 'beta') {
+            const info=document.createElement('p');info.textContent=[row.primary_email,row.request_status,row.request_message].filter(Boolean).join(' · ');article.append(info);
+            if(row.request_status==='pending'){const reply=document.createElement('textarea');reply.placeholder='Response to applicant';reply.maxLength=1000;article.append(reply);
+              for(const approved of [true,false]){const review=document.createElement('button');review.type='button';review.textContent=approved?'Approve access':'Decline';review.onclick=()=>{if(!reply.value.trim()){reply.focus();return;}void action('owner_review_beta_request',{p_request_id:row.request_id,p_approve:approved,p_message:reply.value.trim()},review);};article.append(review);}
+            }
+          } else if (active !== 'users') {
             const note = document.createElement('textarea'); note.rows = 2; note.placeholder = 'Staff note'; note.maxLength = 2000; note.value = row.staff_note || row.moderation_note || ''; article.append(note);
             const select = document.createElement('select');
             (active === 'requests' ? ['new','reviewing','resolved','dismissed'] : ['submitted','reviewing','resolved','dismissed']).forEach(status => { const option = document.createElement('option'); option.value = status; option.textContent = status; option.selected = status === row.status; select.append(option); }); article.append(select);
             const save = document.createElement('button'); save.textContent = 'Save status'; save.type = 'button'; article.append(save);
+            if(active==='requests'&&role==='owner'&&row.request_type==='role_application'&&row.status!=='resolved'){const approve=document.createElement('button');approve.type='button';approve.textContent='Approve staff application';approve.onclick=()=>{if(!confirm('Approve this staff role application?'))return;void action('owner_approve_role_request',{p_request_id:row.request_id,p_note:note.value},approve);};article.append(approve);}
             save.onclick = () => action(active === 'requests' ? 'staff_update_request_status' : 'staff_update_report_status', active === 'requests' ? { p_request_id: row.request_id, p_status: select.value, p_note: note.value } : { p_report_id: row.report_id, p_status: select.value, p_note: note.value }, save);
           } else if (role === 'owner') {
+            const inspect = document.createElement('button');inspect.type='button';inspect.textContent='Inspect account';article.append(inspect);
+            inspect.onclick=async()=>{inspect.disabled=true;try{const result=await rpc('owner_user_inspector',{p_user_id:row.id});const details=document.createElement('details');details.open=true;const summary=document.createElement('summary');summary.textContent='Account details';details.append(summary);const renderValue=(host,label,value)=>{const section=document.createElement('section');const heading=document.createElement('h4');heading.textContent=label.replaceAll('_',' ');section.append(heading);if(value&&typeof value==='object'){for(const [key,item] of Object.entries(value)){if(item&&typeof item==='object'){renderValue(section,key,item);}else{const line=document.createElement('p');line.textContent=key.replaceAll('_',' ')+': '+String(item??'—');section.append(line);}}}else{const line=document.createElement('p');line.textContent=String(value??'—');section.append(line);}host.append(section);};for(const [label,value] of Object.entries(result||{}))renderValue(details,label,value);article.append(details);}catch(error){article.append(Object.assign(document.createElement('p'),{textContent:error.message}));}finally{inspect.disabled=false;}};
             const ban = document.createElement('button'); ban.type = 'button'; ban.textContent = row.banned_at ? 'Restore account' : 'Suspend account'; article.append(ban);
             ban.onclick = () => { const reason = prompt('Reason for this ARROW account action:'); if (reason === null || !reason.trim()) return; if (!confirm(ban.textContent + ' for ' + title.textContent + '?')) return; void action('owner_set_user_ban', {p_user_id:row.id, p_banned:!row.banned_at, p_reason:reason}, ban); };
             const roleSelect = document.createElement('select');
             ['user','moderator','admin','owner'].forEach(value => { const option = document.createElement('option'); option.value = value; option.textContent = value; option.selected = value === row.role; roleSelect.append(option); }); article.append(roleSelect);
             const changeRole = document.createElement('button'); changeRole.type = 'button'; changeRole.textContent = 'Update role'; article.append(changeRole);
             changeRole.onclick = () => { if (roleSelect.value === row.role || !confirm('Change ' + title.textContent + ' to ' + roleSelect.value + '?')) return; void action('set_user_role', {p_user_id:row.id,p_role:roleSelect.value},changeRole); };
+            const ownerNote=document.createElement('textarea');ownerNote.placeholder='Private owner note';ownerNote.maxLength=4000;ownerNote.setAttribute('aria-label','Private owner note');article.append(ownerNote);
+            const addNote=document.createElement('button');addNote.type='button';addNote.textContent='Save owner note';addNote.onclick=()=>{if(ownerNote.value.trim())void action('owner_add_user_note',{p_user_id:row.id,p_note:ownerNote.value.trim()},addNote);};article.append(addNote);
+            const revokeBeta=document.createElement('button');revokeBeta.type='button';revokeBeta.textContent='Revoke beta access';revokeBeta.onclick=()=>{if(confirm('Revoke beta access for '+title.textContent+'?'))void action('owner_revoke_beta_access',{p_user_id:row.id,p_message:null},revokeBeta);};article.append(revokeBeta);
+            const deleteAccount=document.createElement('button');deleteAccount.type='button';deleteAccount.textContent='Delete account';deleteAccount.onclick=()=>{if(prompt('Permanently delete '+title.textContent+' and their data? Type DELETE to confirm.')==='DELETE')void action('owner_delete_user',{p_user_id:row.id},deleteAccount);};article.append(deleteAccount);
             const signOut = document.createElement('button'); signOut.type = 'button'; signOut.textContent = 'Revoke sessions'; article.append(signOut);
             signOut.onclick = () => { if (!confirm('Sign out all sessions for ' + title.textContent + '?')) return; void action('owner_force_sign_out',{p_user_id:row.id},signOut); };
 
@@ -687,16 +716,23 @@
           host.append(article);
         });
       }
-      async function load(queue) {
-        active = queue; host.textContent = 'Loading…';
+      async function load(queue, nextOffset = 0) {
+        const version = ++loadVersion; offset = nextOffset; active = queue; host.textContent = 'Loading…';
         try {
-          records = await rpc(queue === 'requests' ? 'staff_list_requests' : queue === 'reports' ? 'staff_list_reports' : 'admin_list_users_v2', { ...(queue !== 'users' ? { p_status: null } : {}), p_limit: 100, p_offset: 0 }) || [];
+          if(queue==='overview'){paging.hidden=true;const [stats,storage]=await Promise.all([rpc('owner_dashboard_stats',{}),rpc('owner_storage_overview',{})]);if(version!==loadVersion)return;host.replaceChildren();for(const [label,value] of [['Accounts and activity',stats],['Storage',storage]]){const card=document.createElement('section');card.className='arrow-os-support-row';const heading=document.createElement('h3');heading.textContent=label;card.append(heading);for(const [key,amount] of Object.entries(value||{})){const line=document.createElement('p');line.textContent=key.replaceAll('_',' ')+': '+(typeof amount==='object'?JSON.stringify(amount):String(amount));card.append(line);}host.append(card);}return;}
+          paging.hidden=false;
+          const result = queue==='email'?await arrowData('/rest/v1/support_email_threads?select=id,sender_email,sender_name,subject,status,latest_message_at&order=latest_message_at.desc&limit=100&offset='+nextOffset):await rpc(queue === 'requests' ? 'staff_list_requests' : queue === 'reports' ? 'staff_list_reports' : queue==='audit'?'owner_list_audit_log':queue==='beta'?'owner_list_beta_requests':'admin_list_users_v2', { ...(['requests','reports','beta'].includes(queue) ? { p_status: null } : {}), p_limit: 100, p_offset: nextOffset }) || [];
+          if (version !== loadVersion) return;
+          records = result;
+          previous.disabled = nextOffset === 0; nextPage.disabled = records.length < 100; pageLabel.textContent = 'Page ' + (Math.floor(nextOffset / 100) + 1);
           if (host.isConnected) draw();
         } catch (error) { if (host.isConnected) host.innerHTML = sharedDataError(error); }
       }
       search.oninput = draw;
       state.panelBody.querySelectorAll('[data-queue]').forEach(button => button.onclick = () => load(button.dataset.queue));
-      await load('requests');
+      const requested=new URLSearchParams(location.search).get('queue');
+      const allowed=['requests','reports','email',...(role!=='moderator'?['users']:[]),...(role==='owner'?['overview','audit','beta']:[])];
+      await load(allowed.includes(requested)?requested:'requests');
     } catch (error) { if (state.activePanel === 'moderation') state.panelBody.innerHTML = sharedDataError(error); }
   }
 
@@ -1494,10 +1530,12 @@
     });
   }
 
-  function launchToOrbit(module, anchor, orbitAccess = 'enabled') {
-    if (module === 'orbit' || state.departing) return;
+  function launchToOrbit(module, anchor, orbitAccess = 'enabled', destination = null) {
+    if ((module === 'orbit' && !destination) || state.departing) return;
+    const url = new URL(destination || ORBIT_URL, window.location.origin);
+    if (destination && !ON_ENTERARROW) { location.assign(url.toString()); return; }
+    if (destination && (url.origin !== location.origin || !/^\/(orbit|relay|ravin|atlas|waypoint)(\/|$)/.test(url.pathname))) return;
     state.departing = true;
-    const url = new URL(ORBIT_URL, window.location.origin);
     url.searchParams.set('from', module);
     if (orbitAccess === 'relay-only') url.searchParams.set('access', 'relay-only');
 
@@ -1526,7 +1564,7 @@
       '<span class="arrow-os-blackhole-photon-ring"></span>' +
       '<span class="arrow-os-blackhole-core"></span>' +
       '<canvas class="arrow-os-particle-canvas" aria-hidden="true"></canvas>' +
-      '<p>Collapsing to Orbit</p>';
+      '<p>' + (destination ? 'Traveling to ' + escapeHtml(url.pathname.split('/')[1].toUpperCase()) : 'Collapsing to Orbit') + '</p>';
     document.body.appendChild(overlay);
     startParticleCanvas(overlay.querySelector('.arrow-os-particle-canvas'), 'in');
 
@@ -1717,6 +1755,7 @@
     applyAccent,
     applyExperienceChoice,
     launchToOrbit,
+    navigate: (href, module = 'orbit') => launchToOrbit(module, null, 'enabled', href),
     data: arrowData,
     staffRole,
     nextMove,

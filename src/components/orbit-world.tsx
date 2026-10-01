@@ -394,6 +394,12 @@ export function OrbitWorld() {
   const [navigatorQuery, setNavigatorQuery] = useState('');
   const [incomingFrom, setIncomingFrom] = useState<Destination['id'] | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+  const [experience, setExperience] = useState('balanced');
+  useEffect(() => {
+    const update = () => setExperience(document.documentElement.dataset.arrowExperience || 'balanced');
+    update(); window.addEventListener('arrow:experiencechange', update);
+    return () => window.removeEventListener('arrow:experiencechange', update);
+  }, []);
   const [renderProfile, setRenderProfile] = useState<RenderProfile>('balanced');
   const [usesCommandKey, setUsesCommandKey] = useState(true);
   const [destinationStatus, setDestinationStatus] = useState<Record<Destination['id'], string>>({
@@ -413,8 +419,8 @@ export function OrbitWorld() {
       renderProfile === 'balanced' ? 0.72 :
       0.52;
 
-    return createCloudRenderer(false, { density, size: 1.02 });
-  }, [renderProfile]);
+    return createCloudRenderer(false, { density: density * (experience === 'quiet' ? .65 : experience === 'dynamic' ? 1.18 : 1), size: experience === 'dynamic' ? 1.12 : 1.02 });
+  }, [renderProfile, experience]);
 
   const selected = selectedId === 'orbit' ? null : destinationIndex.get(selectedId) ?? null;
   const travelingTo = travelId ? destinationIndex.get(travelId) ?? null : null;
@@ -1595,6 +1601,8 @@ export function OrbitWorld() {
     focusDestination(destination, 0.84);
   };
 
+  const navigateTo = (href:string) => {const os=(window as Window & {ArrowOS?:{navigate?:(href:string,module?:string)=>void}}).ArrowOS;if(os?.navigate)os.navigate(href,'orbit');else window.location.assign(href);};
+
   const openCommandModule = (
     id: Destination['id'],
     params?: Record<string, string>,
@@ -1606,7 +1614,7 @@ export function OrbitWorld() {
     Object.entries(params ?? {}).forEach(([key, value]) => {
       if (value) url.searchParams.set(key, value);
     });
-    window.location.assign(url.toString());
+    navigateTo(url.toString());
   };
 
   const quickCapture = (text?: string) => {
@@ -1620,7 +1628,7 @@ export function OrbitWorld() {
       } catch {}
       url.searchParams.set('capture', text);
     }
-    window.location.assign(url.toString());
+    navigateTo(url.toString());
   };
 
   const showCommandView = (view: 'profile' | 'system' | 'connections' | 'settings') => {
