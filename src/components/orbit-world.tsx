@@ -364,21 +364,15 @@ export function OrbitWorld() {
     lastY: 0,
   });
 
-  const [accessMode] = useState<'full' | 'relay-only'>(() => {
-    if (typeof window === 'undefined') return 'relay-only';
-
-    // Public Orbit is intentionally Relay-only for now. Keep the unreleased
-    // ARROW destinations visible as greyed-out previews, but do not let public
-    // users focus, launch, or navigate into them yet.
-    const requestedRelayOnly =
-      new URLSearchParams(window.location.search).get('access') === 'relay-only';
-    const isLocalDevelopment =
-      window.location.hostname === 'localhost' ||
-      window.location.hostname === '127.0.0.1' ||
-      window.location.hostname === '::1';
-
-    return requestedRelayOnly || !isLocalDevelopment ? 'relay-only' : 'full';
-  });
+  const [accessMode, setAccessMode] = useState<'full' | 'relay-only'>('relay-only');
+  useEffect(() => {
+    const host = window.location.hostname;
+    const arrowWorkspace = host === 'enterarrow.com' || host === 'www.enterarrow.com';
+    const localDevelopment = ['localhost', '127.0.0.1', '::1'].includes(host);
+    const relayPreview = new URLSearchParams(window.location.search).get('access') === 'relay-only';
+    // ARROW exposes every center; the separate public preview retains Relay access.
+    setAccessMode(!relayPreview && (arrowWorkspace || localDevelopment) ? 'full' : 'relay-only');
+  }, []);
   const relayOnlyAccess = accessMode === 'relay-only';
   const destinationEnabled = (destination: Destination) =>
     !relayOnlyAccess || destination.id === 'relay';
