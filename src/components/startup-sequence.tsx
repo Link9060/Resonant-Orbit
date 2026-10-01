@@ -299,7 +299,7 @@ export function StartupSequence() {
       const shouldSkip =
         !forceIntro &&
         (Boolean(source) ||
-          (localStorage.getItem("arrow_os_motion_v1") === "reduce" || (localStorage.getItem("arrow_os_motion_v1") !== "full" && motionQuery.matches)) ||
+          motionQuery.matches ||
           localStorage.getItem(STARTUP_STORAGE_KEY) === '1');
 
       if (forceIntro) {
@@ -318,7 +318,7 @@ export function StartupSequence() {
 
     const timer = window.setTimeout(resolveVisibility, 0);
     const handleMotionChange = () => {
-      if (localStorage.getItem("arrow_os_motion_v1") !== "full" && motionQuery.matches) {
+      if (motionQuery.matches) {
         setFinished(true);
         dismissIntro();
       }

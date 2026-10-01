@@ -1,5 +1,4 @@
 'use client';
-import { OrbitLocations } from './orbit-locations';
 
 import {
   ARROW_DESTINATIONS,
@@ -39,17 +38,6 @@ import {
   ZoomOutIcon,
 } from '@/components/orbit-icons';
 import {
-  IntroParticleCollapse,
-  OrbitCommandPanel,
-} from '@/components/orbit-command-panel';
-import {
-  ENTERTAINMENT_GAME_BY_SLOT,
-  ENTERTAINMENT_GAMES,
-  EntertainmentGameIcon,
-  EntertainmentOverlay,
-  type EntertainmentGameId,
-} from '@/components/orbit-entertainment';
-import {
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -65,7 +53,6 @@ type Destination = ArrowDestination;
 type DestinationId = OrbitSelectionId;
 type TravelPhase = 'idle' | 'launching' | 'preview' | 'returning';
 type RenderProfile = 'high' | 'balanced' | 'low';
-type IntroMode = 'loading' | 'intro' | 'collapsing' | 'command';
 
 type RotationState = {
   yaw: number;
@@ -119,9 +106,8 @@ type TouchPoint = { x: number; y: number };
 const destinations = ARROW_DESTINATIONS;
 const destinationIndex = ARROW_DESTINATION_BY_ID;
 const VIEW_STORAGE_KEY = 'orbit-view-v2';
-const ONBOARDING_STORAGE_KEY = 'orbit-command-onboarding-v1';
 const WAYPOINT_URL = '/waypoint/';
-const FLIGHT_DURATION_MS = 480;
+const FLIGHT_DURATION_MS = 1000;
 const TRANSFER_PARTICLES = Array.from({ length: 26 }, (_, index) => {
   const angle = (Math.PI * 2 * index) / 26 + (index % 2 ? 0.07 : -0.04);
   const distance = 120 + (index % 7) * 42;
@@ -309,9 +295,6 @@ export function OrbitWorld() {
   const shortcutRailRef = useRef<HTMLElement>(null);
   const previousFocusRef = useRef<HTMLElement | null>(null);
   const previousTravelPhaseRef = useRef<TravelPhase>('idle');
-  const entertainmentModeRef = useRef(false);
-  const activeGameRef = useRef<EntertainmentGameId | null>(null);
-  const entertainmentTimerRef = useRef<number | null>(null);
 
   const nodeRefs = useRef<Partial<Record<Destination['id'], HTMLButtonElement | null>>>({});
   const linkRefs = useRef<Partial<Record<Destination['id'], SVGLineElement | null>>>({});
@@ -364,15 +347,21 @@ export function OrbitWorld() {
     lastY: 0,
   });
 
-  const [accessMode, setAccessMode] = useState<'full' | 'relay-only'>('relay-only');
-  useEffect(() => {
-    const host = window.location.hostname;
-    const arrowWorkspace = host === 'enterarrow.com' || host === 'www.enterarrow.com';
-    const localDevelopment = ['localhost', '127.0.0.1', '::1'].includes(host);
-    const relayPreview = new URLSearchParams(window.location.search).get('access') === 'relay-only';
-    // ARROW exposes every center; the separate public preview retains Relay access.
-    setAccessMode(!relayPreview && (arrowWorkspace || localDevelopment) ? 'full' : 'relay-only');
-  }, []);
+  const [accessMode] = useState<'full' | 'relay-only'>(() => {
+    if (typeof window === 'undefined') return 'relay-only';
+
+    // Public Orbit is intentionally Relay-only for now. Keep the unreleased
+    // ARROW destinations visible as greyed-out previews, but do not let public
+    // users focus, launch, or navigate into them yet.
+    const requestedRelayOnly =
+      new URLSearchParams(window.location.search).get('access') === 'relay-only';
+    const isLocalDevelopment =
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname === '::1';
+
+    return requestedRelayOnly || !isLocalDevelopment ? 'relay-only' : 'full';
+  });
   const relayOnlyAccess = accessMode === 'relay-only';
   const destinationEnabled = (destination: Destination) =>
     !relayOnlyAccess || destination.id === 'relay';
@@ -388,12 +377,6 @@ export function OrbitWorld() {
   const [navigatorQuery, setNavigatorQuery] = useState('');
   const [incomingFrom, setIncomingFrom] = useState<Destination['id'] | null>(null);
   const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
-  const [experience, setExperience] = useState('balanced');
-  useEffect(() => {
-    const update = () => setExperience(document.documentElement.dataset.arrowExperience || 'balanced');
-    update(); window.addEventListener('arrow:experiencechange', update);
-    return () => window.removeEventListener('arrow:experiencechange', update);
-  }, []);
   const [renderProfile, setRenderProfile] = useState<RenderProfile>('balanced');
   const [usesCommandKey, setUsesCommandKey] = useState(true);
   const [destinationStatus, setDestinationStatus] = useState<Record<Destination['id'], string>>({
@@ -402,10 +385,6 @@ export function OrbitWorld() {
     relay: 'communication ready',
     waypoint: 'direction clear',
   });
-  const [introMode, setIntroMode] = useState<IntroMode>('loading');
-  const [entertainmentMode, setEntertainmentMode] = useState(false);
-  const [entertainmentTransition, setEntertainmentTransition] = useState<'idle' | 'entering' | 'leaving'>('idle');
-  const [activeGame, setActiveGame] = useState<EntertainmentGameId | null>(null);
 
   const renderer = useMemo(() => {
     const density =
@@ -413,8 +392,8 @@ export function OrbitWorld() {
       renderProfile === 'balanced' ? 0.72 :
       0.52;
 
-    return createCloudRenderer(false, { density: density * (experience === 'quiet' ? .65 : experience === 'dynamic' ? 1.18 : 1), size: experience === 'dynamic' ? 1.12 : 1.02 });
-  }, [renderProfile, experience]);
+    return createCloudRenderer(false, { density, size: 1.02 });
+  }, [renderProfile]);
 
   const selected = selectedId === 'orbit' ? null : destinationIndex.get(selectedId) ?? null;
   const travelingTo = travelId ? destinationIndex.get(travelId) ?? null : null;
@@ -422,10 +401,7 @@ export function OrbitWorld() {
   const interactionLocked =
     travelPhase !== 'idle' ||
     incomingFrom !== null ||
-    navigatorOpen ||
-    introMode === 'collapsing' ||
-    activeGame !== null ||
-    entertainmentTransition !== 'idle';
+    navigatorOpen;
 
   const beginReturnToOrbit = () => {
     const ui = uiRef.current;
@@ -451,17 +427,6 @@ export function OrbitWorld() {
   useEffect(() => {
     uiRef.current = { selectedId, travelPhase, travelId, incomingFrom, navigatorOpen };
   }, [incomingFrom, navigatorOpen, selectedId, travelId, travelPhase]);
-
-  useEffect(() => {
-    entertainmentModeRef.current = entertainmentMode;
-    activeGameRef.current = activeGame;
-  }, [activeGame, entertainmentMode]);
-
-  useEffect(() => () => {
-    if (entertainmentTimerRef.current !== null) {
-      window.clearTimeout(entertainmentTimerRef.current);
-    }
-  }, []);
 
   useEffect(() => {
     const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -516,16 +481,6 @@ export function OrbitWorld() {
   }, []);
 
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const forceIntro = params.get('intro') === '1';
-    let hasSeenIntro = false;
-    try {
-      hasSeenIntro = localStorage.getItem(ONBOARDING_STORAGE_KEY) === '1';
-    } catch {}
-    setIntroMode(forceIntro || !hasSeenIntro ? 'intro' : 'command');
-  }, []);
-
-  useEffect(() => {
     return () => {
       timersRef.current.forEach(timer => window.clearTimeout(timer));
     };
@@ -559,7 +514,7 @@ export function OrbitWorld() {
     const incoming = readIncomingArrowSource(window.location.search);
     if (!incoming) return;
 
-    const reduced = document.documentElement.dataset.arrowMotion === 'reduce' || (!document.documentElement.dataset.arrowMotion && window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
     if (reduced) {
       const url = new URL(window.location.href);
       url.searchParams.delete('from');
@@ -628,15 +583,6 @@ export function OrbitWorld() {
       const isTyping =
         target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
 
-      if (event.key === 'Escape' && activeGameRef.current) {
-        event.preventDefault();
-        setActiveGame(null);
-        activeGameRef.current = null;
-        return;
-      }
-
-      if (activeGameRef.current) return;
-
       if (event.key === 'Escape' && ui.navigatorOpen) {
         event.preventDefault();
         setNavigatorOpen(false);
@@ -651,26 +597,6 @@ export function OrbitWorld() {
       }
 
       if (ui.incomingFrom || ui.travelPhase !== 'idle') return;
-
-      if (entertainmentModeRef.current) {
-        if (event.metaKey || event.ctrlKey || event.altKey || isTyping) return;
-
-        if (/^[1-4]$/.test(event.key)) {
-          event.preventDefault();
-          const game = ENTERTAINMENT_GAMES.find(item => item.shortcut === Number(event.key));
-          if (game) {
-            setActiveGame(game.id);
-            activeGameRef.current = game.id;
-          }
-          return;
-        }
-
-        if (event.key.toLowerCase() === 'o') {
-          event.preventDefault();
-          recenterWorld();
-        }
-        return;
-      }
 
       if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
         event.preventDefault();
@@ -1001,7 +927,7 @@ export function OrbitWorld() {
             : projected.x < centerX - sideDeadzone ? 'left' : 'right';
 
         nodeSideRef.current[destination.id] = nextSide;
-        const available = entertainmentModeRef.current || destinationEnabled(destination);
+        const available = destinationEnabled(destination);
         node.dataset.side = nextSide;
         node.dataset.backface = nextFront ? 'false' : 'true';
         node.dataset.restricted = available ? 'false' : 'true';
@@ -1028,17 +954,6 @@ export function OrbitWorld() {
         }
       }
 
-      shellRef.current?.querySelectorAll<HTMLElement>('[data-orbit-extra]').forEach(node => {
-        const anchor = (node.dataset.anchor || '').split(',').map(Number);
-        if (anchor.length !== 3) return;
-        const point = projectPoint(anchor as [number,number,number], worldYaw,worldPitch,worldRoll,sphereRadius,centerX,centerY);
-        const occupied = projectedNodes.map(p=>({x:p.x,y:p.y}));
-        for(const other of occupied){const dx=point.x-other.x,dy=point.y-other.y,d=Math.hypot(dx,dy);if(d<100){point.x+=(dx/(d||1)||1)*(100-d);point.y+=(dy/(d||1)||.5)*(100-d);}}
-        const safe=resolveSafeScreenPosition(point.x,point.y,safeRectsRef.current,{left:60,top:60,right:width-60,bottom:height-70},45,3);
-        node.style.left = `${safe.x}px`; node.style.top = `${safe.y}px`;
-        node.style.opacity = String(.3 + point.depth * .7);
-        node.style.zIndex = point.depth > .5 ? '14' : '8';
-      });
       const orbitAngle = craftAngleRef.current;
       const craftAnchor: readonly [number, number, number] = [
         Math.cos(orbitAngle) * 1.32,
@@ -1499,35 +1414,6 @@ export function OrbitWorld() {
     );
   };
 
-  const openEntertainmentGame = (gameId: EntertainmentGameId) => {
-    if (!entertainmentModeRef.current) return;
-    setActiveGame(gameId);
-    activeGameRef.current = gameId;
-  };
-
-  const toggleEntertainmentMode = () => {
-    if (introMode !== 'command' || interactionLocked) return;
-
-    const entering = !entertainmentMode;
-    if (entertainmentTimerRef.current !== null) {
-      window.clearTimeout(entertainmentTimerRef.current);
-    }
-
-    setNavigatorOpen(false);
-    setNavigatorQuery('');
-    setSelectedId('orbit');
-    setEntertainmentTransition(entering ? 'entering' : 'leaving');
-    setEntertainmentMode(entering);
-    entertainmentModeRef.current = entering;
-    impulseRef.current = 1.18;
-
-    entertainmentTimerRef.current = window.setTimeout(() => {
-      setEntertainmentTransition('idle');
-      entertainmentTimerRef.current = null;
-      impulseRef.current = 0.48;
-    }, reducedMotionRef.current ? 40 : 880);
-  };
-
   const returnToOrbit = beginReturnToOrbit;
 
   const recenterWorld = () => {
@@ -1550,95 +1436,6 @@ export function OrbitWorld() {
     impulseRef.current = 0.7;
   };
 
-  const openNavigator = (query = '') => {
-    pointerRef.current.inside = false;
-    setNavigatorQuery(query);
-    setNavigatorOpen(true);
-  };
-
-  const persistIntroComplete = () => {
-    try {
-      localStorage.setItem(ONBOARDING_STORAGE_KEY, '1');
-    } catch {}
-
-    const url = new URL(window.location.href);
-    if (url.searchParams.get('intro') === '1') {
-      url.searchParams.delete('intro');
-      window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-    }
-
-    setIntroMode('command');
-    impulseRef.current = 0.82;
-  };
-
-  const dismissOrbitIntro = () => {
-    if (introMode !== 'intro') return;
-    if (reducedMotionRef.current) {
-      persistIntroComplete();
-      return;
-    }
-    setIntroMode('collapsing');
-    impulseRef.current = 1.08;
-  };
-
-  const replayOrbitIntro = () => {
-    try {
-      localStorage.removeItem(ONBOARDING_STORAGE_KEY);
-    } catch {}
-    setIntroMode('intro');
-    recenterWorld();
-  };
-
-  const focusCommandDestination = (id: Destination['id']) => {
-    const destination = destinationIndex.get(id);
-    if (!destination || !destinationEnabled(destination)) return;
-    focusDestination(destination, 0.84);
-  };
-
-  const navigateTo = (href:string) => {const os=(window as Window & {ArrowOS?:{navigate?:(href:string,module?:string)=>void}}).ArrowOS;if(os?.navigate)os.navigate(href,'orbit');else window.location.assign(href);};
-
-  const openCommandModule = (
-    id: Destination['id'],
-    params?: Record<string, string>,
-  ) => {
-    const destination = destinationIndex.get(id);
-    if (!destination || !destinationEnabled(destination) || !destination.href) return;
-    const url = new URL(destination.href);
-    url.searchParams.set('from', 'orbit');
-    Object.entries(params ?? {}).forEach(([key, value]) => {
-      if (value) url.searchParams.set(key, value);
-    });
-    navigateTo(url.toString());
-  };
-
-  const quickCapture = (text?: string) => {
-    if (relayOnlyAccess) return;
-    const url = new URL(WAYPOINT_URL);
-    url.searchParams.set('from', 'orbit');
-    url.searchParams.set('tab', 'dump');
-    if (text) {
-      try {
-        localStorage.setItem('arrow_waypoint_pending_capture_v1', text);
-      } catch {}
-      url.searchParams.set('capture', text);
-    }
-    navigateTo(url.toString());
-  };
-
-  const showCommandView = (view: 'profile' | 'system' | 'connections' | 'settings') => {
-    if (introMode !== 'command') persistIntroComplete();
-    window.setTimeout(() => {
-      window.dispatchEvent(new CustomEvent('orbit:command-view', { detail: { view } }));
-    }, 0);
-  };
-
-  const openArrowSystemPanel = (name: string) => {
-    const api = (window as Window & {
-      ArrowOS?: { openPanel?: (panel: string, module?: string) => void };
-    }).ArrowOS;
-    api?.openPanel?.(name, 'orbit');
-  };
-
   const filteredDestinations = destinations.filter(destination => {
     const query = navigatorQuery.trim().toLowerCase();
     if (!query) return true;
@@ -1655,63 +1452,6 @@ export function OrbitWorld() {
       .toLowerCase()
       .includes(query);
   });
-
-  const navigatorActionQuery = navigatorQuery.trim().toLowerCase();
-  const navigatorActions = [
-    {
-      id: 'capture',
-      label: 'Quick capture',
-      detail: 'Capture a thought, task, or brain dump without leaving your flow.',
-      search: 'capture brain dump task remember waypoint',
-      disabled: relayOnlyAccess,
-      run: () => quickCapture(),
-    },
-    {
-      id: 'profile',
-      label: 'Profile settings',
-      detail: 'Your name, presence, and ARROW account controls.',
-      search: 'profile account me presence available school away',
-      disabled: false,
-      run: () => showCommandView('profile'),
-    },
-    {
-      id: 'connections',
-      label: 'Connections',
-      detail: 'See how accounts, calendar, files, and messaging connect.',
-      search: 'connections integrations sync calendar files relay account',
-      disabled: false,
-      run: () => showCommandView('connections'),
-    },
-    {
-      id: 'appearance',
-      label: 'Appearance',
-      detail: 'Theme, motion, accent, and ARROW experience.',
-      search: 'appearance theme motion accent experience',
-      disabled: false,
-      run: () => openArrowSystemPanel('appearance'),
-    },
-    {
-      id: 'focus',
-      label: 'Start focus',
-      detail: 'Open the ARROW focus timer and attention controls.',
-      search: 'focus timer attention session',
-      disabled: false,
-      run: () => openArrowSystemPanel('focus'),
-    },
-    {
-      id: 'system',
-      label: 'System status',
-      detail: 'Review every ARROW center from Orbit.',
-      search: 'system status modules centers atlas ravin relay waypoint',
-      disabled: false,
-      run: () => showCommandView('system'),
-    },
-  ].filter(action =>
-    navigatorActionQuery &&
-    `${action.label} ${action.detail} ${action.search}`
-      .toLowerCase()
-      .includes(navigatorActionQuery),
-  );
 
   const chooseFromNavigator = (destination: Destination) => {
     restoreNavigatorFocusRef.current = false;
@@ -1751,15 +1491,12 @@ export function OrbitWorld() {
 
     if (
       event.key === 'Enter' &&
-      document.activeElement === navigatorInputRef.current
+      document.activeElement === navigatorInputRef.current &&
+      filteredDestinations.find(destinationEnabled)
     ) {
-      const firstResult = navigatorRef.current?.querySelector<HTMLButtonElement>(
-        '.navigator-result:not(:disabled)',
-      );
-      if (firstResult) {
-        event.preventDefault();
-        firstResult.click();
-      }
+      event.preventDefault();
+      const firstAvailable = filteredDestinations.find(destinationEnabled);
+      if (firstAvailable) chooseFromNavigator(firstAvailable);
       return;
     }
 
@@ -1870,10 +1607,7 @@ export function OrbitWorld() {
         dragging ? 'is-dragging' : '',
         incomingFrom ? 'incoming-active' : '',
         navigatorOpen ? 'has-navigator' : '',
-        entertainmentMode ? 'entertainment-mode' : '',
-        entertainmentTransition !== 'idle' ? 'entertainment-' + entertainmentTransition : '',
         prefersReducedMotion ? 'reduce-motion' : '',
-        `intro-${introMode}`,
         `render-${renderProfile}`,
       ].filter(Boolean).join(' ')}
       data-travel-destination={travelId ?? undefined}
@@ -1894,59 +1628,15 @@ export function OrbitWorld() {
         aria-hidden={navigatorOpen ? true : undefined}
         inert={navigatorOpen ? true : undefined}
       >
-        <div ref={stageCopyRef} className="orbit-left-zone">
-          {introMode !== 'loading' && introMode !== 'command' && (
-            <section className={`stage-copy orbit-intro-card ${introMode === 'collapsing' ? 'is-collapsing' : ''}`}>
-              <p className="eyebrow">CENTRAL WORLD</p>
-              <h1>Everything starts here.</h1>
-              <p className="stage-description">
-                Move through ARROW as one connected system. The sphere is the map; each signal is a destination.
-              </p>
-              <button
-                type="button"
-                className="orbit-intro-enter"
-                onClick={dismissOrbitIntro}
-                disabled={introMode === 'collapsing'}
-              >
-                <span>Enter Orbit</span>
-                <span aria-hidden="true">✓</span>
-              </button>
-            </section>
-          )}
-
-          {introMode === 'command' && (
-            entertainmentMode ? (
-              <section className="entertainment-copy" aria-label="Orbit entertainment mode">
-                <p className="eyebrow">HIDDEN WORLD / PLAY MODE</p>
-                <h1>Give your life <strong>entertainment.</strong></h1>
-                <p>The same Orbit. Different destinations. Pick a signal and play.</p>
-              </section>
-            ) : (
-              <OrbitCommandPanel
-                statuses={destinationStatus}
-                relayOnlyAccess={relayOnlyAccess}
-                onOpenNavigator={openNavigator}
-                onFocusDestination={focusCommandDestination}
-                onOpenModule={openCommandModule}
-                onQuickCapture={quickCapture}
-                onReplayIntro={replayOrbitIntro}
-              />
-            )
-          )}
+        <div ref={stageCopyRef} className="stage-copy">
+          <p className="eyebrow">CENTRAL WORLD</p>
+          <h1>Everything starts here.</h1>
+          <p className="stage-description">
+            Move through ARROW as one connected system. The sphere is the map; each signal is a destination.
+          </p>
         </div>
 
-        <IntroParticleCollapse
-          active={introMode === 'collapsing'}
-          onComplete={persistIntroComplete}
-        />
-
         <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
-
-        {entertainmentTransition !== 'idle' && (
-          <div className="entertainment-switch-message" aria-live="polite">
-            {entertainmentTransition === 'entering' ? 'DIRECTION IS OVERRATED.' : 'ALRIGHT. BACK TO WORK.'}
-          </div>
-        )}
 
         <svg className="orbit-links" aria-hidden="true">
           {destinations.map(destination => (
@@ -1960,10 +1650,9 @@ export function OrbitWorld() {
           ))}
         </svg>
 
-        <div ref={craftRef} className="craft-orbit"><button className="orbit-ship-control" type="button" aria-label="Fly the ARROW ship" title="Fly the ARROW ship" onClick={() => { setEntertainmentMode(true); setActiveGame('flight'); }}>
-          <ArrowMarkIcon size={20} /></button>
+        <div ref={craftRef} className="craft-orbit" aria-hidden="true">
+          <ArrowMarkIcon size={20} />
         </div>
-        <OrbitLocations hidden={entertainmentMode} />
 
         {travelingTo && (
           <div className="travel-flight-layer" aria-hidden="true">
@@ -2012,9 +1701,8 @@ export function OrbitWorld() {
           className={`orbit-core-label ${selectedId === 'orbit' ? 'is-active' : ''}`}
           disabled={interactionLocked}
           onClick={recenterWorld}
-          onDoubleClick={toggleEntertainmentMode}
         >
-          <span className="core-kicker">{entertainmentMode ? 'PLAY MODE' : 'YOU ARE HERE'}</span>
+          <span className="core-kicker">YOU ARE HERE</span>
           <span className="core-title">Orbit</span>
         </button>
 
@@ -2027,74 +1715,58 @@ export function OrbitWorld() {
         >
           <span className="orbit-shortcuts-label">Quick routes</span>
           <div className="orbit-shortcuts-list">
-            {destinations.map(destination => {
-              const game = ENTERTAINMENT_GAME_BY_SLOT[destination.id];
-              const available = entertainmentMode || destinationEnabled(destination);
-              return (
-                <button
-                  type="button"
-                  key={destination.id}
-                  className={`orbit-shortcut ${!entertainmentMode && selectedId === destination.id ? 'is-active' : ''} ${available ? '' : 'is-restricted'}`}
-                  onClick={() => entertainmentMode ? openEntertainmentGame(game.id) : focusDestination(destination, 0.75)}
-                  disabled={interactionLocked || !available}
-                  aria-keyshortcuts={String(destination.shortcut)}
-                  aria-pressed={!entertainmentMode && selectedId === destination.id}
-                  aria-label={entertainmentMode ? `${destination.shortcut}: Play ${game.name}` : `${destination.shortcut}: Focus ${destination.name}`}
-                  title={entertainmentMode ? `${destination.shortcut} · ${game.name}` : (destinationEnabled(destination) ? `${destination.shortcut} · ${destination.name}` : `${destination.name} · unavailable in Relay public access`)}
-                >
-                  <kbd>{destination.shortcut}</kbd>
-                  {entertainmentMode ? <EntertainmentGameIcon id={game.id} size={14} /> : <DestinationIcon id={destination.id} size={14} />}
-                  <span>{entertainmentMode ? game.name : destination.name}</span>
-                </button>
-              );
-            })}
+            {destinations.map(destination => (
+              <button
+                type="button"
+                key={destination.id}
+                className={`orbit-shortcut ${selectedId === destination.id ? 'is-active' : ''} ${destinationEnabled(destination) ? '' : 'is-restricted'}`}
+                onClick={() => focusDestination(destination, 0.75)}
+                disabled={interactionLocked || !destinationEnabled(destination)}
+                aria-keyshortcuts={String(destination.shortcut)}
+                aria-pressed={selectedId === destination.id}
+                aria-label={`${destination.shortcut}: Focus ${destination.name}`}
+                title={destinationEnabled(destination) ? `${destination.shortcut} · ${destination.name}` : `${destination.name} · unavailable in Relay public access`}
+              >
+                <kbd>{destination.shortcut}</kbd>
+                <DestinationIcon id={destination.id} size={14} />
+                <span>{destination.name}</span>
+              </button>
+            ))}
           </div>
         </nav>
 
         <div className="destination-layer">
-          {destinations.map(destination => {
-            const game = ENTERTAINMENT_GAME_BY_SLOT[destination.id];
-            const available = entertainmentMode || destinationEnabled(destination);
-            return (
-              <button
-                ref={node => {
-                  nodeRefs.current[destination.id] = node;
-                }}
-                type="button"
-                key={destination.id}
-                className={[
-                  'destination-node',
-                  !entertainmentMode && selectedId === destination.id ? 'is-selected' : '',
-                  !entertainmentMode && travelId === destination.id ? 'is-travel-target' : '',
-                  available ? '' : 'is-restricted',
-                ].filter(Boolean).join(' ')}
-                onPointerDown={event => {
-                  if (entertainmentMode) {
-                    event.stopPropagation();
-                    openEntertainmentGame(game.id);
-                  }
-                }}
-                onClick={() => entertainmentMode ? openEntertainmentGame(game.id) : focusDestination(destination)}
-                disabled={interactionLocked || !available}
-                aria-pressed={!entertainmentMode && selectedId === destination.id}
-                aria-label={entertainmentMode
-                  ? `${game.name}, ${game.code}. ${game.tagline}`
-                  : (destinationEnabled(destination)
-                    ? `${destination.name}, ${destination.code}. ${destination.detail}`
-                    : `${destination.name}, unavailable in Relay public access`)}
-              >
-                <span className="node-pulse" />
-                <span className="node-landmark" aria-hidden="true">
-                  {entertainmentMode ? <EntertainmentGameIcon id={game.id} size={18} /> : <DestinationIcon id={destination.id} size={18} />}
-                </span>
-                <span className="node-copy">
-                  <span className="node-code">{entertainmentMode ? game.code : destination.code}</span>
-                  <strong>{entertainmentMode ? game.name : destination.name}</strong>
-                  <span className="node-status">{entertainmentMode ? game.status : destinationStatus[destination.id]}</span>
-                </span>
-              </button>
-            );
-          })}
+          {destinations.map(destination => (
+            <button
+              ref={node => {
+                nodeRefs.current[destination.id] = node;
+              }}
+              type="button"
+              key={destination.id}
+              className={[
+                'destination-node',
+                selectedId === destination.id ? 'is-selected' : '',
+                travelId === destination.id ? 'is-travel-target' : '',
+                destinationEnabled(destination) ? '' : 'is-restricted',
+              ].filter(Boolean).join(' ')}
+              onClick={() => focusDestination(destination)}
+              disabled={!destinationEnabled(destination)}
+              aria-pressed={selectedId === destination.id}
+              aria-label={destinationEnabled(destination)
+                ? `${destination.name}, ${destination.code}. ${destination.detail}`
+                : `${destination.name}, unavailable in Relay public access`}
+            >
+              <span className="node-pulse" />
+              <span className="node-landmark" aria-hidden="true">
+                <DestinationIcon id={destination.id} size={18} />
+              </span>
+              <span className="node-copy">
+                <span className="node-code">{destination.code}</span>
+                <strong>{destination.name}</strong>
+                <span className="node-status">{destinationStatus[destination.id]}</span>
+              </span>
+            </button>
+          ))}
         </div>
 
         <aside
@@ -2136,7 +1808,10 @@ export function OrbitWorld() {
             </button>
             <button
               type="button"
-              onClick={() => openNavigator()}
+              onClick={() => {
+                pointerRef.current.inside = false;
+                setNavigatorOpen(true);
+              }}
               disabled={interactionLocked}
               title={usesCommandKey ? 'Open ARROW Navigator (⌘K)' : 'Open ARROW Navigator (Ctrl+K)'}
               aria-keyshortcuts="Meta+K Control+K"
@@ -2162,8 +1837,13 @@ export function OrbitWorld() {
                 type="button"
                 className="focus-button"
                 disabled={relayOnlyAccess}
-                onClick={() => quickCapture()}
-
+                onClick={() => {
+                  if (relayOnlyAccess) return;
+                  const url = new URL(WAYPOINT_URL, window.location.origin);
+                  url.searchParams.set('from', 'orbit');
+                  url.searchParams.set('tab', 'dump');
+                  window.location.assign(url.toString());
+                }}
               >
                 <PulseIcon size={14} />
                 Quick capture
@@ -2237,21 +1917,11 @@ export function OrbitWorld() {
         <div className="stage-footer">
           <span><RotateWorldIcon size={13} /> drag to rotate</span>
           <span><SearchIcon size={13} /> Navigator</span>
-          <span>{entertainmentMode ? '1–4 games' : '1–4 quick routes'}</span>
+          <span>1–4 quick routes</span>
         </div>
       </div>
 
-      {activeGame && (
-        <EntertainmentOverlay
-          gameId={activeGame}
-          onClose={() => {
-            setActiveGame(null);
-            activeGameRef.current = null;
-          }}
-        />
-      )}
-
-      {navigatorOpen && travelPhase === 'idle' && !incomingFrom && !entertainmentMode && (
+      {navigatorOpen && travelPhase === 'idle' && !incomingFrom && (
         <div
           className="orbit-navigator-backdrop"
           role="presentation"
@@ -2272,8 +1942,8 @@ export function OrbitWorld() {
           >
             <div className="navigator-heading">
               <div>
-                <p>ARROW COMMAND</p>
-                <h2>What do you want to do?</h2>
+                <p>ARROW NAVIGATOR</p>
+                <h2>Where to?</h2>
               </div>
               <button
                 type="button"
@@ -2294,28 +1964,11 @@ export function OrbitWorld() {
                 ref={navigatorInputRef}
                 value={navigatorQuery}
                 onChange={event => setNavigatorQuery(event.target.value)}
-                placeholder="Search ARROW or run a command"
+                placeholder="Search ARROW destinations"
                 aria-label="Search ARROW destinations"
               />
               <kbd>/</kbd>
             </label>
-
-            {introMode === 'command' && !navigatorQuery.trim() && (
-              <div className="navigator-command-chips" aria-label="Suggested ARROW commands">
-                <button type="button" onClick={() => quickCapture()} disabled={relayOnlyAccess}>
-                  <PulseIcon size={13} /> Capture
-                </button>
-                <button type="button" onClick={() => showCommandView('profile')}>
-                  <CoreIcon size={13} /> Profile
-                </button>
-                <button type="button" onClick={() => showCommandView('connections')}>
-                  <SearchIcon size={13} /> Connections
-                </button>
-                <button type="button" onClick={() => openArrowSystemPanel('appearance')}>
-                  <TargetIcon size={13} /> Appearance
-                </button>
-              </div>
-            )}
 
             <div className="navigator-results">
               {filteredDestinations.map(destination => (
@@ -2343,36 +1996,9 @@ export function OrbitWorld() {
                 </button>
               ))}
 
-              {navigatorActions.map(action => (
-                <button
-                  type="button"
-                  key={action.id}
-                  className="navigator-result navigator-command-result"
-                  disabled={action.disabled}
-                  onClick={() => {
-                    restoreNavigatorFocusRef.current = false;
-                    setNavigatorOpen(false);
-                    setNavigatorQuery('');
-                    window.setTimeout(action.run, 0);
-                  }}
-                >
-                  <span className="navigator-index">CMD</span>
-                  <span className="navigator-result-icon" aria-hidden="true">
-                    <CommandIcon size={15} />
-                  </span>
-                  <span className="navigator-result-copy">
-                    <strong>{action.label}</strong>
-                    <span>ORBIT</span>
-                  </span>
-                  <span className="navigator-result-description">{action.detail}</span>
-                  <span className="navigator-route is-live">command</span>
-                  <ArrowUpRightIcon size={13} />
-                </button>
-              ))}
-
-              {filteredDestinations.length === 0 && navigatorActions.length === 0 && (
+              {filteredDestinations.length === 0 && (
                 <div className="navigator-empty">
-                  No ARROW destination or command matches “{navigatorQuery}”.
+                  No ARROW destination matches “{navigatorQuery}”.
                 </div>
               )}
             </div>

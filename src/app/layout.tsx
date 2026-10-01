@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next';
 import Script from 'next/script';
 import './globals.css';
-import './entertainment.css';
 
 export const metadata: Metadata = {
   title: 'Orbit · ARROW',
@@ -31,13 +30,13 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href={`/arrow-shell.css?v=20261001`} />
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260928-enterarrow-shell-v1`} />
       </head>
       <body>
         <Script src="/arrow-auth-guard.js?v=auth-v2" strategy="beforeInteractive" />
         {children}
         <Script
-          src={`/arrow-shell.js?v=20261001`}
+          src={`${arrowShellBase}/arrow-shell.js?v=20260928-enterarrow-shell-v1`}
           strategy="afterInteractive"
         />
       </body>

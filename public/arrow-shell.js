@@ -1,6 +1,9 @@
 (() => {
   if (window.ArrowOS) { window.ArrowOS.mountAll(); return; }
   const STORAGE = {
+    notes: 'arrow_os_notes_v1',
+    tasks: 'arrow_os_tasks_v1',
+    events: 'arrow_os_events_v1',
     links: 'arrow_os_links_v1',
     theme: 'arrow_os_theme_v1',
     motion: 'arrow_os_motion_v1',
@@ -11,19 +14,11 @@
   };
 
   const ON_ENTERARROW = ['enterarrow.com', 'www.enterarrow.com'].includes(window.location.hostname);
-  const ORBIT_URL = ON_ENTERARROW ? '/orbit/' : 'https://link9060.github.io/Resonant-Orbit/';
-  const WAYPOINT_URL = ON_ENTERARROW ? '/waypoint/' : 'https://link9060.github.io/Resonant-Waypoint/';
-  const RELAY_URL = ON_ENTERARROW ? '/relay/' : 'https://link9060.github.io/Resonant-Relay/';
-  const RAVIN_URL = ON_ENTERARROW ? '/ravin/' : 'https://link9060.github.io/Project-R.A.V.I.N.-1.1/';
+  const ORBIT_URL = '/orbit/';
+  const WAYPOINT_URL = '/waypoint/';
   const SIGNOUT_URL = ON_ENTERARROW ? '/signout/' : '';
-
-  // Public client credentials only. User ownership is enforced by Supabase RLS.
-  const ARROW_SUPABASE_URL = 'https://cnorozrjugxpanpfmssa.supabase.co';
-  const ARROW_SUPABASE_KEY = 'sb_publishable_yVNPiB7opT0WRvBfKTZ2BA_s5bOQLRg';
-  const ARROW_AUTH_STORAGE_KEY = 'sb-cnorozrjugxpanpfmssa-auth-token';
   const VALID_MODULES = new Set(['relay', 'orbit', 'atlas', 'ravin', 'waypoint']);
   const PANEL_LABELS = {
-    ravin: 'RAVIN',
     notes: 'Notes',
     tasks: 'Tasks',
     focus: 'Focus',
@@ -31,8 +26,6 @@
     links: 'Links',
     appearance: 'Appearance',
     settings: 'Settings',
-    support: 'ARROW support',
-    moderation: 'ARROW staff',
   };
 
   const ACCENTS = [
@@ -100,92 +93,6 @@
     window.dispatchEvent(new CustomEvent('arrow-os:datachange', { detail: { key, value } }));
   }
 
-  function readArrowSession() {
-    try {
-      const session = JSON.parse(localStorage.getItem(ARROW_AUTH_STORAGE_KEY) || 'null');
-      return session && typeof session.access_token === 'string' ? session : null;
-    } catch {
-      return null;
-    }
-  }
-
-  function saveArrowSession(session) {
-    try { localStorage.setItem(ARROW_AUTH_STORAGE_KEY, JSON.stringify(session)); } catch {}
-  }
-
-  async function refreshArrowSession(session) {
-    if (!session?.refresh_token) return null;
-    if (window.__arrowSessionRefreshPromise) return window.__arrowSessionRefreshPromise;
-    window.__arrowSessionRefreshPromise = (async () => {
-      const response = await fetch(ARROW_SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
-        method: 'POST', headers: { apikey: ARROW_SUPABASE_KEY, 'content-type': 'application/json' },
-        body: JSON.stringify({ refresh_token: session.refresh_token }),
-      });
-      if (!response.ok) return null;
-      const fresh = await response.json();
-      const merged = { ...session, ...fresh, user: fresh.user || session.user };
-      saveArrowSession(merged); return merged;
-    })();
-    try { return await window.__arrowSessionRefreshPromise; }
-    finally { window.__arrowSessionRefreshPromise = null; }
-  }
-
-  async function arrowData(pathname, options = {}, retry = true) {
-    let session = readArrowSession();
-    if (!session?.access_token) {
-      const error = new Error('Sign in to ARROW to use shared data.');
-      error.code = 'ARROW_AUTH_REQUIRED';
-      throw error;
-    }
-    if (session.expires_at && Number(session.expires_at) * 1000 < Date.now() + 30000) {
-      session = await refreshArrowSession(session) || session;
-    }
-
-    const headers = {
-      apikey: ARROW_SUPABASE_KEY,
-      Authorization: 'Bearer ' + session.access_token,
-      Accept: 'application/json',
-      ...(options.headers || {}),
-    };
-    if (options.body !== undefined) headers['content-type'] = 'application/json';
-
-    const response = await fetch(ARROW_SUPABASE_URL + pathname, {
-      method: options.method || 'GET',
-      headers,
-      body: options.body === undefined ? undefined : JSON.stringify(options.body),
-    });
-
-    if (response.status === 401 && retry) {
-      const fresh = await refreshArrowSession(session);
-      if (fresh) return arrowData(pathname, options, false);
-    }
-    if (!response.ok) {
-      const payload = await response.json().catch(() => null);
-      throw new Error(payload?.message || payload?.error || 'ARROW data could not load.');
-    }
-
-    if ((options.method || 'GET').toUpperCase() !== 'GET') {
-      try { localStorage.setItem('arrow_shared_data_ping_v1', String(Date.now())); } catch {}
-      window.dispatchEvent(new CustomEvent('arrow:planning-changed'));
-    }
-
-    if (response.status === 204) return null;
-    const text = await response.text();
-    return text ? JSON.parse(text) : null;
-  }
-
-  function currentArrowUserId() {
-    return readArrowSession()?.user?.id || null;
-  }
-
-  function sharedDataError(error) {
-    const signIn = error?.code === 'ARROW_AUTH_REQUIRED'
-      ? '<a href="' + escapeAttr(ORBIT_URL) + '">Open ARROW sign in ↗</a>'
-      : '';
-    return '<div class="arrow-os-empty"><strong>Shared ARROW data is unavailable.</strong><span>' +
-      escapeHtml(error?.message || 'Try again in a moment.') + '</span>' + signIn + '</div>';
-  }
-
   function resolveTheme(choice) {
     if (choice === 'light' || choice === 'dark') return choice;
     return matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
@@ -209,7 +116,7 @@
 
     const root = document.documentElement;
     const currentModule = [...state.instances][0]?.module;
-    if (true) {
+    if (currentModule !== 'orbit') {
       root.classList.toggle('dark', resolved === 'dark');
       if (root.dataset.theme !== resolved) root.dataset.theme = resolved;
     }
@@ -322,7 +229,6 @@
       links: '<path d="M9.5 14.5 14.5 9.5M8 16l-1.2 1.2a3.1 3.1 0 0 1-4.4-4.4L6.2 9a3.1 3.1 0 0 1 4.4 0M16 8l1.2-1.2a3.1 3.1 0 0 1 4.4 4.4L17.8 15a3.1 3.1 0 0 1-4.4 0" fill="none"/>',
       appearance: '<circle cx="12" cy="12" r="7.2" fill="none"/><path d="M12 4.8a7.2 7.2 0 0 0 0 14.4V4.8Z" fill="currentColor" stroke="none"/>',
       settings: '<circle cx="12" cy="12" r="3" fill="none"/><path d="M12 3.5v2M12 18.5v2M3.5 12h2M18.5 12h2M6 6l1.5 1.5M16.5 16.5 18 18M18 6l-1.5 1.5M7.5 16.5 6 18" fill="none"/>',
-      ravin: '<circle cx="12" cy="12" r="2.4"/><circle cx="12" cy="12" r="6.8" fill="none"/><path d="M12 2.5v2M21.5 12h-2M12 21.5v-2M2.5 12h2" fill="none"/>',
       plus: '<path d="M12 5v14M5 12h14" fill="none"/>',
       trash: '<path d="M6 7h12M9 7V5h6v2M8 9l.6 9h6.8L16 9" fill="none"/>',
       close: '<path d="m7 7 10 10M17 7 7 17" fill="none"/>',
@@ -355,7 +261,6 @@
         '<div class="arrow-os-content" aria-hidden="true">' +
           '<span class="arrow-os-module">' + module.toUpperCase() + '</span>' +
           '<button type="button" class="arrow-os-control arrow-os-orbit" aria-label="Orbit" title="Orbit">' + icon('orbit') + '<span>Orbit</span></button>' +
-          controlButton('ravin', 'RAVIN') +
           '<span class="arrow-os-divider" aria-hidden="true"></span>' +
           controlButton('notes', 'Notes') +
           controlButton('tasks', 'Tasks') +
@@ -365,7 +270,6 @@
           '<span class="arrow-os-divider" aria-hidden="true"></span>' +
           controlButton('appearance', 'Appearance') +
           controlButton('settings', 'Settings') +
-          controlButton('support', 'Support') +
           '<span class="arrow-os-divider" aria-hidden="true"></span>' +
           '<span class="arrow-os-name" aria-hidden="true">ARROW</span>' +
         '</div>' +
@@ -587,7 +491,6 @@
 
   function renderPanel(name) {
     if (!state.panelBody) return;
-    if (name === 'ravin') renderRavin();
     if (name === 'notes') renderNotes();
     if (name === 'tasks') renderTasks();
     if (name === 'calendar') renderCalendar();
@@ -595,374 +498,122 @@
     if (name === 'focus') renderFocus();
     if (name === 'appearance') { renderAppearance(); updateAppearanceState(); }
     if (name === 'settings') renderSettings();
-    if (name === 'support') renderSupport();
-    if (name === 'moderation') renderModeration();
   }
 
-  async function staffRole() {
-    const userId = currentArrowUserId();
-    if (!userId) return 'user';
-    const rows = await arrowData('/rest/v1/profiles?id=eq.' + encodeURIComponent(userId) + '&select=role,banned_at');
-    return rows?.[0]?.banned_at ? 'user' : rows?.[0]?.role || 'user';
-  }
-
-  const rpc = (name, body) => arrowData('/rest/v1/rpc/' + name, { method: 'POST', body });
-
-  async function renderSupport() {
-    const module = state.activeModule || 'orbit';
-    state.panelBody.innerHTML = '<p class="arrow-os-panel-copy">Support for every ARROW location. Track replies and status here.</p>' +
-      '<form class="arrow-os-form" id="arrow-support-form">' +
-      '<label>Location<select name="module">' + [...VALID_MODULES].map(m => '<option ' + (m === module ? 'selected' : '') + '>' + m + '</option>').join('') + '</select></label>' +
-      '<label>Request<select name="type"><option value="bug_report">Something is broken</option><option value="safety_report">Safety or abuse</option><option value="feature_request">Feature idea</option><option value="privacy_request">Privacy or data</option><option value="general_feedback">Other feedback</option></select></label>' +
-      '<label>Subject<input name="subject" required minlength="3" maxlength="105" /></label>' +
-      '<label>Details<textarea name="description" required minlength="10" maxlength="5000" rows="5" placeholder="What happened, and what did you expect?"></textarea></label>' +
-      '<button type="submit">Send to ARROW support</button><p role="status" id="arrow-support-status"></p></form><div id="arrow-support-history"></div>';
-    const form = state.panelBody.querySelector('form');
-    const history = state.panelBody.querySelector('#arrow-support-history');
-    const message = state.panelBody.querySelector('[role="status"]');
-    async function loadHistory() {
-      try {
-        const rows = await arrowData('/rest/v1/staff_requests?requester_id=eq.' + encodeURIComponent(currentArrowUserId()) + '&select=id,subject,status,staff_note,created_at&order=created_at.desc&limit=12');
-        if (!history.isConnected) return;
-        history.innerHTML = '<h3>Your requests</h3>' + (rows.length ? rows.map(r => '<article class="arrow-os-support-row"><strong>' + escapeHtml(r.subject) + '</strong><span>' + escapeHtml(r.status) + ' · ' + escapeHtml(new Date(r.created_at).toLocaleDateString()) + '</span>' + (r.staff_note ? '<p>' + escapeHtml(r.staff_note) + '</p>' : '') + '</article>').join('') : panelEmpty('No requests yet.'));
-      } catch (error) { if (history.isConnected) history.innerHTML = sharedDataError(error); }
-    }
-    form.addEventListener('submit', async event => {
-      event.preventDefault();
-      const data = new FormData(form); const button = form.querySelector('button'); button.disabled = true;
-      message.textContent = 'Sending…';
-      try {
-        await rpc('submit_staff_request', { p_request_type: data.get('type'), p_subject: '[' + data.get('module') + '] ' + String(data.get('subject')).trim(), p_description: String(data.get('description')).trim(), p_requested_role: null, p_metadata: { source: 'arrow_support', module: data.get('module'), path: location.pathname, viewport: innerWidth + 'x' + innerHeight } });
-        form.querySelector('[name="subject"]').value = ''; form.querySelector('textarea').value = '';
-        message.textContent = 'Sent. Your request is in the ARROW staff queue.'; await loadHistory();
-      } catch (error) { message.textContent = error.message || 'Could not send. Please retry.'; }
-      finally { button.disabled = false; }
-    });
-    await loadHistory();
-  }
-
-  async function renderModeration() {
-    state.panelBody.innerHTML = '<p class="arrow-os-loading">Verifying staff access…</p>';
-    try {
-      const role = await staffRole();
-      if (state.activePanel !== 'moderation') return;
-      if (!['moderator', 'admin', 'owner'].includes(role)) {
-        state.panelBody.innerHTML = panelEmpty('Staff access is required. For help, open ARROW support.'); return;
-      }
-      state.panelBody.innerHTML = '<p class="arrow-os-panel-copy">ARROW staff · ' + escapeHtml(role) + '</p><div class="arrow-os-segmented"><button data-queue="requests">Support</button><button data-queue="email">Inbox</button><button data-queue="reports">Reports</button>' + (role !== 'moderator' ? '<button data-queue="users">Accounts</button>' : '') + (role === 'owner' ? '<button data-queue="overview">Overview</button><button data-queue="audit">Audit</button><button data-queue="beta">Beta access</button>' : '') + '</div><label class="arrow-os-form">Filter<input id="arrow-staff-search" type="search" placeholder="Search this queue" /></label><div id="arrow-staff-queue"></div>';
-      const host = state.panelBody.querySelector('#arrow-staff-queue');
-      const search = state.panelBody.querySelector('#arrow-staff-search');
-      let active = 'requests'; let records = []; let offset = 0; let loadVersion = 0;
-      const paging = document.createElement('div'); paging.className = 'arrow-staff-paging';
-      const previous = document.createElement('button'); previous.textContent = 'Previous'; previous.type = 'button';
-      const nextPage = document.createElement('button'); nextPage.textContent = 'Next'; nextPage.type = 'button';
-      const pageLabel = document.createElement('span'); paging.append(previous,pageLabel,nextPage); host.after(paging);
-      previous.onclick = () => load(active, Math.max(0, offset - 100)); nextPage.onclick = () => load(active, offset + 100);
-      async function action(name, body, button) {
-        button.disabled = true;
-        try { await rpc(name, body); await load(active); }
-        catch (error) { host.prepend(Object.assign(document.createElement('p'), { textContent: error.message, role: 'alert' })); }
-        finally { button.disabled = false; }
-      }
-      function draw() {
-        const query = search.value.toLowerCase();
-        host.replaceChildren();
-        const visible = records.filter(row => JSON.stringify(row).toLowerCase().includes(query));
-        if (!visible.length) host.innerHTML = panelEmpty('No matching items.');
-        visible.forEach(row => {
-          const article = document.createElement('article'); article.className = 'arrow-os-support-row';
-          const title = document.createElement('strong');
-          title.textContent = row.subject || row.reason || row.action || row.display_name || row.email || 'Account'; article.append(title);
-          const detail = document.createElement('p');
-          detail.textContent = active === 'users' ? [row.email, row.role, row.banned_at ? 'Banned' : 'Active'].filter(Boolean).join(' · ') : [row.metadata?.module || (active === 'reports' ? 'relay' : 'arrow'), row.status, row.description || row.details].filter(Boolean).join(' · '); article.append(detail);
-          if (active === 'email') {
-            const open=document.createElement('button');open.type='button';open.textContent='Open thread';article.append(open);
-            open.onclick=async()=>{open.disabled=true;try{const messages=await arrowData('/rest/v1/support_email_messages?thread_id=eq.'+encodeURIComponent(row.id)+'&select=id,direction,from_email,text_body,created_at&order=created_at.asc&limit=200');const thread=document.createElement('section');thread.className='arrow-staff-thread';for(const message of messages){const copy=document.createElement('p');copy.style.whiteSpace='pre-wrap';copy.textContent=(message.direction==='outbound'?'Support':message.from_email)+' · '+new Date(message.created_at).toLocaleString()+'\n'+(message.text_body||'(No text body)');thread.append(copy);}
-              if(role!=='moderator'){const reply=document.createElement('textarea');reply.placeholder='Reply to '+row.sender_email;reply.maxLength=10000;thread.append(reply);const send=document.createElement('button');send.type='button';send.textContent='Send reply';send.onclick=async()=>{if(!reply.value.trim()||!confirm('Send this reply to '+row.sender_email+'?'))return;send.disabled=true;try{await arrowData('/functions/v1/support-email',{method:'POST',body:{action:'reply',threadId:row.id,text:reply.value.trim()}});reply.value='';await load('email',offset);}catch(error){thread.append(Object.assign(document.createElement('p'),{textContent:error.message}));}finally{send.disabled=false;}};thread.append(send);
-              const status=document.createElement('select');for(const value of ['new','open','pending','closed']){const option=document.createElement('option');option.value=value;option.textContent=value;option.selected=value===row.status;status.append(option);}thread.append(status);const save=document.createElement('button');save.textContent='Save status';save.onclick=()=>action('staff_update_support_thread',{p_thread_id:row.id,p_status:status.value,p_assigned_to:null},save);thread.append(save);}
-              article.append(thread);open.remove();}catch(error){article.append(Object.assign(document.createElement('p'),{textContent:error.message}));open.disabled=false;}};
-          } else if (active === 'audit') {
-            const info = document.createElement('p'); info.textContent = [row.actor_name || row.actor_email, row.target_name || row.target_email, new Date(row.created_at).toLocaleString()].filter(Boolean).join(' · ');article.append(info);
-            const details = document.createElement('details');const summary = document.createElement('summary');summary.textContent='Action details';const copy=document.createElement('pre');copy.textContent=JSON.stringify(row.metadata||{},null,2);details.append(summary,copy);article.append(details);
-          } else if (active === 'beta') {
-            const info=document.createElement('p');info.textContent=[row.primary_email,row.request_status,row.request_message].filter(Boolean).join(' · ');article.append(info);
-            if(row.request_status==='pending'){const reply=document.createElement('textarea');reply.placeholder='Response to applicant';reply.maxLength=1000;article.append(reply);
-              for(const approved of [true,false]){const review=document.createElement('button');review.type='button';review.textContent=approved?'Approve access':'Decline';review.onclick=()=>{if(!reply.value.trim()){reply.focus();return;}void action('owner_review_beta_request',{p_request_id:row.request_id,p_approve:approved,p_message:reply.value.trim()},review);};article.append(review);}
-            }
-          } else if (active !== 'users') {
-            const note = document.createElement('textarea'); note.rows = 2; note.placeholder = 'Staff note'; note.maxLength = 2000; note.value = row.staff_note || row.moderation_note || ''; article.append(note);
-            const select = document.createElement('select');
-            (active === 'requests' ? ['new','reviewing','resolved','dismissed'] : ['submitted','reviewing','resolved','dismissed']).forEach(status => { const option = document.createElement('option'); option.value = status; option.textContent = status; option.selected = status === row.status; select.append(option); }); article.append(select);
-            const save = document.createElement('button'); save.textContent = 'Save status'; save.type = 'button'; article.append(save);
-            if(active==='requests'&&role==='owner'&&row.request_type==='role_application'&&row.status!=='resolved'){const approve=document.createElement('button');approve.type='button';approve.textContent='Approve staff application';approve.onclick=()=>{if(!confirm('Approve this staff role application?'))return;void action('owner_approve_role_request',{p_request_id:row.request_id,p_note:note.value},approve);};article.append(approve);}
-            save.onclick = () => action(active === 'requests' ? 'staff_update_request_status' : 'staff_update_report_status', active === 'requests' ? { p_request_id: row.request_id, p_status: select.value, p_note: note.value } : { p_report_id: row.report_id, p_status: select.value, p_note: note.value }, save);
-          } else if (role === 'owner') {
-            const inspect = document.createElement('button');inspect.type='button';inspect.textContent='Inspect account';article.append(inspect);
-            inspect.onclick=async()=>{inspect.disabled=true;try{const result=await rpc('owner_user_inspector',{p_user_id:row.id});const details=document.createElement('details');details.open=true;const summary=document.createElement('summary');summary.textContent='Account details';details.append(summary);const renderValue=(host,label,value)=>{const section=document.createElement('section');const heading=document.createElement('h4');heading.textContent=label.replaceAll('_',' ');section.append(heading);if(value&&typeof value==='object'){for(const [key,item] of Object.entries(value)){if(item&&typeof item==='object'){renderValue(section,key,item);}else{const line=document.createElement('p');line.textContent=key.replaceAll('_',' ')+': '+String(item??'—');section.append(line);}}}else{const line=document.createElement('p');line.textContent=String(value??'—');section.append(line);}host.append(section);};for(const [label,value] of Object.entries(result||{}))renderValue(details,label,value);article.append(details);}catch(error){article.append(Object.assign(document.createElement('p'),{textContent:error.message}));}finally{inspect.disabled=false;}};
-            const ban = document.createElement('button'); ban.type = 'button'; ban.textContent = row.banned_at ? 'Restore account' : 'Suspend account'; article.append(ban);
-            ban.onclick = () => { const reason = prompt('Reason for this ARROW account action:'); if (reason === null || !reason.trim()) return; if (!confirm(ban.textContent + ' for ' + title.textContent + '?')) return; void action('owner_set_user_ban', {p_user_id:row.id, p_banned:!row.banned_at, p_reason:reason}, ban); };
-            const roleSelect = document.createElement('select');
-            ['user','moderator','admin','owner'].forEach(value => { const option = document.createElement('option'); option.value = value; option.textContent = value; option.selected = value === row.role; roleSelect.append(option); }); article.append(roleSelect);
-            const changeRole = document.createElement('button'); changeRole.type = 'button'; changeRole.textContent = 'Update role'; article.append(changeRole);
-            changeRole.onclick = () => { if (roleSelect.value === row.role || !confirm('Change ' + title.textContent + ' to ' + roleSelect.value + '?')) return; void action('set_user_role', {p_user_id:row.id,p_role:roleSelect.value},changeRole); };
-            const ownerNote=document.createElement('textarea');ownerNote.placeholder='Private owner note';ownerNote.maxLength=4000;ownerNote.setAttribute('aria-label','Private owner note');article.append(ownerNote);
-            const addNote=document.createElement('button');addNote.type='button';addNote.textContent='Save owner note';addNote.onclick=()=>{if(ownerNote.value.trim())void action('owner_add_user_note',{p_user_id:row.id,p_note:ownerNote.value.trim()},addNote);};article.append(addNote);
-            const revokeBeta=document.createElement('button');revokeBeta.type='button';revokeBeta.textContent='Revoke beta access';revokeBeta.onclick=()=>{if(confirm('Revoke beta access for '+title.textContent+'?'))void action('owner_revoke_beta_access',{p_user_id:row.id,p_message:null},revokeBeta);};article.append(revokeBeta);
-            const deleteAccount=document.createElement('button');deleteAccount.type='button';deleteAccount.textContent='Delete account';deleteAccount.onclick=()=>{if(prompt('Permanently delete '+title.textContent+' and their data? Type DELETE to confirm.')==='DELETE')void action('owner_delete_user',{p_user_id:row.id},deleteAccount);};article.append(deleteAccount);
-            const signOut = document.createElement('button'); signOut.type = 'button'; signOut.textContent = 'Revoke sessions'; article.append(signOut);
-            signOut.onclick = () => { if (!confirm('Sign out all sessions for ' + title.textContent + '?')) return; void action('owner_force_sign_out',{p_user_id:row.id},signOut); };
-
-          }
-          host.append(article);
-        });
-      }
-      async function load(queue, nextOffset = 0) {
-        const version = ++loadVersion; offset = nextOffset; active = queue; host.textContent = 'Loading…';
-        try {
-          if(queue==='overview'){paging.hidden=true;const [stats,storage]=await Promise.all([rpc('owner_dashboard_stats',{}),rpc('owner_storage_overview',{})]);if(version!==loadVersion)return;host.replaceChildren();for(const [label,value] of [['Accounts and activity',stats],['Storage',storage]]){const card=document.createElement('section');card.className='arrow-os-support-row';const heading=document.createElement('h3');heading.textContent=label;card.append(heading);for(const [key,amount] of Object.entries(value||{})){const line=document.createElement('p');line.textContent=key.replaceAll('_',' ')+': '+(typeof amount==='object'?JSON.stringify(amount):String(amount));card.append(line);}host.append(card);}return;}
-          paging.hidden=false;
-          const result = queue==='email'?await arrowData('/rest/v1/support_email_threads?select=id,sender_email,sender_name,subject,status,latest_message_at&order=latest_message_at.desc&limit=100&offset='+nextOffset):await rpc(queue === 'requests' ? 'staff_list_requests' : queue === 'reports' ? 'staff_list_reports' : queue==='audit'?'owner_list_audit_log':queue==='beta'?'owner_list_beta_requests':'admin_list_users_v2', { ...(['requests','reports','beta'].includes(queue) ? { p_status: null } : {}), p_limit: 100, p_offset: nextOffset }) || [];
-          if (version !== loadVersion) return;
-          records = result;
-          previous.disabled = nextOffset === 0; nextPage.disabled = records.length < 100; pageLabel.textContent = 'Page ' + (Math.floor(nextOffset / 100) + 1);
-          if (host.isConnected) draw();
-        } catch (error) { if (host.isConnected) host.innerHTML = sharedDataError(error); }
-      }
-      search.oninput = draw;
-      state.panelBody.querySelectorAll('[data-queue]').forEach(button => button.onclick = () => load(button.dataset.queue));
-      const requested=new URLSearchParams(location.search).get('queue');
-      const allowed=['requests','reports','email',...(role!=='moderator'?['users']:[]),...(role==='owner'?['overview','audit','beta']:[])];
-      await load(allowed.includes(requested)?requested:'requests');
-    } catch (error) { if (state.activePanel === 'moderation') state.panelBody.innerHTML = sharedDataError(error); }
-  }
-
-  async function nextMove() {
-    const session = readArrowSession();
-    if (!session) throw new Error('Sign in to see what is next.');
-    const fresh = session.expires_at * 1000 < Date.now() + 30000 ? await refreshArrowSession(session) || session : session;
-    const response = await fetch('/ravin/api/arrow/next', { method: 'POST', headers: { Authorization: 'Bearer ' + fresh.access_token, 'content-type': 'application/json' }, body: JSON.stringify({ timezone: Intl.DateTimeFormat().resolvedOptions().timeZone }), signal: AbortSignal.timeout(25000) });
-    const result = await response.json();
-    if (!response.ok) throw new Error(result.error || 'RAVIN could not load your next move.');
-    return result;
-  }
-
-  function moduleRavinProfile(module) {
-    const profiles = {
-      orbit: {
-        line: 'RAVIN sees the whole ARROW system from here.',
-        prompts: ['What needs my attention across ARROW?', 'Find the most connected thing in my Field', 'Where should I go next?'],
-      },
-      relay: {
-        line: 'RAVIN can use your shared notes, tasks, calendar, and Field context without reading private Relay chats by default.',
-        prompts: ['What should I follow up on today?', 'Turn my current notes into next actions', 'What do I have coming up?'],
-      },
-      waypoint: {
-        line: 'RAVIN is in planning mode here: tasks, calendar, notes, plans, and direction.',
-        prompts: ['What is my best next move?', 'Help me organize what I need to do today', 'What am I forgetting this week?'],
-      },
-      atlas: {
-        line: 'RAVIN is in retrieval mode here: find, connect, and explain the knowledge in your Field.',
-        prompts: ['Find everything related to my current project', 'What connects these ideas?', 'Summarize my most relevant recent knowledge'],
-      },
-      ravin: {
-        line: 'Full RAVIN workspace. Ask across every RAVIN-readable part of ARROW.',
-        prompts: ['What changed across ARROW recently?', 'Pull together my current priorities', 'Search my Field for something useful'],
-      },
-    };
-    return profiles[module] || profiles.orbit;
-  }
-
-  function ravinUrl(prompt = '') {
-    const url = new URL(RAVIN_URL, location.href);
-    const surface = state.activeModule || 'orbit';
-    url.searchParams.set('from', surface);
-    url.searchParams.set('surface', surface);
-    if (prompt) url.searchParams.set('prompt', prompt);
-    return url;
-  }
-
-  function renderRavin() {
-    const module = state.activeModule || 'orbit';
-    const profile = moduleRavinProfile(module);
+  function renderNotes() {
+    const value = readString(STORAGE.notes, '');
     state.panelBody.innerHTML =
-      '<div class="arrow-os-ravin-card">' +
-        '<div class="arrow-os-ravin-core" aria-hidden="true"></div>' +
-        '<div><span>RAVIN · ' + escapeHtml(module.toUpperCase()) + '</span><p>' + escapeHtml(profile.line) + '</p></div>' +
-      '</div>' +
-      '<div class="arrow-os-ravin-prompts">' +
-        profile.prompts.map(prompt => '<button type="button" data-ravin-prompt="' + escapeAttr(prompt) + '">' + escapeHtml(prompt) + '</button>').join('') +
-      '</div>' +
-      '<form class="arrow-os-ravin-form">' +
-        '<input type="text" maxlength="500" placeholder="Ask RAVIN from ' + escapeAttr(module) + '..." aria-label="Ask RAVIN" />' +
-        '<button type="submit">Ask ↗</button>' +
-      '</form>' +
-      '<div class="arrow-os-panel-foot"><span>Context follows you into RAVIN.</span><a href="' + escapeAttr(ravinUrl().toString()) + '">Open full RAVIN ↗</a></div>';
+      '<label class="arrow-os-field">' +
+        '<span>Quick note</span>' +
+        '<textarea class="arrow-os-notes" rows="12" placeholder="Write anything you want available everywhere in ARROW..."></textarea>' +
+      '</label>' +
+      '<div class="arrow-os-panel-foot"><span class="arrow-os-save-state">Saved locally across ARROW</span><span>' + value.length + ' characters</span></div>';
 
-    state.panelBody.querySelectorAll('[data-ravin-prompt]').forEach(button => {
-      button.addEventListener('click', () => location.assign(ravinUrl(button.dataset.ravinPrompt).toString()));
+    const area = state.panelBody.querySelector('.arrow-os-notes');
+    area.value = value;
+    area.addEventListener('input', () => {
+      writeString(STORAGE.notes, area.value);
+      state.panelBody.querySelector('.arrow-os-panel-foot span:last-child').textContent = area.value.length + ' characters';
     });
-    state.panelBody.querySelector('.arrow-os-ravin-form')?.addEventListener('submit', event => {
-      event.preventDefault();
-      const value = event.currentTarget.querySelector('input')?.value?.trim();
-      location.assign(ravinUrl(value || '').toString());
-    });
-  }
-
-  async function renderNotes() {
-    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared notes…</div>';
-    try {
-      const notes = await arrowData('/rest/v1/notes?select=id,title,content,is_pinned,updated_at&order=is_pinned.desc,updated_at.desc&limit=12');
-      if (state.activePanel !== 'notes') return;
-      state.panelBody.innerHTML =
-        '<div class="arrow-os-owner-note"><span>ONE NOTES LIBRARY</span><p>Relay edits the same notes that Field indexes and RAVIN can read.</p><a href="' + escapeAttr(new URL('notes', new URL(RELAY_URL, location.href)).toString()) + '">Open full Notes ↗</a></div>' +
-        '<form class="arrow-os-note-form">' +
-          '<textarea rows="4" maxlength="4000" placeholder="Quick note — this saves to your shared ARROW notes…" aria-label="Quick note"></textarea>' +
-          '<button type="submit">Save shared note</button>' +
-        '</form>' +
-        '<div class="arrow-os-list">' +
-          (notes?.length ? notes.map(note => {
-            const blocks = Array.isArray(note.content) ? note.content : [];
-            const snippet = blocks.map(block => typeof block?.text === 'string' ? block.text.trim() : '').filter(Boolean).slice(0, 2).join(' · ');
-            return '<div class="arrow-os-list-row arrow-os-note-row"><div><strong>' + escapeHtml(note.title || 'Untitled') + '</strong><span>' + escapeHtml(snippet || 'Empty note') + '</span></div></div>';
-          }).join('') : panelEmpty('No notes yet.')) +
-        '</div>';
-
-      state.panelBody.querySelector('.arrow-os-note-form')?.addEventListener('submit', async event => {
-        event.preventDefault();
-        const area = event.currentTarget.querySelector('textarea');
-        const value = area?.value?.trim();
-        const userId = currentArrowUserId();
-        if (!value || !userId) return;
-        const title = value.split(/\n/)[0].slice(0, 80) || 'Quick note';
-        event.currentTarget.querySelector('button').disabled = true;
-        try {
-          await arrowData('/rest/v1/notes', {
-            method: 'POST',
-            headers: { Prefer: 'return=minimal' },
-            body: { user_id: userId, title, content: [{ id: id(), type: 'paragraph', text: value }], is_pinned: false },
-          });
-          renderNotes();
-        } catch (error) {
-          state.panelBody.innerHTML = sharedDataError(error);
-        }
-      });
-    } catch (error) {
-      if (state.activePanel === 'notes') state.panelBody.innerHTML = sharedDataError(error);
-    }
   }
 
   function ownerNote(tab, copy) {
-    const url = new URL(WAYPOINT_URL, location.href);
+    const url = new URL(WAYPOINT_URL);
     url.searchParams.set('from', state.activeModule || 'orbit');
     url.searchParams.set('tab', tab);
     return '<div class="arrow-os-owner-note"><span>WAYPOINT</span><p>' + copy + '</p><a href="' + escapeAttr(url.toString()) + '">Open Waypoint ↗</a></div>';
   }
 
-  async function renderTasks() {
-    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared tasks…</div>';
-    try {
-      const tasks = await arrowData('/rest/v1/todos?select=id,title,due_on,completed,position,created_at&order=completed.asc,due_on.asc,position.asc,created_at.asc&limit=80');
-      if (state.activePanel !== 'tasks') return;
-      state.panelBody.innerHTML =
-        ownerNote('today', 'Waypoint is the planning view. Relay and RAVIN use this exact same task data.') +
-        '<form class="arrow-os-inline-form arrow-os-task-form">' +
-          '<input type="text" maxlength="120" placeholder="Add a task…" aria-label="Task name" required />' +
-          '<input type="date" aria-label="Due date" required />' +
-          '<button type="submit" aria-label="Add task">' + icon('plus') + '</button>' +
-        '</form>' +
-        '<div class="arrow-os-list">' +
-          (tasks?.length ? tasks.map(task =>
-            '<div class="arrow-os-list-row ' + (task.completed ? 'is-done' : '') + '" data-id="' + escapeAttr(task.id) + '">' +
-              '<label><input type="checkbox" ' + (task.completed ? 'checked' : '') + ' /><span>' + escapeHtml(task.title) + '<small>' + escapeHtml(task.due_on || '') + '</small></span></label>' +
-              '<button type="button" class="arrow-os-row-delete" aria-label="Delete task">' + icon('trash') + '</button>' +
-            '</div>'
-          ).join('') : panelEmpty('No tasks yet.')) +
-        '</div>';
+  function renderTasks() {
+    const rawTasks = readJson(STORAGE.tasks, []);
+    const tasks = Array.isArray(rawTasks)
+      ? rawTasks.filter(task => task && typeof task.id === 'string' && typeof task.text === 'string').slice(0, 500)
+      : [];
+    state.panelBody.innerHTML =
+      ownerNote('today', 'Tasks are owned by Waypoint. This is the fast ARROW-wide view of the same list.') +
+      '<form class="arrow-os-inline-form arrow-os-task-form">' +
+        '<input type="text" maxlength="120" placeholder="Add a task..." aria-label="Task name" required />' +
+        '<button type="submit" aria-label="Add task">' + icon('plus') + '</button>' +
+      '</form>' +
+      '<div class="arrow-os-list">' +
+        (tasks.length ? tasks.map(task =>
+          '<div class="arrow-os-list-row ' + (task.done ? 'is-done' : '') + '" data-id="' + escapeAttr(task.id) + '">' +
+            '<label><input type="checkbox" ' + (task.done ? 'checked' : '') + ' /><span>' + escapeHtml(task.text) + '</span></label>' +
+            '<button type="button" class="arrow-os-row-delete" aria-label="Delete task">' + icon('trash') + '</button>' +
+          '</div>'
+        ).join('') : panelEmpty('No tasks yet.')) +
+      '</div>';
 
-      const form = state.panelBody.querySelector('.arrow-os-task-form');
-      form.querySelector('input[type="date"]').value = localDateInputValue();
-      form.addEventListener('submit', async event => {
-        event.preventDefault();
-        const [titleInput, dateInput] = form.querySelectorAll('input');
-        const userId = currentArrowUserId();
-        const title = titleInput.value.trim();
-        if (!title || !dateInput.value || !userId) return;
-        await arrowData('/rest/v1/todos', {
-          method: 'POST',
-          headers: { Prefer: 'return=minimal' },
-          body: { user_id: userId, title, due_on: dateInput.value },
-        });
+    state.panelBody.querySelector('.arrow-os-task-form').addEventListener('submit', event => {
+      event.preventDefault();
+      const input = event.currentTarget.querySelector('input');
+      const text = input.value.trim();
+      if (!text) return;
+      const next = [{ id: id(), text, done: false, createdAt: Date.now() }, ...tasks];
+      writeJson(STORAGE.tasks, next);
+      renderTasks();
+      state.panelBody.querySelector('.arrow-os-task-form input')?.focus();
+    });
+
+    state.panelBody.querySelectorAll('.arrow-os-list-row').forEach(row => {
+      const taskId = row.dataset.id;
+      row.querySelector('input').addEventListener('change', event => {
+        const next = tasks.map(task => task.id === taskId ? { ...task, done: event.target.checked } : task);
+        writeJson(STORAGE.tasks, next);
         renderTasks();
       });
-
-      state.panelBody.querySelectorAll('.arrow-os-list-row').forEach(row => {
-        row.querySelector('input')?.addEventListener('change', async event => {
-          await arrowData('/rest/v1/todos?id=eq.' + encodeURIComponent(row.dataset.id), {
-            method: 'PATCH',
-            headers: { Prefer: 'return=minimal' },
-            body: { completed: event.target.checked },
-          });
-          renderTasks();
-        });
-        row.querySelector('.arrow-os-row-delete')?.addEventListener('click', async () => {
-          await arrowData('/rest/v1/todos?id=eq.' + encodeURIComponent(row.dataset.id), { method: 'DELETE' });
-          renderTasks();
-        });
+      row.querySelector('.arrow-os-row-delete').addEventListener('click', () => {
+        writeJson(STORAGE.tasks, tasks.filter(task => task.id !== taskId));
+        renderTasks();
       });
-    } catch (error) {
-      if (state.activePanel === 'tasks') state.panelBody.innerHTML = sharedDataError(error);
-    }
+    });
   }
 
-  async function renderCalendar() {
-    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared calendar…</div>';
-    try {
-      const events = await arrowData('/rest/v1/relay_calendar_events?select=id,title,event_date,is_all_day,start_time,end_time,details&order=event_date.asc,start_time.asc&limit=80');
-      if (state.activePanel !== 'calendar') return;
-      state.panelBody.innerHTML =
-        ownerNote('calendar', 'Waypoint is the planning view. This panel writes to the same calendar events Relay and RAVIN use.') +
-        '<form class="arrow-os-calendar-form">' +
-          '<input type="text" maxlength="100" placeholder="Event title" aria-label="Event title" required />' +
-          '<div class="arrow-os-form-grid">' +
-            '<input type="date" aria-label="Event date" required />' +
-            '<input type="time" aria-label="Event time" />' +
-          '</div>' +
-          '<button type="submit">Add shared event</button>' +
-        '</form>' +
-        '<div class="arrow-os-list arrow-os-events">' +
-          (events?.length ? events.map(item =>
-            '<div class="arrow-os-list-row" data-id="' + escapeAttr(item.id) + '">' +
-              '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(formatEventDate(item.event_date, item.start_time?.slice(0, 5) || '')) + '</span></div>' +
-              '<button type="button" class="arrow-os-row-delete" aria-label="Delete event">' + icon('trash') + '</button>' +
-            '</div>'
-          ).join('') : panelEmpty('No ARROW events yet.')) +
-        '</div>';
+  function renderCalendar() {
+    const rawEvents = readJson(STORAGE.events, []);
+    const events = (Array.isArray(rawEvents)
+      ? rawEvents.filter(item => item && typeof item.id === 'string' && typeof item.title === 'string' && typeof item.date === 'string').slice(0, 500)
+      : [])
+      .sort((a, b) => String(a.date + (a.time || '')).localeCompare(String(b.date + (b.time || ''))));
+    state.panelBody.innerHTML =
+      ownerNote('calendar', 'Calendar is owned by Waypoint. Events created here stay in the same shared ARROW data.') +
+      '<form class="arrow-os-calendar-form">' +
+        '<input type="text" maxlength="100" placeholder="Event title" aria-label="Event title" required />' +
+        '<div class="arrow-os-form-grid">' +
+          '<input type="date" aria-label="Event date" required />' +
+          '<input type="time" aria-label="Event time" />' +
+        '</div>' +
+        '<button type="submit">Add event</button>' +
+      '</form>' +
+      '<div class="arrow-os-list arrow-os-events">' +
+        (events.length ? events.map(item =>
+          '<div class="arrow-os-list-row" data-id="' + escapeAttr(item.id) + '">' +
+            '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(formatEventDate(item.date, item.time)) + '</span></div>' +
+            '<button type="button" class="arrow-os-row-delete" aria-label="Delete event">' + icon('trash') + '</button>' +
+          '</div>'
+        ).join('') : panelEmpty('No ARROW events yet.')) +
+      '</div>';
 
-      const form = state.panelBody.querySelector('.arrow-os-calendar-form');
-      form.querySelector('input[type="date"]').value = localDateInputValue();
-      form.addEventListener('submit', async event => {
-        event.preventDefault();
-        const [titleInput, dateInput, timeInput] = form.querySelectorAll('input');
-        const userId = currentArrowUserId();
-        const title = titleInput.value.trim();
-        if (!title || !dateInput.value || !userId) return;
-        await arrowData('/rest/v1/relay_calendar_events', {
-          method: 'POST',
-          headers: { Prefer: 'return=minimal' },
-          body: { user_id: userId, title, event_date: dateInput.value, is_all_day: !timeInput.value, start_time: timeInput.value || null },
-        });
+    const form = state.panelBody.querySelector('.arrow-os-calendar-form');
+    form.querySelector('input[type="date"]').value = localDateInputValue();
+    form.addEventListener('submit', event => {
+      event.preventDefault();
+      const [titleInput, dateInput, timeInput] = form.querySelectorAll('input');
+      const title = titleInput.value.trim();
+      if (!title || !dateInput.value) return;
+      writeJson(STORAGE.events, [
+        ...events,
+        { id: id(), title, date: dateInput.value, time: timeInput.value || '', createdAt: Date.now() },
+      ]);
+      renderCalendar();
+    });
+
+    state.panelBody.querySelectorAll('.arrow-os-events .arrow-os-list-row').forEach(row => {
+      row.querySelector('.arrow-os-row-delete').addEventListener('click', () => {
+        writeJson(STORAGE.events, events.filter(item => item.id !== row.dataset.id));
         renderCalendar();
       });
-
-      state.panelBody.querySelectorAll('.arrow-os-events .arrow-os-list-row').forEach(row => {
-        row.querySelector('.arrow-os-row-delete')?.addEventListener('click', async () => {
-          await arrowData('/rest/v1/relay_calendar_events?id=eq.' + encodeURIComponent(row.dataset.id), { method: 'DELETE' });
-          renderCalendar();
-        });
-      });
-    } catch (error) {
-      if (state.activePanel === 'calendar') state.panelBody.innerHTML = sharedDataError(error);
-    }
+    });
   }
 
   function renderLinks() {
@@ -1245,7 +896,7 @@
       '</div>';
 
     state.panelBody.querySelector('[data-settings-action="intro"]').addEventListener('click', () => {
-      const url = new URL(ORBIT_URL);
+      const url = new URL(ORBIT_URL, window.location.origin);
       url.searchParams.set('intro', '1');
       location.assign(url.toString());
     });
@@ -1418,7 +1069,7 @@
 
     const inward = direction === 'in';
     const startedAt = performance.now();
-    const duration = inward ? 420 : 380;
+    const duration = inward ? 1120 : 980;
     let frame = 0;
 
     const easeIn = value => value * value * value;
@@ -1530,12 +1181,10 @@
     });
   }
 
-  function launchToOrbit(module, anchor, orbitAccess = 'enabled', destination = null) {
-    if ((module === 'orbit' && !destination) || state.departing) return;
-    const url = new URL(destination || ORBIT_URL, window.location.origin);
-    if (destination && !ON_ENTERARROW) { location.assign(url.toString()); return; }
-    if (destination && (url.origin !== location.origin || !/^\/(orbit|relay|ravin|atlas|waypoint)(\/|$)/.test(url.pathname))) return;
+  function launchToOrbit(module, anchor, orbitAccess = 'enabled') {
+    if (module === 'orbit' || state.departing) return;
     state.departing = true;
+    const url = new URL(ORBIT_URL, window.location.origin);
     url.searchParams.set('from', module);
     if (orbitAccess === 'relay-only') url.searchParams.set('access', 'relay-only');
 
@@ -1564,7 +1213,7 @@
       '<span class="arrow-os-blackhole-photon-ring"></span>' +
       '<span class="arrow-os-blackhole-core"></span>' +
       '<canvas class="arrow-os-particle-canvas" aria-hidden="true"></canvas>' +
-      '<p>' + (destination ? 'Traveling to ' + escapeHtml(url.pathname.split('/')[1].toUpperCase()) : 'Collapsing to Orbit') + '</p>';
+      '<p>Collapsing to Orbit</p>';
     document.body.appendChild(overlay);
     startParticleCanvas(overlay.querySelector('.arrow-os-particle-canvas'), 'in');
 
@@ -1682,11 +1331,6 @@
   window.visualViewport?.addEventListener('resize', repositionPanel);
 
   window.addEventListener('storage', event => {
-    if (event.key === 'arrow_shared_data_ping_v1') {
-      if (['notes', 'tasks', 'calendar'].includes(state.activePanel)) renderPanel(state.activePanel);
-      window.dispatchEvent(new CustomEvent('arrow:planning-changed'));
-      return;
-    }
     if (!Object.values(STORAGE).includes(event.key)) return;
     if (event.key === STORAGE.theme) applyTheme(getThemeChoice(), false);
     if (event.key === STORAGE.motion) applyMotion(getMotionChoice(), false);
@@ -1715,19 +1359,12 @@
   document.documentElement.dataset.arrowAccent = readString(STORAGE.accent, 'mono');
   if (readString(STORAGE.experience, '')) applyExperienceChoice(getExperienceChoice(), false);
   if (readString(STORAGE.accent, '')) applyAccent(readString(STORAGE.accent, 'mono'), false);
-  applyTheme(getThemeChoice(), false);
-  applyExperienceChoice(getExperienceChoice(), false);
-  applyAccent(readString(STORAGE.accent, 'mono'), false);
   applyMotion(getMotionChoice(), false);
   restoreFocusState();
   // State is persisted on timer actions. An old background tab must not overwrite it on exit.
 
   const startMounting = () => {
-    requestAnimationFrame(() => {
-      mountAll();
-      const panel = new URLSearchParams(location.search).get('panel');
-      if (location.pathname.startsWith('/orbit') && ['support','moderation'].includes(panel)) openPanel(panel,'orbit');
-    });
+    requestAnimationFrame(mountAll);
     // Ignore panel rendering, chat tokens, counters and other unrelated DOM updates.
     let mountFrame = 0;
     const isMount = node => node.nodeType === 1 &&
@@ -1755,9 +1392,5 @@
     applyAccent,
     applyExperienceChoice,
     launchToOrbit,
-    navigate: (href, module = 'orbit') => launchToOrbit(module, null, 'enabled', href),
-    data: arrowData,
-    staffRole,
-    nextMove,
   };
 })();
