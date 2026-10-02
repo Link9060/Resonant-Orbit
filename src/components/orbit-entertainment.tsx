@@ -84,7 +84,7 @@ export function EntertainmentGameIcon({
   return <PulseIcon size={size} />;
 }
 
-function FlightGame() {
+function FlightGame({paused}: {paused:boolean}) {
   const [playerY, setPlayerY] = useState(50);
   const [gateY, setGateY] = useState(46);
   const [score, setScore] = useState(0);
@@ -100,6 +100,8 @@ function FlightGame() {
   }, [playerY]);
 
   useEffect(() => {
+    if (paused) return;
+    let feedbackTimer: number | undefined;
     const timer = window.setInterval(() => {
       const hit = Math.abs(playerYRef.current - gateYRef.current) <= 13;
       setScore(value => value + (hit ? 100 : 0));
@@ -112,14 +114,15 @@ function FlightGame() {
       gateYRef.current = next;
       setGateY(next);
 
-      window.setTimeout(() => setResult('ALIGN WITH THE GAP'), 520);
+      feedbackTimer = window.setTimeout(() => setResult('ALIGN WITH THE GAP'), 520);
     }, 1450);
 
-    return () => window.clearInterval(timer);
-  }, []);
+    return () => { window.clearInterval(timer); window.clearTimeout(feedbackTimer); };
+  }, [paused]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
+      if (paused || event.target instanceof HTMLElement && event.target.closest('button,input,textarea,select')) return;
       const key = event.key.toLowerCase();
       if (key === 'arrowup' || key === 'w') {
         event.preventDefault();
@@ -133,9 +136,10 @@ function FlightGame() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [paused]);
 
   const moveCraft = (event: ReactPointerEvent<HTMLDivElement>) => {
+    if (paused) return;
     const rect = event.currentTarget.getBoundingClientRect();
     const y = ((event.clientY - rect.top) / Math.max(1, rect.height)) * 100;
     setPlayerY(Math.max(10, Math.min(90, y)));
@@ -161,19 +165,20 @@ function FlightGame() {
         </div>
         <span className="flight-result">{result}</span>
       </div>
+      <label className="flight-steering">Craft altitude<input aria-label="Craft altitude" type="range" min={10} max={90} value={100-playerY} disabled={paused} onChange={event=>setPlayerY(100-Number(event.target.value))}/></label>
       <p className="ent-game-help">Move your pointer, or use ↑ ↓ / W S, to line the craft up with each incoming gate.</p>
     </div>
   );
 }
 
-function OrbitGame() {
+function OrbitGame({paused}: {paused:boolean}) {
   const [radius, setRadius] = useState(49);
   const [angle, setAngle] = useState(0);
   const [score, setScore] = useState(0);
   const [alive, setAlive] = useState(true);
 
   useEffect(() => {
-    if (!alive) return;
+    if (!alive || paused) return;
     const timer = window.setInterval(() => {
       setAngle(value => value + 0.16);
       setScore(value => value + 1);
@@ -188,10 +193,10 @@ function OrbitGame() {
     }, 90);
 
     return () => window.clearInterval(timer);
-  }, [alive]);
+  }, [alive, paused]);
 
   const boost = () => {
-    if (!alive) return;
+    if (!alive || paused) return;
     setRadius(value => Math.min(82, value + 7.5));
   };
 
@@ -221,7 +226,7 @@ function OrbitGame() {
       </div>
       <div className="ent-game-actions">
         {alive ? (
-          <button type="button" onClick={boost}>BOOST ORBIT</button>
+          <button type="button" disabled={paused} onClick={boost}>BOOST ORBIT</button>
         ) : (
           <button type="button" onClick={reset}>RESTART</button>
         )}
@@ -239,15 +244,19 @@ function makeCipherSequence(length: number, seed: number) {
   );
 }
 
-function CipherGame() {
+function CipherGame({paused}: {paused:boolean}) {
   const [level, setLevel] = useState(1);
   const [score, setScore] = useState(0);
   const [sequence, setSequence] = useState(() => makeCipherSequence(4, 18));
   const [visible, setVisible] = useState(true);
   const [entry, setEntry] = useState<number[]>([]);
   const [feedback, setFeedback] = useState('READ THE SIGNAL');
+  const feedbackTimer = useRef<number | undefined>(undefined);
+  useEffect(()=>()=>window.clearTimeout(feedbackTimer.current),[]);
 
   useEffect(() => {
+    window.clearTimeout(feedbackTimer.current);
+    if (paused) return;
     setVisible(true);
     setEntry([]);
     setFeedback('READ THE SIGNAL');
@@ -256,16 +265,16 @@ function CipherGame() {
       setFeedback('REBUILD IT');
     }, 1050 + sequence.length * 120);
     return () => window.clearTimeout(timer);
-  }, [sequence]);
+  }, [sequence, paused]);
 
   const choose = (symbolIndex: number) => {
-    if (visible || feedback === 'SIGNAL MATCHED') return;
+    if (paused || visible || feedback === 'SIGNAL MATCHED' || feedback === 'SIGNAL BROKEN') return;
     const position = entry.length;
 
     if (sequence[position] !== symbolIndex) {
       setFeedback('SIGNAL BROKEN');
       setEntry([]);
-      window.setTimeout(() => setFeedback('TRY AGAIN'), 420);
+      feedbackTimer.current = window.setTimeout(() => setFeedback('TRY AGAIN'), 420);
       return;
     }
 
@@ -275,7 +284,7 @@ function CipherGame() {
     if (nextEntry.length === sequence.length) {
       setFeedback('SIGNAL MATCHED');
       setScore(value => value + sequence.length * 100);
-      window.setTimeout(() => {
+      feedbackTimer.current = window.setTimeout(() => {
         const nextLevel = level + 1;
         setLevel(nextLevel);
         setSequence(makeCipherSequence(Math.min(8, 3 + nextLevel), 18 + nextLevel * 7));
@@ -309,7 +318,7 @@ function CipherGame() {
             type="button"
             key={symbol}
             onClick={() => choose(index)}
-            disabled={visible}
+            disabled={paused || visible || feedback === 'SIGNAL MATCHED' || feedback === 'SIGNAL BROKEN'}
             aria-label={'Cipher symbol ' + symbol}
           >
             {symbol}
@@ -323,7 +332,7 @@ function CipherGame() {
 
 type SurgePhase = 'ready' | 'waiting' | 'go' | 'result' | 'early';
 
-function SurgeGame() {
+function SurgeGame({paused}: {paused:boolean}) {
   const [phase, setPhase] = useState<SurgePhase>('ready');
   const [reaction, setReaction] = useState<number | null>(null);
   const timerRef = useRef<number | null>(null);
@@ -337,8 +346,10 @@ function SurgeGame() {
   };
 
   useEffect(() => clearTimer, []);
+  useEffect(()=>{if(paused){clearTimer();setPhase('ready');setReaction(null);}},[paused]);
 
   const arm = () => {
+    if (paused) return;
     clearTimer();
     setReaction(null);
     setPhase('waiting');
@@ -351,6 +362,7 @@ function SurgeGame() {
   };
 
   const hit = () => {
+    if (paused) return;
     if (phase === 'waiting') {
       clearTimer();
       setPhase('early');
@@ -362,13 +374,13 @@ function SurgeGame() {
     setPhase('result');
   };
 
-  const ravinLine = useMemo(() => {
-    if (phase === 'early') return 'RAVIN: Too soon. The signal had not fired.';
+  const hostLine = useMemo(() => {
+    if (phase === 'early') return 'Too soon. The signal had not fired.';
     if (phase !== 'result' || reaction === null) return '';
-    if (reaction < 190) return 'RAVIN: That was absurdly fast.';
-    if (reaction < 260) return 'RAVIN: Clean reaction.';
-    if (reaction < 360) return 'RAVIN: Solid. You can beat that.';
-    return 'RAVIN: I am choosing to blame latency.';
+    if (reaction < 190) return 'Lightning response.';
+    if (reaction < 260) return 'Clean reaction.';
+    if (reaction < 360) return 'Solid. You can beat that.';
+    return 'Try again when you’re ready.';
   }, [phase, reaction]);
 
   return (
@@ -407,7 +419,7 @@ function SurgeGame() {
           </button>
         )}
       </div>
-      {ravinLine && <p className="surge-ravin">{ravinLine}</p>}
+      {hostLine && <p className="surge-ravin">{hostLine}</p>}
       <p className="ent-game-help">Arm the test, wait for the white pulse, then click or press Space as fast as you can.</p>
     </div>
   );
@@ -421,6 +433,26 @@ export function EntertainmentOverlay({
   onClose: () => void;
 }) {
   const game = ENTERTAINMENT_GAMES.find(item => item.id === gameId) ?? ENTERTAINMENT_GAMES[0];
+  const rootRef=useRef<HTMLDivElement>(null);
+  const [manualPause,setManualPause]=useState(false);
+  const [background,setBackground]=useState(false);
+  const paused=manualPause||background;
+  useEffect(()=>{const update=()=>setBackground(document.hidden);update();document.addEventListener('visibilitychange',update);return()=>document.removeEventListener('visibilitychange',update);},[]);
+  useEffect(()=>{
+    const previous=document.activeElement instanceof HTMLElement?document.activeElement:null;
+    const root=rootRef.current;
+    root?.querySelector<HTMLButtonElement>('.ent-close')?.focus();
+    const contain=(event:KeyboardEvent)=>{
+      if(event.key!=='Tab'||!root)return;
+      const controls=[...root.querySelectorAll<HTMLElement>('button:not(:disabled),input:not(:disabled),[tabindex="0"]')].filter(el=>el.getClientRects().length);
+      if(!controls.length){event.preventDefault();root.focus();return;}
+      const first=controls[0],last=controls[controls.length-1];
+      if(event.shiftKey&&(document.activeElement===first||!root.contains(document.activeElement))){event.preventDefault();last.focus();}
+      else if(!event.shiftKey&&(document.activeElement===last||!root.contains(document.activeElement))){event.preventDefault();first.focus();}
+    };
+    document.addEventListener('keydown',contain,true);
+    return()=>{document.removeEventListener('keydown',contain,true);if(previous?.isConnected)previous.focus();};
+  },[]);
 
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -436,6 +468,8 @@ export function EntertainmentOverlay({
   return (
     <div
       className="ent-overlay"
+      ref={rootRef}
+      tabIndex={-1}
       role="dialog"
       aria-modal="true"
       aria-label={game.name + ' game'}
@@ -453,13 +487,14 @@ export function EntertainmentOverlay({
           </button>
         </header>
 
-        {gameId === 'flight' && <FlightGame />}
-        {gameId === 'orbit' && <OrbitGame />}
-        {gameId === 'cipher' && <CipherGame />}
-        {gameId === 'surge' && <SurgeGame />}
+        <div className="ent-session-controls"><button type="button" aria-pressed={manualPause} onClick={()=>setManualPause(value=>!value)}>{manualPause?'Resume':'Pause'}</button><span role="status">{paused?'Paused · your game stops while this tab is hidden':'Session active'}</span></div>
+        {gameId === 'flight' && <FlightGame paused={paused} />}
+        {gameId === 'orbit' && <OrbitGame paused={paused} />}
+        {gameId === 'cipher' && <CipherGame paused={paused} />}
+        {gameId === 'surge' && <SurgeGame paused={paused} />}
 
         <footer className="ent-overlay-footer">
-          <span>RAVIN GAME HOST / LOCAL SESSION</span>
+          <span>ARROW ARCADE / LOCAL SESSION</span>
           <span>ESC TO RETURN TO ORBIT</span>
         </footer>
       </div>

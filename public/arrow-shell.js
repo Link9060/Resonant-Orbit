@@ -28,7 +28,7 @@
   const WAYPOINT_URL = BETA_BASE ? BETA_BASE+'/waypoint/' : ON_ENTERARROW ? '/waypoint/' : 'https://link9060.github.io/Resonant-Waypoint/';
   const RELAY_URL = BETA_BASE ? '/Resonant-Relay/' : ON_ENTERARROW ? '/relay/' : 'https://link9060.github.io/Resonant-Relay/';
   const RAVIN_URL = BETA_BASE ? BETA_BASE+'/ravin/' : ON_ENTERARROW ? '/ravin/' : 'https://link9060.github.io/Project-R.A.V.I.N.-1.1/';
-  const SIGNOUT_URL = ON_ENTERARROW ? '/signout/' : '';
+  const SIGNOUT_URL = BETA_BASE ? '/Resonant-Relay/login/' : ON_ENTERARROW ? '/signout/' : '';
 
   document.addEventListener('click', event => {if(!BETA_BASE)return;const link=event.target.closest?.('a[href]');if(link)link.href=resolveHref(link.href);},true);
 
@@ -1263,39 +1263,42 @@
 
   function renderSettings() {
     const asArray = value => Array.isArray(value) ? value : [];
-    const tasks = asArray(readJson(STORAGE.tasks, []));
-    const events = asArray(readJson(STORAGE.events, []));
     const links = asArray(readJson(STORAGE.links, []));
-    const notesLength = readString(STORAGE.notes, '').length;
 
     state.panelBody.innerHTML =
       '<div class="arrow-os-settings-card">' +
-        '<span>ARROW local data</span>' +
-        '<strong>' + tasks.length + ' tasks · ' + events.length + ' events · ' + links.length + ' links</strong>' +
-        '<small>' + notesLength + ' note characters. Browser-synced across ARROW centers on this device. Account cloud sync is not connected yet.</small>' +
+        '<span>Preferences on this device</span>' +
+        '<strong>' + links.length + ' saved links · ' + escapeHtml(getThemeChoice()) + ' theme · ' + escapeHtml(getMotionChoice()) + ' motion</strong>' +
+        '<small>Appearance, links and focus settings are shared across ARROW tabs on this device. Tasks, notes, calendar and plans are saved to your account.</small>' +
       '</div>' +
       '<div class="arrow-os-settings-actions">' +
         '<button type="button" data-settings-action="intro">Replay Orbit intro</button>' +
-        '<button type="button" data-settings-action="export">Export ARROW data</button>' +
-        '<label class="arrow-os-import">Import ARROW data<input type="file" accept="application/json" data-settings-action="import" /></label>' +
+        '<button type="button" data-settings-action="export">Export preferences</button>' +
+        '<label class="arrow-os-import">Import preferences<input type="file" accept="application/json" data-settings-action="import" /></label>' +
         (SIGNOUT_URL ? '<button type="button" class="is-danger" data-settings-action="signout">Sign out of ARROW</button>' : '') +
-        '<button type="button" class="is-danger" data-settings-action="reset">Reset ARROW data</button>' +
+        '<button type="button" class="is-danger" data-settings-action="reset">Reset preferences</button>' +
       '</div>';
 
     state.panelBody.querySelector('[data-settings-action="intro"]').addEventListener('click', () => {
-      const url = new URL(ORBIT_URL);
+      const url = new URL(ORBIT_URL, location.origin);
       url.searchParams.set('intro', '1');
       location.assign(url.toString());
     });
     state.panelBody.querySelector('[data-settings-action="export"]').addEventListener('click', exportData);
     state.panelBody.querySelector('[data-settings-action="import"]').addEventListener('change', importData);
     const signoutButton = state.panelBody.querySelector('[data-settings-action="signout"]');
-    signoutButton?.addEventListener('click', () => {
+    signoutButton?.addEventListener('click', async () => {
+      signoutButton.disabled=true;
+      if(BETA_BASE){
+        try {await arrowData('/auth/v1/logout?scope=local',{method:'POST'});} catch { /* Always clear this device's session even if the network is unavailable. */ }
+        localStorage.removeItem(ARROW_AUTH_STORAGE_KEY);
+        for(const key of ['ravin_access_token','ravin_refresh_token','ravin_user','ravin_token_expires_at'])localStorage.removeItem(key);
+      }
       location.assign(SIGNOUT_URL);
     });
 
     state.panelBody.querySelector('[data-settings-action="reset"]').addEventListener('click', () => {
-      if (!confirm('Reset ARROW notes, tasks, calendar events, links, appearance, and focus settings in this browser?')) return;
+      if (!confirm('Reset appearance, saved links and focus settings on this device? Your account tasks, notes, plans and events stay saved.')) return;
       Object.values(STORAGE).forEach(key => {
         try { localStorage.removeItem(key); } catch {}
       });
@@ -1320,7 +1323,7 @@
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'arrow-data.json';
+    a.download = 'arrow-preferences.json';
     a.click();
     setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -1346,7 +1349,7 @@
       stopFocusTimer(false);
       restoreFocusState();
       renderSettings();
-      alert('ARROW data imported.');
+      alert('ARROW preferences imported.');
     } catch (error) {
       alert(error?.message || 'Could not import that ARROW data file.');
     } finally {
@@ -1701,6 +1704,7 @@
   document.addEventListener('pointerdown', closeEverythingOnOutsidePointer);
   window.addEventListener('keydown', event => {
     if (event.key !== 'Escape') return;
+    if (!state.activePanel && event.target instanceof Element && event.target.closest('[data-arrow-escape-local],dialog[open],[role="dialog"][aria-modal="true"]')) return;
 
     const current = [...state.instances][0];
     if (current && current.module !== 'orbit') {

@@ -5,6 +5,32 @@ const { JSDOM } = require('jsdom');
 const source = readFileSync(process.env.ARROW_SHELL_SOURCE || 'public/arrow-shell.js', 'utf8');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 
+test('reset preferences keeps account planning data and explains what it changes',async()=>{
+  const f=await fixture('relay');try{
+    f.w.ArrowOS.openPanel('settings','relay');
+    const panel=f.w.document.querySelector('.arrow-os-panel');
+    assert.match(panel.textContent,/Preferences on this device/);
+    assert.doesNotMatch(panel.textContent,/cloud sync is not connected/);
+    assert.match(panel.textContent,/Tasks, notes, calendar and plans are saved to your account/);
+    panel.querySelector('[data-settings-action="reset"]').click();
+    assert.ok(!f.w.__fetchCalls.some(call=>['DELETE','PATCH','PUT','POST'].includes(call.options.method)));
+    assert.ok(f.w.localStorage.getItem('sb-cnorozrjugxpanpfmssa-auth-token'));
+  }finally{f.close();}
+});
+
+test('Escape stays in a module when a local map or dialog handles it',async()=>{
+  const f=await fixture('atlas','','enabled','https://enterarrow.com/atlas/');
+  try{
+    for(const html of ['<canvas data-arrow-escape-local></canvas>','<section role="dialog" aria-modal="true"><button>Close</button></section>']){
+      f.w.document.querySelector('#app').innerHTML=html;
+      const target=f.w.document.querySelector('#app button,#app canvas');
+      let handled=false;target.addEventListener('keydown',event=>{handled=true;event.preventDefault();});
+      target.dispatchEvent(new f.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+      assert.equal(handled,true);assert.equal(f.w.document.querySelector('.arrow-os-handoff'),null);
+    }
+  }finally{f.close();}
+});
+
 async function fixture(module = 'orbit', query = '', orbitAccess = 'enabled', baseUrl = 'https://link9060.github.io/test/') {
   const dom = new JSDOM(`<html><body><div data-arrow-os-shell data-module="${module}" data-orbit-access="${orbitAccess}"></div><div id="app"></div></body></html>`, {
     url: baseUrl + query, runScripts: 'outside-only', pretendToBeVisual: true,
