@@ -273,3 +273,48 @@ test('beta navigation stays in beta for every module and preserves deep links',a
   assert.equal(f.w.ArrowOS.resolveHref('https://example.com/'),'https://example.com/');
  }finally{f.close();}
 });
+
+test('owner overview renders readable metrics and storage without raw account identifiers',async()=>{
+  const f=await fixture('orbit');
+  try{
+    f.w.fetch=async url=>{
+      const path=String(url);
+      const data=path.includes('/profiles?')?[{role:'owner'}]:path.includes('owner_dashboard_stats')?{profiles:{total:19,active_7d:5},generated_at:'2026-10-02T00:00:00Z'}:path.includes('owner_storage_overview')?{file_total_bytes:1048576,top_users:[{id:'private-raw-id',display_name:'Test account',file_bytes:1024,total_bytes:2048}]}:[];
+      return {ok:true,status:200,json:async()=>data,text:async()=>JSON.stringify(data)};
+    };
+    f.w.ArrowOS.openPanel('moderation','orbit');await delay(30);
+    f.w.document.querySelector('[data-queue="overview"]').click();await delay(30);
+    const panel=f.w.document.querySelector('.arrow-os-panel');
+    assert.match(panel.textContent,/Active this week/);
+    assert.match(panel.textContent,/1 MB/);
+    assert.match(panel.textContent,/Test account/);
+    assert.doesNotMatch(panel.textContent,/private-raw-id|\{"|top_users/);
+    assert.equal(panel.querySelectorAll('.arrow-staff-metric').length,3);
+    assert.equal(panel.querySelectorAll('table tbody tr').length,1);
+  }finally{f.close();}
+});
+
+test('shared calendar includes owned events, Relay plan instances and connected multi-day events without write signals',async()=>{
+  const f=await fixture('orbit','','enabled','https://link9060.github.io/Resonant-Relay/arrow/orbit/');
+  try{
+    let signals=0;f.w.addEventListener('arrow:planning-changed',()=>signals++);
+    const calls=[];
+    f.w.fetch=async (url,options={})=>{
+      calls.push(String(url));
+      const path=String(url);
+      const data=path.includes('relay_calendar_events')?[{id:'owned',title:'Shared event',event_date:'2026-10-02',start_time:'09:00',end_time:'10:00'}]:path.includes('group_members')?[{group_id:'group'}]:path.includes('/plans?')?[{id:'plan',name:'Group meeting',start_time:'11:00',end_time:'12:00',instances:[{id:'instance',occurs_on:'2026-10-02'}]}]:path.includes('calendar-hub')?{events:[{id:'provider',accountId:'calendar',summary:'Trip',start:'2026-10-02',end:'2026-10-04',isAllDay:true,htmlLink:'javascript:bad'}],accountErrors:[]}:[];
+      return {ok:true,status:200,json:async()=>data,text:async()=>JSON.stringify(data)};
+    };
+    const result=await f.w.ArrowOS.loadCalendarSources();
+    assert.equal(result.events.length,4);
+    assert.equal(result.events.filter(e=>e.title==='Trip').length,2);
+    assert.equal(result.events.find(e=>e.id==='owned').read_only,undefined);
+    const plan=result.events.find(e=>e.id==='relay-plan-instance');
+    assert.equal(plan.read_only,true);
+    assert.equal(plan.source_href,'https://link9060.github.io/Resonant-Relay/planner/view/?id=plan');
+    assert.ok(result.events.filter(e=>e.title==='Trip').every(e=>e.is_all_day&&e.source_href==='https://link9060.github.io/Resonant-Relay/calendar/'));
+    assert.ok(calls.some(path=>path.includes('group_members?user_id=eq.00000000-0000-0000-0000-000000000001')));
+    assert.equal(signals,0);
+    assert.equal(result.warnings.length,0);
+  }finally{f.close();}
+});

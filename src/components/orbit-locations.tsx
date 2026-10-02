@@ -8,6 +8,8 @@ function navigate(href:string){const os=(window as Window & {ArrowOS?:{navigate?
 function api() { return (window as Window & {ArrowOS?:API}).ArrowOS; }
 export function OrbitLocations({hidden=false}:{hidden?:boolean}) {
   const [pins,setPins]=useState<Pin[]>([]); const [targets,setTargets]=useState<{id:string;title:string;href:string}[]>([]); const [editing,setEditing]=useState(false);
+  const nameInput=useRef<HTMLInputElement>(null);
+  useEffect(()=>{if(editing)nameInput.current?.focus();},[editing]);
   const [title,setTitle]=useState(''); const [href,setHref]=useState('/waypoint/?tab=today');
   const [next,setNext]=useState<Next|null>(null); const [source,setSource]=useState('loading'); const [notice,setNotice]=useState('');
   const [ready,setReady]=useState(false); const [busy,setBusy]=useState(false); const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
@@ -64,12 +66,12 @@ export function OrbitLocations({hidden=false}:{hidden?:boolean}) {
     </button>
     {pins.map(pin=><button key={pin.number} className="orbit-extra-location" data-orbit-extra data-anchor={pin.anchor.join(',')} type="button" onClick={()=>navigate(pin.href)} title={pin.title}><kbd>{pin.number}</kbd><span><strong>{pin.title}</strong><small>Quick location</small></span></button>)}
     <div className="orbit-location-tools"><button type="button" onClick={()=>setEditing(!editing)}>Quick locations · {pins.length}/5</button>{notice&&<p role="status">{notice}</p>}</div>
-    {editing&&<section className="orbit-location-editor" aria-label="Manage Orbit quick locations">
+    {editing&&<section className="orbit-location-editor" aria-label="Manage Orbit quick locations" data-arrow-escape-local="true" onKeyDown={event=>{if(event.key==='Escape'){event.preventDefault();event.stopPropagation();setEditing(false);}}}>
       <header><h2>Quick locations</h2><button type="button" onClick={()=>setEditing(false)} aria-label="Close quick locations">×</button></header>
       <p>Keys 5–9 open your shortcuts. Key 0 opens your next move.</p>
       {pins.map(pin=><div className="orbit-pin-row" key={pin.number}><kbd>{pin.number}</kbd><span>{pin.title}</span><button disabled={busy} type="button" onClick={()=>void save(pins.filter(p=>p.number!==pin.number).map((p,i)=>({...p,number:i+5,anchor:anchors[i]})))}>Remove</button></div>)}
       {pins.length<5&&<form onSubmit={event=>{event.preventDefault();const safe=safeHref(href);if(!safe||!title.trim()){setNotice('Name this location and choose an ARROW destination.');return;}void save([...pins,{number:5+pins.length,title:title.trim().slice(0,60),href:safe,anchor:anchors[pins.length]}]);}}>
-        <label>Name<input required maxLength={60} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Homework, next ride, project…"/></label>
+        <label>Name<input ref={nameInput} required maxLength={60} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Homework, next ride, project…"/></label>
         <label>Destination<select value={href} onChange={e=>{setHref(e.target.value);const target=targets.find(t=>t.href===e.target.value);if(target)setTitle(target.title);}}><option value="/waypoint/?tab=today">Tasks</option><option value="/waypoint/?tab=plans">Plans</option><option value="/waypoint/?tab=calendar">Calendar</option><option value="/waypoint/?tab=direction">Goals</option><option value="/atlas/">Atlas</option><option value="/ravin/">RAVIN</option><option value="/relay/">Relay</option>{targets.map(target=><option key={target.id} value={target.href}>{target.title}</option>)}</select></label>
         <button type="submit" disabled={busy||!ready}>{busy?'Saving…':'Add location'}</button>
       </form>}

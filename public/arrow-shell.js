@@ -168,6 +168,7 @@
       method: options.method || 'GET',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
+      signal: AbortSignal.timeout(options.timeoutMs || 20000),
     });
 
     if (response.status === 401 && retry) {
@@ -179,7 +180,7 @@
       throw new Error(payload?.message || payload?.error || 'ARROW data could not load.');
     }
 
-    if ((options.method || 'GET').toUpperCase() !== 'GET') {
+    if (!options.readOnly && (options.method || 'GET').toUpperCase() !== 'GET') {
       try { localStorage.setItem('arrow_shared_data_ping_v1', String(Date.now())); } catch {}
       window.dispatchEvent(new CustomEvent('arrow:planning-changed'));
     }
@@ -223,11 +224,8 @@
     } catch {}
 
     const root = document.documentElement;
-    const currentModule = [...state.instances][0]?.module;
-    if (true) {
-      root.classList.toggle('dark', resolved === 'dark');
-      if (root.dataset.theme !== resolved) root.dataset.theme = resolved;
-    }
+    root.classList.toggle('dark', resolved === 'dark');
+    if (root.dataset.theme !== resolved) root.dataset.theme = resolved;
     if (root.dataset.arrowTheme !== resolved) root.dataset.arrowTheme = resolved;
 
     window.dispatchEvent(new CustomEvent('arrow:themechange', {
@@ -658,6 +656,44 @@
     await loadHistory();
   }
 
+  function renderOwnerOverview(host, stats, storage) {
+    host.replaceChildren();
+    const label = key => key.replaceAll('_',' ').replace(/\b24h\b/g,'today').replace(/\b7d\b/g,'this week').replace(/\b30d\b/g,'this month').replace(/^./,c=>c.toUpperCase());
+    const bytes = value => {
+      if (!Number.isFinite(Number(value))) return '—';
+      const amount=Number(value);
+      for(const [unit,divisor] of [['GB',1073741824],['MB',1048576],['KB',1024]]) if(amount>=divisor)return (amount/divisor).toLocaleString(undefined,{maximumFractionDigits:1})+' '+unit;
+      return amount.toLocaleString()+' B';
+    };
+    function card(title, values) {
+      const section=document.createElement('section');section.className='arrow-os-support-row';
+      const heading=document.createElement('h3');heading.textContent=title;section.append(heading);
+      const metrics=document.createElement('dl');metrics.className='arrow-staff-metrics';
+      for(const [key,value] of Object.entries(values||{})) {
+        if(typeof value!=='number')continue;
+        const metric=document.createElement('div');metric.className='arrow-staff-metric';
+        const name=document.createElement('dt');name.textContent=label(key);
+        const amount=document.createElement('dd');amount.textContent=key.includes('bytes')?bytes(value):value.toLocaleString();
+        metric.append(name,amount);metrics.append(metric);
+      }
+      if(!metrics.children.length)return;
+      section.append(metrics);host.append(section);
+    }
+    for(const [key,values] of Object.entries(stats||{})) if(values&&typeof values==='object'&&!Array.isArray(values)) card(label(key),values);
+    card('Storage',storage);
+    const users=Array.isArray(storage?.top_users)?storage.top_users:[];
+    if(users.length) {
+      const section=document.createElement('section');section.className='arrow-os-support-row';
+      const heading=document.createElement('h3');heading.textContent='Storage by account';section.append(heading);
+      const table=document.createElement('table');table.className='arrow-staff-storage';
+      const head=document.createElement('thead');const headers=document.createElement('tr');
+      for(const title of ['Account','Files','Total']){const th=document.createElement('th');th.scope='col';th.textContent=title;headers.append(th);}head.append(headers);table.append(head);
+      const body=document.createElement('tbody');
+      for(const user of users){const row=document.createElement('tr');for(const value of [user.display_name||'Account',bytes(user.file_bytes),bytes(user.total_bytes)]){const cell=document.createElement('td');cell.textContent=value;row.append(cell);}body.append(row);}table.append(body);section.append(table);host.append(section);
+    }
+    if(stats?.generated_at){const updated=document.createElement('p');updated.className='arrow-os-panel-copy';updated.textContent='Updated '+new Date(stats.generated_at).toLocaleString();host.append(updated);}
+  }
+
   async function renderModeration() {
     state.panelBody.innerHTML = '<p class="arrow-os-loading">Verifying staff access…</p>';
     try {
@@ -736,7 +772,13 @@
       async function load(queue, nextOffset = 0) {
         const version = ++loadVersion; offset = nextOffset; active = queue; host.textContent = 'Loading…';
         try {
-          if(queue==='overview'){paging.hidden=true;const [stats,storage]=await Promise.all([rpc('owner_dashboard_stats',{}),rpc('owner_storage_overview',{})]);if(version!==loadVersion)return;host.replaceChildren();for(const [label,value] of [['Accounts and activity',stats],['Storage',storage]]){const card=document.createElement('section');card.className='arrow-os-support-row';const heading=document.createElement('h3');heading.textContent=label;card.append(heading);for(const [key,amount] of Object.entries(value||{})){const line=document.createElement('p');line.textContent=key.replaceAll('_',' ')+': '+(typeof amount==='object'?JSON.stringify(amount):String(amount));card.append(line);}host.append(card);}return;}
+          if(queue==='overview') {
+            paging.hidden=true;
+            const [stats,storage]=await Promise.all([rpc('owner_dashboard_stats',{}),rpc('owner_storage_overview',{})]);
+            if(version!==loadVersion)return;
+            renderOwnerOverview(host,stats,storage);
+            return;
+          }
           paging.hidden=false;
           const result = queue==='email'?await arrowData('/rest/v1/support_email_threads?select=id,sender_email,sender_name,subject,status,latest_message_at&order=latest_message_at.desc&limit=100&offset='+nextOffset):await rpc(queue === 'requests' ? 'staff_list_requests' : queue === 'reports' ? 'staff_list_reports' : queue==='audit'?'owner_list_audit_log':queue==='beta'?'owner_list_beta_requests':'admin_list_users_v2', { ...(['requests','reports','beta'].includes(queue) ? { p_status: null } : {}), p_limit: 100, p_offset: nextOffset }) || [];
           if (version !== loadVersion) return;
@@ -753,11 +795,49 @@
     } catch (error) { if (state.activePanel === 'moderation') state.panelBody.innerHTML = sharedDataError(error); }
   }
 
+  let calendarLoad = null;
+  async function loadCalendarSources() {
+    if(calendarLoad)return calendarLoad;
+    calendarLoad=(async()=>{
+      const warnings=[];
+      const [owned,memberships,connected]=await Promise.all([
+        arrowData('/rest/v1/relay_calendar_events?select=id,title,event_date,start_time,end_time,is_all_day,source_key,details&order=event_date.asc&limit=500'),
+        arrowData('/rest/v1/group_members?user_id=eq.'+encodeURIComponent(currentArrowUserId())+'&select=group_id').catch(()=>{warnings.push('Relay group plans could not load.');return [];}),
+        arrowData('/functions/v1/calendar-hub',{method:'POST',body:{action:'calendar_events'},readOnly:true}).catch(()=>{warnings.push('Connected calendars could not load.');return {events:[]};})
+      ]);
+      if(connected?.accountErrors?.length)warnings.push('Some connected calendars need reconnecting in Relay.');
+      const groups=[...new Set((memberships||[]).map(m=>m.group_id))];
+      const plans=groups.length?await arrowData('/rest/v1/plans?group_id=in.('+groups.map(encodeURIComponent).join(',')+')&select=id,name,start_time,end_time,instances:plan_instances(id,occurs_on)').catch(()=>{warnings.push('Relay group plans could not load.');return [];}):[];
+      const events=[...(owned||[])];
+      for(const plan of plans||[])for(const instance of plan.instances||[])events.push({id:'relay-plan-'+instance.id,title:plan.name,event_date:instance.occurs_on,start_time:plan.start_time,end_time:plan.end_time,is_all_day:!plan.start_time,read_only:true,source:'Relay plan',source_href:resolveHref('/relay/')+'planner/view/?id='+encodeURIComponent(plan.id)});
+      for(const event of connected?.events||[]) {
+        const start=new Date(event.isAllDay?event.start.slice(0,10)+'T00:00:00':event.start);
+        if(!Number.isFinite(start.getTime()))continue;
+        const end=event.end?new Date(event.isAllDay?event.end.slice(0,10)+'T00:00:00':event.end):null;
+        // Split multi-day events so every occupied day is visible to the planner.
+        const day=new Date(start);day.setHours(0,0,0,0);
+        for(let count=0;count<366;count++) {
+          const nextDay=new Date(day);nextDay.setDate(day.getDate()+1);
+          const first=localDateInputValue(day)===localDateInputValue(start);
+          const last=!end||end<=nextDay;
+          const clock=date=>String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+          const allDay=Boolean(event.isAllDay)||!first&&!last;
+          events.push({id:'calendar-'+event.accountId+'-'+event.id+'-'+localDateInputValue(day),title:event.summary||'Calendar event',event_date:localDateInputValue(day),start_time:allDay?null:first?clock(start):'00:00',end_time:allDay?null:last&&end?clock(end):'23:59',is_all_day:allDay,read_only:true,source:event.calendarName||'Connected calendar',source_href:/^https?:\/\//i.test(event.htmlLink||'')?event.htmlLink:resolveHref('/relay/')+'calendar/'});
+          if(last||!end)break;
+          day.setDate(day.getDate()+1);
+          if(day>=end)break;
+        }
+      }
+      return {events:events.sort((a,b)=>(a.event_date+' '+(a.start_time||'')).localeCompare(b.event_date+' '+(b.start_time||''))),warnings};
+    })();
+    try{return await calendarLoad;}finally{calendarLoad=null;}
+  }
+
   async function nextMove() {
     if(BETA_BASE){
       const [tasks,events,plans]=await Promise.all([
         arrowData('/rest/v1/todos?select=id,title,due_on,completed,position,scheduled_on,scheduled_start&limit=500'),
-        arrowData('/rest/v1/relay_calendar_events?select=id,title,event_date,start_time,end_time,source_key&limit=500'),
+        loadCalendarSources().then(result=>result.events),
         arrowData('/rest/v1/waypoint_items?status=eq.active&select=id,title,source_key,due_date,due_time,depends_on,why,status&limit=100')
       ]);
       const {planningCandidates}=await import(BETA_BASE+'/next-move.js?v=beta-repair-1');
@@ -777,7 +857,7 @@
     if(!BETA_BASE)throw new Error('This preview is available in ARROW Beta.');
     const [tasks,events]=await Promise.all([
       arrowData('/rest/v1/todos?select=id,title,due_on,completed,position,estimated_minutes,scheduled_on,scheduled_start&limit=500'),
-      arrowData('/rest/v1/relay_calendar_events?select=id,title,event_date,start_time,end_time,is_all_day,source_key&limit=500')
+      loadCalendarSources().then(result=>result.events)
     ]);
     const {buildSchedule}=await import(BETA_BASE+'/autoPlanner.js?v=beta-repair-1');
     return {...buildSchedule({tasks,events,start,end,timezone:Intl.DateTimeFormat().resolvedOptions().timeZone}),source:'calendar',can_apply:false};
@@ -955,10 +1035,11 @@
   async function renderCalendar() {
     state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared calendar…</div>';
     try {
-      const events = await arrowData('/rest/v1/relay_calendar_events?select=id,title,event_date,is_all_day,start_time,end_time,details&order=event_date.asc,start_time.asc&limit=80');
+      const {events,warnings} = await loadCalendarSources();
       if (state.activePanel !== 'calendar') return;
       state.panelBody.innerHTML =
-        ownerNote('calendar', 'Waypoint is the planning view. This panel writes to the same calendar events Relay and RAVIN use.') +
+        ownerNote('calendar', 'Shared events, Relay plans, and connected calendars in one view. Manage imported events at their source.') +
+        warnings.map(warning=>'<p role="status" class="arrow-os-panel-copy">'+escapeHtml(warning)+'</p>').join('') +
         '<form class="arrow-os-calendar-form">' +
           '<input type="text" maxlength="100" placeholder="Event title" aria-label="Event title" required />' +
           '<div class="arrow-os-form-grid">' +
@@ -971,7 +1052,7 @@
           (events?.length ? events.map(item =>
             '<div class="arrow-os-list-row" data-id="' + escapeAttr(item.id) + '">' +
               '<div><strong>' + escapeHtml(item.title) + '</strong><span>' + escapeHtml(formatEventDate(item.event_date, item.start_time?.slice(0, 5) || '')) + '</span></div>' +
-              '<button type="button" class="arrow-os-row-delete" aria-label="Delete event">' + icon('trash') + '</button>' +
+              (item.read_only ? '<a class="arrow-os-source-link" href="'+escapeAttr(item.source_href||resolveHref('/relay/')+'calendar/')+'">'+escapeHtml(item.source||'Open source')+' ↗</a>' : '<button type="button" class="arrow-os-row-delete" aria-label="Delete event">' + icon('trash') + '</button>') +
             '</div>'
           ).join('') : panelEmpty('No ARROW events yet.')) +
         '</div>';
@@ -1816,6 +1897,7 @@
     navigate: (href, module = 'orbit') => launchToOrbit(module, null, 'enabled', href),
     data: arrowData,
     staffRole,
+    loadCalendarSources,
     nextMove,
   };
 })();
