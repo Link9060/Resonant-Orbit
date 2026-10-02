@@ -18,9 +18,11 @@ export function ArrowAuthGate({ children }: { children: ReactNode }) {
     const onArrowDomain =
       window.location.hostname === 'enterarrow.com' ||
       window.location.hostname === 'www.enterarrow.com';
+    const onArrowBeta = window.location.hostname === 'link9060.github.io' &&
+      window.location.pathname.startsWith('/Resonant-Relay/arrow/orbit/');
 
-    if (onArrowDomain) {
-      // The domain-level /arrow-auth-guard.js owns authentication.
+    if (onArrowDomain || onArrowBeta) {
+      // The public domain guard or packaged beta guard verifies the session.
       setReady(true);
       return;
     }
