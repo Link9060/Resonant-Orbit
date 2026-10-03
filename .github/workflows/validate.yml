@@ -2,9 +2,9 @@ name: Orbit validation
 
 on:
   push:
-    branches: [main]
+    branches: [main, enterarrow-domain]
   pull_request:
-    branches: [main]
+    branches: [main, enterarrow-domain]
 
 jobs:
   validate:
