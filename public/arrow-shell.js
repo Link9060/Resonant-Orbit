@@ -5,6 +5,7 @@
     theme: 'arrow_os_theme_v1',
     motion: 'arrow_os_motion_v1',
     accent: 'arrow_os_accent_v1',
+    customAccent: 'arrow_os_custom_accent_v1',
     experience: 'arrow_os_experience_v1',
     focusMinutes: 'arrow_os_focus_minutes_v1',
     focusState: 'arrow_os_focus_state_v1',
@@ -62,6 +63,7 @@
 
   const state = {
     instances: new Set(),
+    renderVersion: 0,
     activePanel: null,
     activeModule: null,
     panelEl: null,
@@ -78,7 +80,7 @@
   };
 
   function id() {
-    if (crypto?.randomUUID) return crypto.randomUUID();
+    if (window.crypto?.randomUUID) return crypto.randomUUID();
     return 'a-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   }
 
@@ -133,7 +135,7 @@
     if (window.__arrowSessionRefreshPromise) return window.__arrowSessionRefreshPromise;
     window.__arrowSessionRefreshPromise = (async () => {
       const response = await fetch(ARROW_SUPABASE_URL + '/auth/v1/token?grant_type=refresh_token', {
-        method: 'POST', headers: { apikey: ARROW_SUPABASE_KEY, 'content-type': 'application/json' },
+        method: 'POST', signal: AbortSignal.timeout(15000), headers: { apikey: ARROW_SUPABASE_KEY, 'content-type': 'application/json' },
         body: JSON.stringify({ refresh_token: session.refresh_token }),
       });
       if (!response.ok) return null;
@@ -165,6 +167,7 @@
     if (options.body !== undefined) headers['content-type'] = 'application/json';
 
     const response = await fetch(ARROW_SUPABASE_URL + pathname, {
+      signal: AbortSignal.timeout(20000),
       method: options.method || 'GET',
       headers,
       body: options.body === undefined ? undefined : JSON.stringify(options.body),
@@ -227,6 +230,8 @@
     root.classList.toggle('dark', resolved === 'dark');
     if (root.dataset.theme !== resolved) root.dataset.theme = resolved;
     if (root.dataset.arrowTheme !== resolved) root.dataset.arrowTheme = resolved;
+    root.style.colorScheme = resolved;
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', resolved === 'light' ? '#f5f6f8' : '#08090b');
 
     window.dispatchEvent(new CustomEvent('arrow:themechange', {
       detail: { choice, resolved },
@@ -268,7 +273,25 @@
     const allowed = new Set(ACCENTS.map(([value]) => value));
     const normalized = allowed.has(accent) ? accent : 'mono';
     if (persist) writeString(STORAGE.accent, normalized);
-    document.documentElement.dataset.arrowAccent = normalized;
+    const root = document.documentElement;
+    const custom = /^#[0-9a-f]{6}$/i.test(accent || '') ? accent.toLowerCase() : null;
+    if (custom && persist) writeString(STORAGE.customAccent, custom);
+    const selected = custom || (accent === 'custom' ? readString(STORAGE.customAccent, '#2f6fed') : null);
+    const color = selected || ACCENTS.find(([value]) => value === normalized)?.[2] || '#f3f3f4';
+    const rgb = [1,3,5].map(start => parseInt(color.slice(start,start+2),16));
+    const effective = selected ? 'custom' : normalized;
+    if (persist) writeString(STORAGE.accent, effective);
+    root.dataset.arrowAccent = effective;
+    root.style.setProperty('--arrow-accent-color', color);
+    root.style.setProperty('--arrow-accent-rgb', rgb.join(','));
+    root.style.setProperty('--arrow-accent-channels', rgb.join(' '));
+    const luminance = rgb.map(v => {const c=v/255;return c<=.04045?c/12.92:((c+.055)/1.055)**2.4;}).reduce((n,v,i)=>n+v*[.2126,.7152,.0722][i],0);
+    root.style.setProperty('--arrow-accent-on', luminance > .179 ? '#101114' : '#ffffff');
+    root.style.setProperty('--accent', rgb.join(' '));
+    root.style.setProperty('--rv-accent', rgb.join(' '));
+    root.style.setProperty('--rv-accent-soft', rgb.join(' '));
+    root.style.setProperty('--accent-color', color);
+    root.style.setProperty('--accent-rgb', rgb.join(','));
 
     const relayPalette = normalized === 'mono' ? 'monochrome' : normalized;
     try {
@@ -545,6 +568,7 @@
   function openPanel(name, module, anchor) {
     if (!PANEL_LABELS[name]) return;
     const panel = ensurePanel();
+    state.renderVersion++;
     state.activePanel = name;
     state.activeModule = module;
     state.lastFocused = anchor || state.lastFocused;
@@ -571,6 +595,7 @@
     if (!state.panelEl || state.panelEl.hidden) return;
     state.panelEl.dataset.open = 'false';
     state.panelEl.hidden = true;
+    state.renderVersion++;
     state.activePanel = null;
     state.activeModule = null;
     state.instances.forEach(instance => {
@@ -695,7 +720,7 @@
   }
 
   async function renderModeration() {
-    state.panelBody.innerHTML = '<p class="arrow-os-loading">Verifying staff access…</p>';
+    state.panelBody.innerHTML = '<p class="arrow-os-loading" role="status">Verifying staff access…</p>';
     try {
       const role = await staffRole();
       if (state.activePanel !== 'moderation') return;
@@ -927,10 +952,12 @@
   }
 
   async function renderNotes() {
-    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared notes…</div>';
+    if (state.activePanel !== 'notes') return;
+    const version = ++state.renderVersion;
+    state.panelBody.innerHTML = '<div class="arrow-os-loading" role="status">Loading shared notes…</div>';
     try {
       const notes = await arrowData('/rest/v1/notes?select=id,title,content,is_pinned,updated_at&order=is_pinned.desc,updated_at.desc&limit=12');
-      if (state.activePanel !== 'notes') return;
+      if (state.activePanel !== 'notes' || version !== state.renderVersion) return;
       state.panelBody.innerHTML =
         '<div class="arrow-os-owner-note"><span>ONE NOTES LIBRARY</span><p>Relay edits the same notes that Field indexes and RAVIN can read.</p><a href="' + escapeAttr(new URL('notes', new URL(RELAY_URL, location.href)).toString()) + '">Open full Notes ↗</a></div>' +
         '<form class="arrow-os-note-form">' +
@@ -952,7 +979,9 @@
         const userId = currentArrowUserId();
         if (!value || !userId) return;
         const title = value.split(/\n/)[0].slice(0, 80) || 'Quick note';
-        event.currentTarget.querySelector('button').disabled = true;
+        const saveButton = event.currentTarget.querySelector('button');
+        if (saveButton.disabled) return;
+        saveButton.disabled = true;
         try {
           await arrowData('/rest/v1/notes', {
             method: 'POST',
@@ -961,11 +990,11 @@
           });
           renderNotes();
         } catch (error) {
-          state.panelBody.innerHTML = sharedDataError(error);
+          if (state.activePanel === 'notes') { const status=document.createElement('p'); status.setAttribute('role','alert'); status.textContent=error?.message||'Could not save note.'; state.panelBody.appendChild(status); saveButton.disabled=false; }
         }
       });
     } catch (error) {
-      if (state.activePanel === 'notes') state.panelBody.innerHTML = sharedDataError(error);
+      if (state.activePanel === 'notes' && version === state.renderVersion) state.panelBody.innerHTML = sharedDataError(error);
     }
   }
 
@@ -976,11 +1005,28 @@
     return '<div class="arrow-os-owner-note"><span>WAYPOINT</span><p>' + copy + '</p><a href="' + escapeAttr(url.toString()) + '">Open Waypoint ↗</a></div>';
   }
 
+  async function savePanelAction(control, action) {
+    if (control?.dataset.busy === 'true') return false;
+    if (control) { control.dataset.busy = 'true'; control.disabled = true; }
+    const version = state.renderVersion;
+    try { await action(); return true; }
+    catch (error) {
+      if (version === state.renderVersion && state.panelBody) {
+        let status = state.panelBody.querySelector('.arrow-os-action-error');
+        if (!status) { status = document.createElement('p'); status.className = 'arrow-os-action-error'; status.setAttribute('role','alert'); state.panelBody.appendChild(status); }
+        status.textContent = error?.message || 'Could not save. Try again.';
+      }
+      return false;
+    } finally { if (control) { delete control.dataset.busy; control.disabled = false; } }
+  }
+
   async function renderTasks() {
-    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared tasks…</div>';
+    if (state.activePanel !== 'tasks') return;
+    const version = ++state.renderVersion;
+    state.panelBody.innerHTML = '<div class="arrow-os-loading" role="status">Loading shared tasks…</div>';
     try {
       const tasks = await arrowData('/rest/v1/todos?select=id,title,due_on,completed,position,created_at&order=completed.asc,due_on.asc,position.asc,created_at.asc&limit=80');
-      if (state.activePanel !== 'tasks') return;
+      if (state.activePanel !== 'tasks' || version !== state.renderVersion) return;
       state.panelBody.innerHTML =
         ownerNote('today', 'Waypoint is the planning view. Relay and RAVIN use this exact same task data.') +
         '<form class="arrow-os-inline-form arrow-os-task-form">' +
@@ -1005,38 +1051,41 @@
         const userId = currentArrowUserId();
         const title = titleInput.value.trim();
         if (!title || !dateInput.value || !userId) return;
-        await arrowData('/rest/v1/todos', {
+        const saved = await savePanelAction(form.querySelector('button'), () => arrowData('/rest/v1/todos', {
           method: 'POST',
           headers: { Prefer: 'return=minimal' },
           body: { user_id: userId, title, due_on: dateInput.value },
-        });
-        renderTasks();
+        }));
+        if (saved) renderTasks();
       });
 
       state.panelBody.querySelectorAll('.arrow-os-list-row').forEach(row => {
         row.querySelector('input')?.addEventListener('change', async event => {
-          await arrowData('/rest/v1/todos?id=eq.' + encodeURIComponent(row.dataset.id), {
+          const saved = await savePanelAction(event.currentTarget, () => arrowData('/rest/v1/todos?id=eq.' + encodeURIComponent(row.dataset.id), {
             method: 'PATCH',
             headers: { Prefer: 'return=minimal' },
             body: { completed: event.target.checked },
-          });
-          renderTasks();
+          }));
+          if (saved) renderTasks(); else event.target.checked = !event.target.checked;
         });
         row.querySelector('.arrow-os-row-delete')?.addEventListener('click', async () => {
-          await arrowData('/rest/v1/todos?id=eq.' + encodeURIComponent(row.dataset.id), { method: 'DELETE' });
-          renderTasks();
+          if (!confirm('Delete this task?')) return;
+          const saved = await savePanelAction(row.querySelector('.arrow-os-row-delete'), () => arrowData('/rest/v1/todos?id=eq.' + encodeURIComponent(row.dataset.id), { method: 'DELETE' }));
+          if (saved) renderTasks();
         });
       });
     } catch (error) {
-      if (state.activePanel === 'tasks') state.panelBody.innerHTML = sharedDataError(error);
+      if (state.activePanel === 'tasks' && version === state.renderVersion) state.panelBody.innerHTML = sharedDataError(error);
     }
   }
 
   async function renderCalendar() {
-    state.panelBody.innerHTML = '<div class="arrow-os-loading">Loading shared calendar…</div>';
+    if (state.activePanel !== 'calendar') return;
+    const version = ++state.renderVersion;
+    state.panelBody.innerHTML = '<div class="arrow-os-loading" role="status">Loading shared calendar…</div>';
     try {
       const {events,warnings} = await loadCalendarSources();
-      if (state.activePanel !== 'calendar') return;
+      if (state.activePanel !== 'calendar' || version !== state.renderVersion) return;
       state.panelBody.innerHTML =
         ownerNote('calendar', 'Shared events, Relay plans, and connected calendars in one view. Manage imported events at their source.') +
         warnings.map(warning=>'<p role="status" class="arrow-os-panel-copy">'+escapeHtml(warning)+'</p>').join('') +
@@ -1065,22 +1114,23 @@
         const userId = currentArrowUserId();
         const title = titleInput.value.trim();
         if (!title || !dateInput.value || !userId) return;
-        await arrowData('/rest/v1/relay_calendar_events', {
+        const saved = await savePanelAction(form.querySelector('button'), () => arrowData('/rest/v1/relay_calendar_events', {
           method: 'POST',
           headers: { Prefer: 'return=minimal' },
           body: { user_id: userId, title, event_date: dateInput.value, is_all_day: !timeInput.value, start_time: timeInput.value || null },
-        });
-        renderCalendar();
+        }));
+        if (saved) renderCalendar();
       });
 
       state.panelBody.querySelectorAll('.arrow-os-events .arrow-os-list-row').forEach(row => {
         row.querySelector('.arrow-os-row-delete')?.addEventListener('click', async () => {
-          await arrowData('/rest/v1/relay_calendar_events?id=eq.' + encodeURIComponent(row.dataset.id), { method: 'DELETE' });
-          renderCalendar();
+          if (!confirm('Delete this event?')) return;
+          const saved = await savePanelAction(row.querySelector('.arrow-os-row-delete'), () => arrowData('/rest/v1/relay_calendar_events?id=eq.' + encodeURIComponent(row.dataset.id), { method: 'DELETE' }));
+          if (saved) renderCalendar();
         });
       });
     } catch (error) {
-      if (state.activePanel === 'calendar') state.panelBody.innerHTML = sharedDataError(error);
+      if (state.activePanel === 'calendar' && version === state.renderVersion) state.panelBody.innerHTML = sharedDataError(error);
     }
   }
 
@@ -1145,7 +1195,7 @@
       state.focusUpdatedAt += elapsed * 1000;
     }
     writeJson(STORAGE.focusState, {
-      remaining: Math.max(0, Math.floor(state.focusRemaining)),
+      remaining: Math.min(3600, Math.max(0, Math.floor(state.focusRemaining))),
       running: Boolean(state.focusRunning),
       updatedAt: Date.now(),
     });
@@ -1160,7 +1210,7 @@
       return;
     }
 
-    const baseRemaining = Number(saved.remaining);
+    const baseRemaining = Math.min(3600, Number(saved.remaining));
     state.focusRemaining = Number.isFinite(baseRemaining) && baseRemaining >= 0
       ? baseRemaining
       : focusMinutes() * 60;
@@ -1324,8 +1374,10 @@
             '</button>'
           ).join('') +
         '</div>' +
+        '<label class="arrow-os-custom-accent">Custom color<input type="color" data-custom-accent value="' + escapeAttr(readString(STORAGE.customAccent, '#2f6fed')) + '" /></label>' +
       '</div>';
 
+    state.panelBody.querySelector('[data-custom-accent]').addEventListener('input', event => applyAccent(event.target.value, true));
     state.panelBody.querySelectorAll('[data-experience-choice]').forEach(button => {
       button.addEventListener('click', () => applyExperienceChoice(button.dataset.experienceChoice, true));
     });
@@ -1353,6 +1405,13 @@
         '<small>Appearance, links and focus settings are shared across ARROW tabs on this device. Tasks, notes, calendar and plans are saved to your account.</small>' +
       '</div>' +
       '<div class="arrow-os-settings-actions">' +
+        '<a href="' + escapeAttr(resolveHref('/relay/profile/')) + '">Profile, account and recovery</a>' +
+        '<a href="' + escapeAttr(resolveHref('/relay/profile/#notifications')) + '">Notifications and device setup</a>' +
+        '<a href="' + escapeAttr(resolveHref('/relay/profile/#appearance')) + '">Relay appearance, layout and particles</a>' +
+        '<a href="' + escapeAttr(resolveHref('/relay/profile/#account-data')) + '">Export account data or delete account</a>' +
+        '<a href="' + escapeAttr(resolveHref('/relay/privacy/')) + '">ARROW privacy policy</a>' +
+        '<a href="' + escapeAttr(resolveHref('/relay/terms/')) + '">Terms of use</a>' +
+        '<a href="' + escapeAttr(resolveHref('/relay/help/')) + '">Setup guide and help</a>' +
         '<button type="button" data-settings-action="intro">Replay Orbit intro</button>' +
         '<button type="button" data-settings-action="export">Export preferences</button>' +
         '<label class="arrow-os-import">Import preferences<input type="file" accept="application/json" data-settings-action="import" /></label>' +
@@ -1452,7 +1511,7 @@
     try {
       const candidate = /^[a-z][a-z0-9+.-]*:\/\//i.test(value) ? value : 'https://' + value;
       const url = new URL(candidate);
-      if (!['http:', 'https:'].includes(url.protocol)) return '';
+      if (!['http:', 'https:'].includes(url.protocol) || url.username || url.password) return '';
       return url.toString();
     } catch {
       return '';
@@ -1787,6 +1846,8 @@
     if (event.key !== 'Escape') return;
     if (!state.activePanel && event.target instanceof Element && event.target.closest('[data-arrow-escape-local],dialog[open],[role="dialog"][aria-modal="true"]')) return;
 
+    if (state.activePanel) { event.preventDefault(); event.stopPropagation(); closePanel(); return; }
+    if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable="true"]'))) return;
     const current = [...state.instances][0];
     if (current && current.module !== 'orbit') {
       event.preventDefault();
@@ -1828,12 +1889,13 @@
     if (event.key === STORAGE.theme) applyTheme(getThemeChoice(), false);
     if (event.key === STORAGE.motion) applyMotion(getMotionChoice(), false);
     if (event.key === STORAGE.experience) applyExperienceChoice(getExperienceChoice(), false);
+    if (event.key === STORAGE.customAccent) applyAccent(readString(STORAGE.accent, 'mono'), false);
     if (event.key === STORAGE.accent) applyAccent(readString(STORAGE.accent, 'mono'), false);
     if (event.key === STORAGE.focusState || event.key === STORAGE.focusMinutes) {
       stopFocusTimer(false);
       restoreFocusState();
     }
-    const panelKeys = { notes: [STORAGE.notes], tasks: [STORAGE.tasks], calendar: [STORAGE.events], links: [STORAGE.links], focus: [STORAGE.focusState, STORAGE.focusMinutes], settings: Object.values(STORAGE) };
+    const panelKeys = { links: [STORAGE.links], focus: [STORAGE.focusState, STORAGE.focusMinutes], settings: Object.values(STORAGE) };
     if (panelKeys[state.activePanel]?.includes(event.key)) renderPanel(state.activePanel);
   });
 

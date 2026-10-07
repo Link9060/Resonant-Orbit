@@ -318,3 +318,17 @@ test('shared calendar includes owned events, Relay plan instances and connected 
     assert.equal(result.warnings.length,0);
   }finally{f.close();}
 });
+
+test('Escape closes the shared panel before leaving a center',async()=>{
+  const f=await fixture('relay','','enabled','https://enterarrow.com/relay/');
+  try {f.w.ArrowOS.openPanel('appearance','relay');f.w.document.querySelector('[data-theme-choice="light"]').dispatchEvent(new f.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));assert.equal(f.w.document.querySelector('.arrow-os-panel').hidden,true);assert.equal(f.w.document.querySelector('.arrow-os-handoff'),null);}finally{f.close();}
+});
+test('custom color persists through reload and reaches center variables',async()=>{
+  const f=await fixture('orbit');try{f.w.ArrowOS.applyAccent('#19a7c4',true);assert.equal(f.w.document.documentElement.dataset.arrowAccent,'custom');assert.equal(f.w.localStorage.getItem('arrow_os_custom_accent_v1'),'#19a7c4');assert.equal(f.w.document.documentElement.style.getPropertyValue('--rv-accent'),'25 167 196');f.w.ArrowOS.applyAccent('custom',false);assert.equal(f.w.document.documentElement.style.getPropertyValue('--arrow-accent-color'),'#19a7c4');}finally{f.close();}
+});
+test('failed task write reports the error, keeps the draft and re-enables submit',async()=>{
+  const f=await fixture('relay');try{f.w.ArrowOS.openPanel('tasks','relay');await delay(30);f.w.fetch=async()=>({ok:false,status:500,json:async()=>({message:'Network error'})});const form=f.w.document.querySelector('.arrow-os-task-form');form.querySelector('input').value='Keep my draft';form.dispatchEvent(new f.w.Event('submit',{bubbles:true,cancelable:true}));await delay(30);assert.equal(form.querySelector('input').value,'Keep my draft');assert.equal(form.querySelector('button').disabled,false);assert.match(f.w.document.querySelector('[role="alert"]').textContent,/Network error/);}finally{f.close();}
+});
+test('settings exposes account, notification, help and legal destinations in beta',async()=>{
+  const f=await fixture('orbit','','enabled','https://link9060.github.io/Resonant-Relay/arrow/orbit/');try{f.w.ArrowOS.openPanel('settings','orbit');const links=[...f.w.document.querySelectorAll('.arrow-os-settings-actions a')].map(a=>a.href);for(const path of ['profile/','profile/#notifications','help/','privacy/','terms/'])assert.ok(links.some(href=>href.endsWith('/Resonant-Relay/'+path)),path);}finally{f.close();}
+});

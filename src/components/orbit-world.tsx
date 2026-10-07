@@ -853,7 +853,7 @@ export function OrbitWorld() {
         centerY,
       );
 
-      renderer(ctx, centerX, centerY, width, time, true, {
+      renderer(ctx, centerX, centerY, width, time, document.documentElement.dataset.arrowTheme !== 'light', {
         mx: normalizedX,
         my: normalizedY,
         hover,

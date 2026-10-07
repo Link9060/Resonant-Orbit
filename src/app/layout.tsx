@@ -29,15 +29,15 @@ const arrowShellBase = process.env.NEXT_PUBLIC_ARROW_SHELL_BASE || (configuredBa
 
 export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en">
-      <head>
-        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=beta-repair-1`} />
+    <html lang="en" suppressHydrationWarning>
+      <head><script dangerouslySetInnerHTML={{__html:`(()=>{try{const c=localStorage.getItem('arrow_os_theme_v1')||'system';const t=c==='system'?(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'):c;if(t==='light'||t==='dark'){document.documentElement.dataset.arrowTheme=t;document.documentElement.dataset.theme=t;document.documentElement.classList.toggle('dark',t==='dark');document.documentElement.style.colorScheme=t;}}catch{}})();`}}/>
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=review-20261006`} />
       </head>
       <body>
         {!arrowShellBase.startsWith("/Resonant-Relay/arrow") && <Script src="/arrow-auth-guard.js?v=auth-v2" strategy="beforeInteractive" />}
         {children}
         <Script
-          src={`${arrowShellBase}/arrow-shell.js?v=beta-repair-1`}
+          src={`${arrowShellBase}/arrow-shell.js?v=review-20261006`}
           strategy="afterInteractive"
         />
       </body>
