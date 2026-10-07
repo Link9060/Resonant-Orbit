@@ -1,10 +1,11 @@
 'use client';
+import { resolveArrowHref } from '@/lib/arrow-map';
 import { useEffect, useRef, useState } from 'react';
 type Pin = { number:number; title:string; href:string; anchor:number[] };
 type Next = {title:string;date?:string;time?:string;reason:string;href:string};
 type API = {data:(path:string,options?:{method?:string;body?:unknown})=>Promise<unknown>;nextMove:()=>Promise<{next:Next|null;source:string}>;openPanel:(name:string,module?:string)=>void};
 const anchors = [[-.9,.12,.46],[.12,.96,.35],[.85,-.2,-.48],[-.12,-.95,-.28],[.16,.14,-.98]];
-function navigate(href:string){const os=(window as Window & {ArrowOS?:{navigate?:(href:string,module?:string)=>void}}).ArrowOS;if(os?.navigate)os.navigate(href,'orbit');else location.assign(href);}
+function navigate(href:string){const os=(window as Window & {ArrowOS?:{navigate?:(href:string,module?:string)=>void}}).ArrowOS;if(os?.navigate)os.navigate(href,'orbit');else location.assign(resolveArrowHref(href, location.href));}
 function api() { return (window as Window & {ArrowOS?:API}).ArrowOS; }
 export function OrbitLocations({hidden=false}:{hidden?:boolean}) {
   const [pins,setPins]=useState<Pin[]>([]); const [targets,setTargets]=useState<{id:string;title:string;href:string}[]>([]); const [editing,setEditing]=useState(false);
@@ -79,3 +80,4 @@ export function OrbitLocations({hidden=false}:{hidden?:boolean}) {
   </>;
 }
 function safeHref(value:string) {try{const u=new URL(value,location.origin);return u.origin===location.origin&&/^\/(waypoint|atlas|ravin|relay)\//.test(u.pathname)?u.pathname+u.search+u.hash:null;}catch{return null;}}
+

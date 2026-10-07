@@ -339,3 +339,27 @@ test('hover tray survives the gap and cancels pending closure on reentry',async(
 test('Escape closes an open tray and focuses its trigger before any center navigation',async()=>{
  const f=await fixture('relay','','enabled','https://enterarrow.com/relay/');try{const root=f.w.document.querySelector('.arrow-os-root');root.dispatchEvent(new f.w.MouseEvent('mouseenter'));f.w.document.body.dispatchEvent(new f.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));assert.equal(root.dataset.open,'false');assert.ok(root.contains(f.w.document.activeElement));assert.equal(f.w.document.querySelector('.arrow-os-handoff'),null);}finally{f.close();}
 });
+
+
+test('shared shell cannot restore a session after sign-out during refresh',async()=>{
+  const f=await fixture('relay');
+  try {
+    const session=JSON.parse(f.w.localStorage.getItem('sb-cnorozrjugxpanpfmssa-auth-token'));session.expires_at=1;
+    f.w.localStorage.setItem('sb-cnorozrjugxpanpfmssa-auth-token',JSON.stringify(session));
+    let release;const pending=new Promise(resolve=>{release=resolve;});
+    f.w.fetch=async()=>{await pending;return {ok:true,json:async()=>({...session,access_token:'fresh',refresh_token:'rotated'})};};
+    const request=f.w.ArrowOS.data('/rest/v1/notes');
+    f.w.localStorage.removeItem('sb-cnorozrjugxpanpfmssa-auth-token');release();
+    await assert.rejects(request,/account changed/);assert.equal(f.w.localStorage.getItem('sb-cnorozrjugxpanpfmssa-auth-token'),null);
+  }finally{f.close();}
+});
+test('shared shell discards a late private-data response after account switching',async()=>{
+  const f=await fixture('relay');
+  try {
+    let release;const pending=new Promise(resolve=>{release=resolve;});
+    f.w.fetch=async()=>{await pending;return {ok:true,status:200,text:async()=> '[{"title":"private"}]'};};
+    const request=f.w.ArrowOS.data('/rest/v1/notes');
+    f.w.localStorage.removeItem('sb-cnorozrjugxpanpfmssa-auth-token');release();
+    await assert.rejects(request,/account changed/);
+  }finally{f.close();}
+});

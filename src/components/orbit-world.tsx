@@ -3,6 +3,7 @@ import { OrbitLocations } from './orbit-locations';
 
 import {
   ARROW_DESTINATIONS,
+  resolveArrowHref,
   ARROW_DESTINATION_BY_ID,
   readIncomingArrowSource,
   readOrbitFocusTarget,
@@ -1428,7 +1429,7 @@ export function OrbitWorld() {
     if (!destination.href) return;
 
     const resolve=(window as Window & {ArrowOS?:{resolveHref?:(href:string)=>string}}).ArrowOS?.resolveHref;
-    const url = new URL(resolve?resolve(destination.href):destination.href, window.location.origin);
+    const url = new URL(resolve?resolve(destination.href):resolveArrowHref(destination.href, window.location.href), window.location.origin);
     url.searchParams.set('from', 'orbit');
     window.location.assign(url.toString());
   };
@@ -1663,7 +1664,7 @@ export function OrbitWorld() {
   ) => {
     const destination = destinationIndex.get(id);
     if (!destination || !destinationEnabled(destination) || !destination.href) return;
-    const url = new URL(destination.href);
+    const url = new URL(resolveArrowHref(destination.href, window.location.href));
     url.searchParams.set('from', 'orbit');
     Object.entries(params ?? {}).forEach(([key, value]) => {
       if (value) url.searchParams.set(key, value);
@@ -1673,7 +1674,7 @@ export function OrbitWorld() {
 
   const quickCapture = (text?: string) => {
     if (relayOnlyAccess) return;
-    const url = new URL(WAYPOINT_URL);
+    const url = new URL(resolveArrowHref(WAYPOINT_URL, window.location.href));
     url.searchParams.set('from', 'orbit');
     url.searchParams.set('tab', 'dump');
     if (text) {
@@ -2453,3 +2454,4 @@ export function OrbitWorld() {
     </div>
   );
 }
+

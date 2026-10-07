@@ -82,3 +82,18 @@ export function readOrbitFocusTarget(search: string) {
   const target = new URLSearchParams(search).get('focus');
   return isArrowDestinationId(target) ? target : null;
 }
+
+
+/** Resolve module links even before the shared shell has initialized. */
+export function resolveArrowHref(href: string, currentHref: string) {
+  const current = new URL(currentHref);
+  const target = new URL(href, current.origin);
+  if (current.hostname === 'link9060.github.io' && current.pathname.startsWith('/Resonant-Relay/')) {
+    if (target.origin === current.origin && /^\/(orbit|relay|atlas|ravin|waypoint)(\/|$)/.test(target.pathname)) {
+      target.pathname = target.pathname.startsWith('/relay')
+        ? '/Resonant-Relay' + target.pathname.slice('/relay'.length)
+        : '/Resonant-Relay/arrow' + target.pathname;
+    }
+  }
+  return target.toString();
+}
