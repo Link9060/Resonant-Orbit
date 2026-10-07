@@ -21,6 +21,8 @@ export type CloudMotion = {
   pitch?: number;
   roll?: number;
   reduceMotion?: boolean;
+  collapse?: number;
+  entertainment?: boolean;
 };
 
 type SpherePoint = {
@@ -166,6 +168,7 @@ export function createCloudRenderer(compact = false, options: ParticleOptions = 
     const opacity = clamp01(motion.alpha ?? 1);
     const loadingMix = smooth01(motion.loadingMix ?? 0);
     const reduceMotion = motion.reduceMotion ?? false;
+    const collapse = clamp01(motion.collapse ?? 0);
 
     const transform = ctx.getTransform();
     const viewportHeight = ctx.canvas.height / Math.max(1, transform.d);
@@ -196,7 +199,7 @@ export function createCloudRenderer(compact = false, options: ParticleOptions = 
           : Math.sin(time * 0.2 + point.phase) * 0.0018;
 
       const pulse = impulse * (point.layer === 4 ? 0.048 + point.spark * 0.03 : 0.017);
-      const wobble = 1 + cloudDrift + pulse;
+      const wobble = (1 + cloudDrift + pulse) * (1 - collapse * .995);
       const px = point.x * wobble;
       const py = point.y * wobble;
       const pz = point.z * wobble;
@@ -251,7 +254,10 @@ export function createCloudRenderer(compact = false, options: ParticleOptions = 
         point.grain * size * (0.9 + rim * 0.26 + front * 0.12 + point.spark * 0.45),
       );
 
-      ctx.globalAlpha = Math.min(0.99, alpha + interaction * 0.22) * opacity;
+      if (motion.entertainment) {
+        ctx.fillStyle = ['#c4b5fd', '#67e8f9', '#a5b4fc', '#f9a8d4', '#fcd34d'][point.layer];
+      }
+      ctx.globalAlpha = Math.min(0.99, alpha + interaction * 0.22) * opacity * (1 - collapse * .88);
       ctx.fillRect(sx - grain / 2, sy - grain / 2, grain, grain);
     }
 

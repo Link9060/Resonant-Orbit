@@ -7,20 +7,20 @@
 }
 
 .world-shell.entertainment-mode .orbit-link {
-  stroke: rgba(255,255,255,.2);
+  stroke: rgb(var(--ui-fg) / .2);
   stroke-dasharray: 2 7;
 }
 
 .world-shell.entertainment-mode .destination-node .node-landmark {
-  border-color: rgba(255,255,255,.38);
+  border-color: rgb(var(--ui-fg) / .38);
   background: rgba(14,14,14,.9);
   box-shadow: 0 0 0 1px rgba(255,255,255,.04), 0 0 24px rgba(255,255,255,.08);
 }
 
 .world-shell.entertainment-mode .destination-node:hover .node-landmark,
 .world-shell.entertainment-mode .destination-node:focus-visible .node-landmark {
-  background: #f3f3f3;
-  color: #090909;
+  background: rgb(var(--ui-contrast) / 1);
+  color: var(--ui-on-contrast);
   box-shadow: 0 0 42px rgba(255,255,255,.28);
 }
 
@@ -42,7 +42,7 @@
 
 .entertainment-copy .eyebrow {
   margin: 0 0 10px;
-  color: #8f8f8f;
+  color: var(--ui-muted);
   font-size: 9px;
   letter-spacing: .2em;
   text-transform: uppercase;
@@ -64,7 +64,7 @@
 .entertainment-copy > p:last-child {
   max-width: 340px;
   margin: 18px 0 0;
-  color: #9d9d9d;
+  color: var(--ui-muted);
   font-size: 13px;
   line-height: 1.65;
 }
@@ -81,9 +81,9 @@
   top: 50%;
   transform: translate(-50%,-50%);
   padding: 14px 18px;
-  color: #f6f6f6;
+  color: rgb(var(--ui-fg) / 1);
   background: rgba(0,0,0,.9);
-  border: 1px solid rgba(255,255,255,.14);
+  border: 1px solid rgb(var(--ui-fg) / .14);
   font-size: clamp(12px, 1.3vw, 17px);
   font-weight: 650;
   letter-spacing: .18em;
@@ -118,8 +118,8 @@
   width: min(900px, 100%);
   max-height: min(760px, calc(100dvh - 110px));
   overflow: auto;
-  background: #070707;
-  border: 1px solid rgba(255,255,255,.16);
+  background: rgb(var(--ui-surface) / 1);
+  border: 1px solid rgb(var(--ui-fg) / .16);
   box-shadow: 0 24px 100px rgba(0,0,0,.6);
 }
 
@@ -134,7 +134,7 @@
 
 .ent-overlay-header p {
   margin: 0 0 8px;
-  color: #858585;
+  color: var(--ui-muted);
   font-size: 9px;
   letter-spacing: .18em;
 }
@@ -150,17 +150,17 @@
 .ent-overlay-header > div > span {
   display: block;
   margin-top: 10px;
-  color: #a8a8a8;
+  color: var(--ui-muted);
   font-size: 13px;
 }
 
 .ent-close {
   flex: 0 0 auto;
-  width: 42px;
-  height: 42px;
-  border: 1px solid rgba(255,255,255,.14);
-  background: #0d0d0d;
-  color: #ddd;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgb(var(--ui-fg) / .14);
+  background: rgb(var(--ui-surface) / 1);
+  color: rgb(var(--ui-fg) / 1);
   font-size: 26px;
   line-height: 1;
   cursor: pointer;
@@ -168,8 +168,8 @@
 
 .ent-close:hover,
 .ent-close:focus-visible {
-  background: #f2f2f2;
-  color: #090909;
+  background: rgb(var(--ui-contrast) / 1);
+  color: var(--ui-on-contrast);
 }
 
 .ent-game-body {
@@ -185,20 +185,20 @@
 
 .ent-game-hud span {
   padding: 7px 9px;
-  border: 1px solid rgba(255,255,255,.11);
-  color: #7e7e7e;
+  border: 1px solid rgb(var(--ui-fg) / .11);
+  color: var(--ui-muted);
   font-size: 9px;
   letter-spacing: .14em;
 }
 
 .ent-game-hud b {
-  color: #f0f0f0;
+  color: rgb(var(--ui-fg) / 1);
   font-weight: 700;
 }
 
 .ent-game-help {
   margin: 14px 0 0;
-  color: #868686;
+  color: var(--ui-muted);
   font-size: 11px;
   line-height: 1.55;
 }
@@ -212,9 +212,9 @@
 .ent-game-actions button {
   min-width: 170px;
   min-height: 44px;
-  border: 1px solid rgba(255,255,255,.2);
-  background: #ececec;
-  color: #090909;
+  border: 1px solid rgb(var(--ui-fg) / .2);
+  background: rgb(var(--ui-contrast) / 1);
+  color: var(--ui-on-contrast);
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .13em;
@@ -227,7 +227,7 @@
   gap: 20px;
   padding: 14px 26px;
   border-top: 1px solid rgba(255,255,255,.08);
-  color: #656565;
+  color: var(--ui-muted);
   font-size: 8px;
   letter-spacing: .14em;
 }
@@ -235,7 +235,7 @@
 /* Flight */
 .flight-field {
   position: relative;
-  height: min(350px, 43vh);
+  height: min(350px, 43dvh);
   min-height: 260px;
   overflow: hidden;
   border: 1px solid rgba(255,255,255,.12);
@@ -309,7 +309,7 @@
   width: 92px;
   height: 92px;
   transform: translate(-50%,-50%);
-  border: 1px solid rgba(255,255,255,.2);
+  border: 1px solid rgb(var(--ui-fg) / .2);
   border-radius: 50%;
 }
 
@@ -330,7 +330,7 @@
   aspect-ratio: 1;
   margin: 6px auto 0;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255,255,255,.04), transparent 58%);
+  background: radial-gradient(circle, rgb(var(--ui-fg) / .04), transparent 58%);
 }
 
 .orbit-safe-band {
@@ -340,7 +340,7 @@
   width: 62%;
   height: 62%;
   transform: translate(-50%,-50%);
-  border: 16px solid rgba(255,255,255,.08);
+  border: 16px solid rgb(var(--ui-fg) / .08);
   border-radius: 50%;
   box-shadow: inset 0 0 0 1px rgba(255,255,255,.12), 0 0 0 1px rgba(255,255,255,.08);
 }
@@ -350,7 +350,7 @@
   left: 50%;
   top: 50%;
   transform: translate(-50%,-50%);
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
   filter: drop-shadow(0 0 16px rgba(255,255,255,.25));
 }
 
@@ -361,7 +361,7 @@
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: #fff;
+  background: rgb(var(--ui-contrast) / 1);
   box-shadow: 0 0 18px rgba(255,255,255,.65);
   transform:
     translate(-50%,-50%)
@@ -375,14 +375,14 @@
   left: 50%;
   bottom: 8%;
   transform: translateX(-50%);
-  color: #777;
+  color: var(--ui-muted);
   font-size: 9px;
   letter-spacing: .16em;
   white-space: nowrap;
 }
 
 .orbit-game-field.is-lost .orbit-game-dot {
-  background: #777;
+  background: rgb(var(--ui-fg) / .12);
   box-shadow: none;
 }
 
@@ -395,8 +395,8 @@
   flex-wrap: wrap;
   gap: 14px;
   padding: 28px 18px;
-  border: 1px solid rgba(255,255,255,.1);
-  background: #030303;
+  border: 1px solid rgb(var(--ui-fg) / .1);
+  background: rgb(var(--ui-surface) / 1);
 }
 
 .cipher-display span {
@@ -404,19 +404,19 @@
   place-items: center;
   width: 54px;
   height: 62px;
-  border: 1px solid rgba(255,255,255,.13);
-  color: #f5f5f5;
+  border: 1px solid rgb(var(--ui-fg) / .13);
+  color: rgb(var(--ui-fg) / 1);
   font-size: 27px;
   font-weight: 300;
 }
 
 .cipher-display span.is-filled {
-  background: rgba(255,255,255,.07);
+  background: rgb(var(--ui-fg) / .07);
 }
 
 .cipher-feedback {
   margin: 13px 0;
-  color: #8c8c8c;
+  color: var(--ui-muted);
   text-align: center;
   font-size: 9px;
   letter-spacing: .17em;
@@ -430,17 +430,17 @@
 
 .cipher-pad button {
   min-height: 58px;
-  border: 1px solid rgba(255,255,255,.13);
-  background: #0b0b0b;
-  color: #eaeaea;
+  border: 1px solid rgb(var(--ui-fg) / .13);
+  background: rgb(var(--ui-surface) / 1);
+  color: rgb(var(--ui-fg) / 1);
   font-size: 22px;
   cursor: pointer;
 }
 
 .cipher-pad button:hover:not(:disabled),
 .cipher-pad button:focus-visible:not(:disabled) {
-  background: #ededed;
-  color: #0a0a0a;
+  background: rgb(var(--ui-contrast) / 1);
+  color: var(--ui-on-contrast);
 }
 
 .cipher-pad button:disabled {
@@ -449,15 +449,15 @@
 
 /* Surge */
 .surge-pad {
-  min-height: min(360px, 44vh);
+  min-height: min(360px, 44dvh);
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 14px;
-  border: 1px solid rgba(255,255,255,.12);
-  background: #030303;
-  color: #858585;
+  border: 1px solid rgb(var(--ui-fg) / .12);
+  background: rgb(var(--ui-surface) / 1);
+  color: var(--ui-muted);
   cursor: pointer;
   outline: none;
   user-select: none;
@@ -479,8 +479,8 @@
 }
 
 .surge-pad.is-go {
-  background: #f3f3f3;
-  color: #090909;
+  background: rgb(var(--ui-contrast) / 1);
+  color: var(--ui-on-contrast);
 }
 
 .surge-pad.is-go svg {
@@ -489,28 +489,28 @@
 }
 
 .surge-pad.is-early {
-  color: #b9b9b9;
-  background: #101010;
+  color: var(--ui-muted);
+  background: rgb(var(--ui-surface) / 1);
 }
 
 .surge-ravin {
   margin: 14px 0 0;
   text-align: center;
-  color: #b2b2b2;
+  color: var(--ui-muted);
   font-size: 11px;
 }
 
 /* Make the four normal anchors feel like game landmarks without changing Orbit geometry. */
 .entertainment-mode .destination-node .node-code {
-  color: #8b8b8b;
+  color: var(--ui-muted);
 }
 
 .entertainment-mode .destination-node .node-status {
-  color: #777;
+  color: var(--ui-muted);
 }
 
 .entertainment-mode .orbit-shortcuts-label {
-  color: #9a9a9a;
+  color: var(--ui-muted);
 }
 
 @media (max-width: 700px) {

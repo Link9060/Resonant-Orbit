@@ -46,9 +46,10 @@ import {
   ENTERTAINMENT_GAME_BY_SLOT,
   ENTERTAINMENT_GAMES,
   EntertainmentGameIcon,
-  EntertainmentOverlay,
+  EntertainmentPreview,
   type EntertainmentGameId,
 } from '@/components/orbit-entertainment';
+import { entertainmentFrame, ENTERTAINMENT_SWAP_MS, ENTERTAINMENT_DURATION_MS } from '@/lib/entertainment-transition';
 import {
   useEffect,
   useLayoutEffect,
@@ -312,6 +313,13 @@ export function OrbitWorld() {
   const entertainmentModeRef = useRef(false);
   const activeGameRef = useRef<EntertainmentGameId | null>(null);
   const entertainmentTimerRef = useRef<number | null>(null);
+  const entertainmentSwapRef = useRef<number | null>(null);
+  const entertainmentAnimationRef = useRef<{ start: number; entering: boolean } | null>(null);
+  const toggleEntertainmentRef = useRef<() => void>(() => {});
+  const centerClickTimerRef = useRef<number | null>(null);
+  const shipPulseUntilRef = useRef(0);
+  const [shipPulse, setShipPulse] = useState(0);
+  const [commandExpanded, setCommandExpanded] = useState(false);
 
   const nodeRefs = useRef<Partial<Record<Destination['id'], HTMLButtonElement | null>>>({});
   const linkRefs = useRef<Partial<Record<Destination['id'], SVGLineElement | null>>>({});
@@ -466,10 +474,18 @@ export function OrbitWorld() {
     activeGameRef.current = activeGame;
   }, [activeGame, entertainmentMode]);
 
+  useEffect(() => {
+    document.documentElement.dataset.orbitMode = entertainmentTransition !== 'idle' ? 'switching' : entertainmentMode ? 'entertainment' : 'direction';
+    return () => { delete document.documentElement.dataset.orbitMode; };
+  }, [entertainmentMode, entertainmentTransition]);
+
   useEffect(() => () => {
     if (entertainmentTimerRef.current !== null) {
       window.clearTimeout(entertainmentTimerRef.current);
     }
+    if (entertainmentSwapRef.current !== null) window.clearTimeout(entertainmentSwapRef.current);
+    if (centerClickTimerRef.current !== null) window.clearTimeout(centerClickTimerRef.current);
+    entertainmentAnimationRef.current = null;
   }, []);
 
   useEffect(() => {
@@ -660,8 +676,14 @@ export function OrbitWorld() {
       }
 
       if (ui.incomingFrom || ui.travelPhase !== 'idle') return;
+      if (entertainmentAnimationRef.current) return;
 
       if (entertainmentModeRef.current) {
+        if (event.key === 'Escape') {
+          event.preventDefault();
+          toggleEntertainmentRef.current();
+          return;
+        }
         if (event.metaKey || event.ctrlKey || event.altKey || isTyping) return;
 
         if (/^[1-4]$/.test(event.key)) {
@@ -762,10 +784,13 @@ export function OrbitWorld() {
       const rotation = rotationRef.current;
       const ui = uiRef.current;
       const reduced = reducedMotionRef.current;
+      const modeAnimation = entertainmentAnimationRef.current;
+      const modeFrame = modeAnimation ? entertainmentFrame(now - modeAnimation.start) : null;
+      const collapse = reduced ? 0 : modeFrame?.collapse ?? 0;
       const locked =
         ui.travelPhase !== 'idle' ||
         ui.incomingFrom !== null ||
-        ui.navigatorOpen;
+        ui.navigatorOpen || Boolean(modeAnimation);
 
       const idleLowPower =
         !locked &&
@@ -834,15 +859,15 @@ export function OrbitWorld() {
 
       const worldYaw = autoYawRef.current + rotation.yaw;
       const worldPitch =
-        (reduced ? 0 : Math.sin(time * 0.14) * 0.028) +
+        (reduced || modeAnimation ? 0 : Math.sin(time * 0.14) * 0.028) +
         rotation.pitch;
-      const worldRoll = reduced ? 0 : Math.sin(time * 0.09) * 0.016;
+      const worldRoll = reduced || modeAnimation ? 0 : Math.sin(time * 0.09) * 0.016;
 
       const sphereRadius =
         Math.min(width * 0.228, height * 0.258, 292) *
         worldScale;
 
-      drawOrbitSegments(
+      if (!modeAnimation) drawOrbitSegments(
         ctx,
         'back',
         worldYaw,
@@ -853,7 +878,7 @@ export function OrbitWorld() {
         centerY,
       );
 
-      renderer(ctx, centerX, centerY, width, time, document.documentElement.dataset.arrowTheme !== 'light', {
+      renderer(ctx, centerX, centerY, width, modeAnimation ? modeAnimation.start / 1000 : time, Boolean(modeAnimation) || entertainmentModeRef.current || document.documentElement.dataset.arrowTheme !== 'light', {
         mx: normalizedX,
         my: normalizedY,
         hover,
@@ -867,9 +892,11 @@ export function OrbitWorld() {
         pitch: worldPitch,
         roll: worldRoll,
         reduceMotion: reduced,
+        collapse,
+        entertainment: entertainmentModeRef.current,
       });
 
-      drawOrbitSegments(
+      if (!modeAnimation) drawOrbitSegments(
         ctx,
         'front',
         worldYaw,
@@ -981,19 +1008,19 @@ export function OrbitWorld() {
           }
         }
 
-        node.style.setProperty('--node-x', `${projected.x}px`);
-        node.style.setProperty('--node-y', `${projected.y}px`);
+        node.style.setProperty('--node-x', `${projected.x + (centerX - projected.x) * collapse}px`);
+        node.style.setProperty('--node-y', `${projected.y + (centerY - projected.y) * collapse}px`);
         node.style.setProperty(
           '--node-scale',
           (0.84 + projected.depth * 0.22).toFixed(3),
         );
         node.style.setProperty(
           '--node-opacity',
-          (0.035 + frontness * 0.965).toFixed(3),
+          ((0.12 + frontness * 0.88) * (1 - collapse)).toFixed(3),
         );
         node.style.setProperty(
           '--label-opacity',
-          smoothstep(0.4, 0.57, projected.depth).toFixed(3),
+          Math.max(.75, smoothstep(0.35, 0.52, projected.depth)).toFixed(3),
         );
         node.style.zIndex = String(
           ui.travelId === destination.id
@@ -1108,6 +1135,11 @@ export function OrbitWorld() {
       };
 
       if (craftRef.current) {
+        const ship = craftRef.current.querySelector('button');
+        if (ship) {
+          ship.disabled = locked || craftOcclusion < .18;
+          ship.tabIndex = ship.disabled ? -1 : 0;
+        }
         craftRef.current.style.setProperty('--craft-x', `${craftPoint.x}px`);
         craftRef.current.style.setProperty('--craft-y', `${craftPoint.y}px`);
         craftRef.current.style.setProperty(
@@ -1122,6 +1154,14 @@ export function OrbitWorld() {
           '--craft-opacity',
           ((0.38 + craftPoint.depth * 0.62) * craftOcclusion).toFixed(3),
         );
+      }
+      if (!reduced && now < shipPulseUntilRef.current && !locked && !behindDisc) {
+        const pulse = 1 - (shipPulseUntilRef.current - now) / 700;
+        ctx.beginPath();
+        ctx.arc(craftPoint.x, craftPoint.y, 9 + pulse * 27, 0, Math.PI * 2);
+        ctx.strokeStyle = document.documentElement.dataset.arrowTheme === 'light' && !entertainmentModeRef.current ? `rgba(23,28,38,${(1-pulse)*.45})` : `rgba(255,255,255,${(1-pulse)*.45})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
       sampleFrames += 1;
@@ -1518,7 +1558,8 @@ export function OrbitWorld() {
   const toggleEntertainmentMode = () => {
     if (introMode !== 'command' || interactionLocked) return;
 
-    const entering = !entertainmentMode;
+    if (entertainmentAnimationRef.current) return;
+    const entering = !entertainmentModeRef.current;
     if (entertainmentTimerRef.current !== null) {
       window.clearTimeout(entertainmentTimerRef.current);
     }
@@ -1527,16 +1568,25 @@ export function OrbitWorld() {
     setNavigatorQuery('');
     setSelectedId('orbit');
     setEntertainmentTransition(entering ? 'entering' : 'leaving');
-    setEntertainmentMode(entering);
-    entertainmentModeRef.current = entering;
-    impulseRef.current = 1.18;
+    rotationRef.current.velocityYaw = 0;
+    rotationRef.current.velocityPitch = 0;
+    entertainmentAnimationRef.current = { start: performance.now(), entering };
+    const swap = () => {
+      setEntertainmentMode(entering);
+      entertainmentModeRef.current = entering;
+      entertainmentSwapRef.current = null;
+    };
+    entertainmentSwapRef.current = window.setTimeout(swap, reducedMotionRef.current ? 20 : ENTERTAINMENT_SWAP_MS);
 
     entertainmentTimerRef.current = window.setTimeout(() => {
       setEntertainmentTransition('idle');
       entertainmentTimerRef.current = null;
+      entertainmentAnimationRef.current = null;
       impulseRef.current = 0.48;
-    }, reducedMotionRef.current ? 40 : 880);
+      coreRef.current?.focus({ preventScroll: true });
+    }, reducedMotionRef.current ? 80 : ENTERTAINMENT_DURATION_MS);
   };
+  toggleEntertainmentRef.current = toggleEntertainmentMode;
 
   const returnToOrbit = beginReturnToOrbit;
 
@@ -1885,6 +1935,7 @@ export function OrbitWorld() {
         prefersReducedMotion ? 'reduce-motion' : '',
         `intro-${introMode}`,
         `render-${renderProfile}`,
+        commandExpanded ? 'command-expanded' : '',
       ].filter(Boolean).join(' ')}
       data-travel-destination={travelId ?? undefined}
       data-flight-behind={flightPath.behind ? 'true' : 'false'}
@@ -1904,7 +1955,10 @@ export function OrbitWorld() {
         aria-hidden={navigatorOpen ? true : undefined}
         inert={navigatorOpen ? true : undefined}
       >
-        <div ref={stageCopyRef} className="orbit-left-zone">
+        <button className="orbit-command-toggle" type="button" aria-expanded={commandExpanded} aria-controls="orbit-command-home" onClick={() => setCommandExpanded(value => !value)}>
+          <CommandIcon size={16} /> {commandExpanded ? 'Close command' : 'Command'}
+        </button>
+        <div ref={stageCopyRef} id="orbit-command-home" className="orbit-left-zone">
           {introMode !== 'loading' && introMode !== 'command' && (
             <section className={`stage-copy orbit-intro-card ${introMode === 'collapsing' ? 'is-collapsing' : ''}`}>
               <p className="eyebrow">CENTRAL WORLD</p>
@@ -1929,7 +1983,8 @@ export function OrbitWorld() {
               <section className="entertainment-copy" aria-label="Orbit entertainment mode">
                 <p className="eyebrow">HIDDEN WORLD / PLAY MODE</p>
                 <h1>Give your life <strong>entertainment.</strong></h1>
-                <p>The same Orbit. Different destinations. Pick a signal and play.</p>
+                <p>A different side of Orbit. The games are being rebuilt.</p>
+                <button type="button" className="entertainment-return" onClick={toggleEntertainmentMode} disabled={interactionLocked}>Back to direction <ArrowLeftIcon size={14} /></button>
               </section>
             ) : (
               <OrbitCommandPanel
@@ -1953,8 +2008,10 @@ export function OrbitWorld() {
         <canvas ref={canvasRef} className="world-canvas" aria-hidden="true" />
 
         {entertainmentTransition !== 'idle' && (
-          <div className="entertainment-switch-message" aria-live="polite">
-            {entertainmentTransition === 'entering' ? 'DIRECTION IS OVERRATED.' : 'ALRIGHT. BACK TO WORK.'}
+          <div className={`entertainment-transition ${entertainmentTransition}`} role="status" aria-label={entertainmentTransition === 'entering' ? 'Switching to entertainment' : 'Returning to direction'}>
+            <div className="entertainment-veil" />
+            <p className="entertainment-beat beat-one" aria-hidden="true">{entertainmentTransition === 'entering' ? 'DIRECTION IS OVERRATED.' : 'ALRIGHT. BACK TO WORK.'}</p>
+            <p className="entertainment-beat beat-two" aria-hidden="true">GIVE YOUR LIFE <strong>{entertainmentTransition === 'entering' ? 'ENTERTAINMENT.' : 'DIRECTION.'}</strong></p>
           </div>
         )}
 
@@ -1970,8 +2027,8 @@ export function OrbitWorld() {
           ))}
         </svg>
 
-        <div ref={craftRef} className="craft-orbit"><button className="orbit-ship-control" type="button" aria-label="Fly the ARROW ship" title="Fly the ARROW ship" onClick={() => { setEntertainmentMode(true); setActiveGame('flight'); }}>
-          <ArrowMarkIcon size={20} /></button>
+        <div ref={craftRef} className="craft-orbit"><button className="orbit-ship-control" type="button" aria-label="Pulse the ARROW ship" disabled={interactionLocked} onPointerDown={event => event.stopPropagation()} onDoubleClick={event => event.stopPropagation()} onClick={event => { event.stopPropagation(); if (interactionLocked) return; shipPulseUntilRef.current = performance.now() + 700; setShipPulse(value => value + 1); impulseRef.current = Math.min(1, impulseRef.current + .25); }}>
+          <span key={shipPulse} className={shipPulse ? 'ship-glyph is-pulsing' : 'ship-glyph'}><ArrowMarkIcon size={22} /></span></button>
         </div>
         <OrbitLocations hidden={entertainmentMode} />
 
@@ -2021,8 +2078,8 @@ export function OrbitWorld() {
           type="button"
           className={`orbit-core-label ${selectedId === 'orbit' ? 'is-active' : ''}`}
           disabled={interactionLocked}
-          onClick={recenterWorld}
-          onDoubleClick={toggleEntertainmentMode}
+          onClick={() => { if (centerClickTimerRef.current !== null) window.clearTimeout(centerClickTimerRef.current); centerClickTimerRef.current = window.setTimeout(() => { centerClickTimerRef.current = null; recenterWorld(); }, 230); }}
+          onDoubleClick={() => { if (centerClickTimerRef.current !== null) window.clearTimeout(centerClickTimerRef.current); centerClickTimerRef.current = null; toggleEntertainmentMode(); }}
         >
           <span className="core-kicker">{entertainmentMode ? 'PLAY MODE' : 'YOU ARE HERE'}</span>
           <span className="core-title">Orbit</span>
@@ -2072,6 +2129,7 @@ export function OrbitWorld() {
                 }}
                 type="button"
                 key={destination.id}
+                data-center={destination.id}
                 className={[
                   'destination-node',
                   !entertainmentMode && selectedId === destination.id ? 'is-selected' : '',
@@ -2081,7 +2139,6 @@ export function OrbitWorld() {
                 onPointerDown={event => {
                   if (entertainmentMode) {
                     event.stopPropagation();
-                    openEntertainmentGame(game.id);
                   }
                 }}
                 onClick={() => entertainmentMode ? openEntertainmentGame(game.id) : focusDestination(destination)}
@@ -2098,9 +2155,8 @@ export function OrbitWorld() {
                   {entertainmentMode ? <EntertainmentGameIcon id={game.id} size={18} /> : <DestinationIcon id={destination.id} size={18} />}
                 </span>
                 <span className="node-copy">
-                  <span className="node-code">{entertainmentMode ? game.code : destination.code}</span>
                   <strong>{entertainmentMode ? game.name : destination.name}</strong>
-                  <span className="node-status">{entertainmentMode ? game.status : destinationStatus[destination.id]}</span>
+                  {entertainmentMode && <span className="node-status">In development</span>}
                 </span>
               </button>
             );
@@ -2120,11 +2176,11 @@ export function OrbitWorld() {
             </span>
           </div>
 
-          <h2>{selected ? selected.name : 'Your ARROW system'}</h2>
+          {selected && <h2>{selected.name}</h2>}
           <p>
             {selected
               ? selected.description
-              : 'Drag the world, choose a landmark, or use Navigator to move through ARROW.'}
+              : 'Choose a center or drag to explore.'}
           </p>
 
           <div className="world-control-row" aria-label="World controls">
@@ -2252,7 +2308,7 @@ export function OrbitWorld() {
       </div>
 
       {activeGame && (
-        <EntertainmentOverlay
+        <EntertainmentPreview
           gameId={activeGame}
           onClose={() => {
             setActiveGame(null);

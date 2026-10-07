@@ -84,6 +84,36 @@ export function EntertainmentGameIcon({
   return <PulseIcon size={size} />;
 }
 
+/** The arcade will be rebuilt; unfinished timer demos are not launched from Orbit. */
+export function EntertainmentPreview({ gameId, onClose }: { gameId: EntertainmentGameId; onClose: () => void }) {
+  const game = ENTERTAINMENT_GAMES.find(item => item.id === gameId) ?? ENTERTAINMENT_GAMES[0];
+  const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const root = rootRef.current;
+    root?.querySelector<HTMLButtonElement>('button')?.focus();
+    const contain = (event: KeyboardEvent) => {
+      if (event.key !== 'Tab' || !root) return;
+      const controls = [...root.querySelectorAll<HTMLButtonElement>('button')];
+      const first = controls[0], last = controls[controls.length - 1];
+      if (event.shiftKey && (document.activeElement === first || !root.contains(document.activeElement))) { event.preventDefault(); last?.focus(); }
+      else if (!event.shiftKey && (document.activeElement === last || !root.contains(document.activeElement))) { event.preventDefault(); first?.focus(); }
+    };
+    document.addEventListener('keydown', contain, true);
+    return () => { document.removeEventListener('keydown', contain, true); if (previous?.isConnected) previous.focus(); };
+  }, []);
+  return <div ref={rootRef} className="ent-preview-backdrop" role="dialog" aria-modal="true" aria-labelledby="ent-preview-title" aria-describedby="ent-preview-description" onPointerDown={event => event.stopPropagation()} onKeyDown={event => { if (event.key === 'Escape') { event.preventDefault(); event.stopPropagation(); onClose(); } }}>
+    <section className="ent-preview-card">
+      <button type="button" className="ent-preview-close" aria-label="Close game preview" onClick={onClose}>×</button>
+      <span className="ent-preview-symbol" aria-hidden="true"><EntertainmentGameIcon id={game.id} size={32} /></span>
+      <p className="eyebrow">IN DEVELOPMENT</p>
+      <h2 id="ent-preview-title">{game.name}</h2>
+      <p id="ent-preview-description">This destination is reserved for a proper game. The early demos are being replaced.</p>
+      <button type="button" className="entertainment-return" onClick={onClose}>Back to entertainment</button>
+    </section>
+  </div>;
+}
+
 function FlightGame({paused}: {paused:boolean}) {
   const [playerY, setPlayerY] = useState(50);
   const [gateY, setGateY] = useState(46);

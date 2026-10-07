@@ -48,7 +48,7 @@ input:focus-visible {
 
 ::selection {
   background: rgb(var(--orbit-fg) / 0.9);
-  color: #050505;
+  color: var(--ui-on-contrast);
 }
 
 .sr-only {
@@ -71,7 +71,7 @@ input:focus-visible {
   overflow: hidden;
   background:
     radial-gradient(circle at 50% 49%, rgb(var(--orbit-fg) / 0.032), transparent 34%),
-    #050505;
+    rgb(var(--ui-surface) / 1);
 }
 
 .orbit-app::before {
@@ -158,7 +158,7 @@ input:focus-visible {
   border: 1px solid var(--line);
   border-radius: 999px;
   background: rgba(7, 7, 7, 0.5);
-  color: rgb(var(--orbit-fg) / 0.42);
+  color: var(--ui-muted);
   backdrop-filter: blur(16px);
   letter-spacing: 0.11em;
 }
@@ -331,7 +331,7 @@ input:focus-visible {
     rotate(var(--craft-rotation, 0deg))
     scale(calc(.76 + var(--craft-depth, .5) * .32));
   opacity: var(--craft-opacity, 0);
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
   filter:
     drop-shadow(0 0 7px rgb(var(--orbit-fg) / 0.62))
     drop-shadow(0 0 16px rgb(var(--orbit-fg) / 0.18));
@@ -370,7 +370,7 @@ input:focus-visible {
 }
 
 .core-kicker {
-  color: rgb(var(--orbit-fg) / 0.34);
+  color: var(--ui-muted);
   font-size: 12px;
   letter-spacing: 0.2em;
   transition: color 180ms ease;
@@ -420,7 +420,7 @@ input:focus-visible {
 
 .orbit-shortcuts-label {
   padding: 0 4px 2px;
-  color: rgb(var(--orbit-fg) / 0.32);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.14em;
@@ -443,7 +443,7 @@ input:focus-visible {
   border: 1px solid transparent;
   border-radius: 9px;
   background: transparent;
-  color: rgb(var(--orbit-fg) / 0.46);
+  color: var(--ui-muted);
   cursor: pointer;
   text-align: left;
   transition:
@@ -558,7 +558,7 @@ input:focus-visible {
   transform: scale(1.08);
   border-color: rgb(var(--orbit-fg) / 0.3);
   background: rgb(var(--orbit-fg) / 0.075);
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
   box-shadow:
     0 0 30px rgb(var(--orbit-fg) / 0.075),
     inset 0 1px rgb(var(--orbit-fg) / 0.08);
@@ -611,7 +611,7 @@ input:focus-visible {
 
 .node-status {
   margin-top: 2px;
-  color: rgb(var(--orbit-fg) / 0.34);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 560;
   letter-spacing: .08em;
@@ -625,7 +625,7 @@ input:focus-visible {
 }
 
 .node-code {
-  color: rgb(var(--orbit-fg) / 0.36);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.14em;
@@ -676,7 +676,7 @@ input:focus-visible {
   align-items: center;
   justify-content: space-between;
   gap: 12px;
-  color: rgb(var(--orbit-fg) / 0.38);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 650;
   letter-spacing: 0.14em;
@@ -684,7 +684,7 @@ input:focus-visible {
 }
 
 .route-state {
-  color: rgb(var(--orbit-fg) / 0.38);
+  color: var(--ui-muted);
 }
 
 .route-state.is-live {
@@ -692,7 +692,7 @@ input:focus-visible {
 }
 
 .route-state.is-staged {
-  color: rgb(var(--orbit-fg) / 0.32);
+  color: var(--ui-muted);
 }
 
 .world-inspector h2 {
@@ -721,14 +721,14 @@ input:focus-visible {
 .world-control-row button,
 .control-hint {
   display: inline-flex;
-  min-height: 30px;
+  min-height: 44px;
   align-items: center;
   gap: 6px;
   padding: 0 8px;
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: rgb(var(--orbit-fg) / 0.46);
+  color: var(--ui-muted);
   font-size: 14px;
   font-weight: 600;
 }
@@ -765,7 +765,7 @@ input:focus-visible {
   padding: 2px 4px;
   border: 1px solid rgb(var(--orbit-fg) / 0.08);
   border-radius: 5px;
-  color: rgb(var(--orbit-fg) / 0.44);
+  color: var(--ui-muted);
   font: inherit;
   font-size: 14px;
 }
@@ -780,7 +780,7 @@ input:focus-visible {
 
 .focus-button {
   display: inline-flex;
-  min-height: 34px;
+  min-height: 44px;
   align-items: center;
   gap: 7px;
   padding: 0 12px;
@@ -801,7 +801,7 @@ input:focus-visible {
 
 .handoff-state {
   max-width: 140px;
-  color: rgb(var(--orbit-fg) / 0.34);
+  color: var(--ui-muted);
   font-size: 12px;
   line-height: 1.35;
   text-align: right;
@@ -815,7 +815,7 @@ input:focus-visible {
   display: flex;
   align-items: center;
   gap: 15px;
-  color: rgb(var(--orbit-fg) / 0.3);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 560;
   letter-spacing: 0.04em;
@@ -851,7 +851,7 @@ input:focus-visible {
   top: 50%;
   display: grid;
   place-items: center;
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
   filter:
     drop-shadow(0 0 8px rgb(var(--orbit-fg) / 0.82))
     drop-shadow(0 0 24px rgb(var(--orbit-fg) / 0.28));
@@ -894,7 +894,7 @@ input:focus-visible {
   height: 44px;
   margin: -22px;
   border-radius: 50%;
-  background: #000;
+  background: rgb(var(--ui-surface) / 1);
   opacity: 0;
   transform:
     translate(var(--flight-target-x), var(--flight-target-y))
@@ -921,7 +921,7 @@ input:focus-visible {
   height: var(--burst-size);
   margin: calc(var(--burst-size) / -2);
   border-radius: 999px;
-  background: #fff;
+  background: rgb(var(--ui-contrast) / 1);
   box-shadow:
     0 0 8px rgb(var(--orbit-fg) / .85),
     0 0 20px rgb(var(--orbit-fg) / .26);
@@ -949,7 +949,7 @@ input:focus-visible {
   height: 3px;
   margin: -1.5px;
   border-radius: 50%;
-  background: #fff;
+  background: rgb(var(--ui-contrast) / 1);
   box-shadow: 0 0 10px rgb(var(--orbit-fg) / 0.72);
   opacity: 0;
 }
@@ -1074,7 +1074,7 @@ input:focus-visible {
   position: relative;
   z-index: 1;
   margin: 0 0 8px;
-  color: rgb(var(--orbit-fg) / 0.4);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 650;
   letter-spacing: .2em;
@@ -1128,7 +1128,7 @@ input:focus-visible {
 .arrival-primary {
   border: 1px solid rgb(var(--orbit-fg) / .1);
   background: rgb(var(--orbit-fg) / .025);
-  color: rgb(var(--orbit-fg) / .34);
+  color: var(--ui-muted);
 }
 
 .arrival-primary:disabled {
@@ -1185,7 +1185,7 @@ input:focus-visible {
   width: 5px;
   height: 5px;
   border-radius: 50%;
-  background: #fff;
+  background: rgb(var(--ui-contrast) / 1);
   box-shadow: 0 0 10px rgb(var(--orbit-fg) / .8);
   animation: travel-status-pulse 760ms ease-in-out infinite alternate;
 }
@@ -1404,7 +1404,7 @@ input:focus-visible {
       transparent 0 3%,
       rgb(var(--orbit-fg) / .12) 9%,
       rgb(var(--orbit-fg) / .88) 24%,
-      #fff 42%,
+      rgb(var(--ui-contrast) / 1) 42%,
       rgb(var(--orbit-fg) / .96) 55%,
       rgb(var(--orbit-fg) / .54) 76%,
       rgb(var(--orbit-fg) / .08) 92%,
@@ -1475,7 +1475,7 @@ input:focus-visible {
   margin-left: calc(min(20vw,238px) / -2);
   margin-top: calc(min(20vw,238px) / -2);
   border-radius: 50%;
-  background: #000;
+  background: rgb(var(--ui-surface) / 1);
   box-shadow:
     0 0 0 2px rgb(var(--orbit-fg) / .26),
     0 0 22px 8px rgb(var(--orbit-fg) / .22),
@@ -1490,7 +1490,7 @@ input:focus-visible {
   margin: -12px;
   display: grid;
   place-items: center;
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
   filter:
     drop-shadow(0 0 8px rgb(var(--orbit-fg) / .82))
     drop-shadow(0 0 22px rgb(var(--orbit-fg) / .3));
@@ -1503,7 +1503,7 @@ input:focus-visible {
   left: 50%;
   bottom: 28px;
   transform: translateX(-50%);
-  color: rgb(var(--orbit-fg) / .42);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 630;
   letter-spacing: .13em;
@@ -1529,7 +1529,7 @@ input:focus-visible {
 }
 
 @keyframes incoming-overlay-release {
-  0%,34% { background: #000; }
+  0%,34% { background: rgb(var(--ui-surface) / 1); }
   68% { background: rgba(0,0,0,.74); }
   100% { background: rgba(0,0,0,0); }
 }
@@ -1660,7 +1660,7 @@ input:focus-visible {
 
 .navigator-heading p {
   margin: 0 0 6px;
-  color: rgb(var(--orbit-fg) / .34);
+  color: var(--ui-muted);
   font-size: 14px;
   font-weight: 650;
   letter-spacing: .17em;
@@ -1675,20 +1675,20 @@ input:focus-visible {
 
 .navigator-close {
   display: grid;
-  width: 34px;
-  height: 34px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 1px solid transparent;
   border-radius: 50%;
   background: transparent;
-  color: rgb(var(--orbit-fg) / .44);
+  color: var(--ui-muted);
   cursor: pointer;
 }
 
 .navigator-close:hover {
   border-color: rgb(var(--orbit-fg) / .08);
   background: rgb(var(--orbit-fg) / .05);
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
 }
 
 .navigator-search {
@@ -1701,7 +1701,7 @@ input:focus-visible {
   border: 1px solid rgb(var(--orbit-fg) / .1);
   border-radius: 13px;
   background: rgb(var(--orbit-fg) / .027);
-  color: rgb(var(--orbit-fg) / .48);
+  color: var(--ui-muted);
 }
 
 .navigator-search:focus-within {
@@ -1721,7 +1721,7 @@ input:focus-visible {
 }
 
 .navigator-search input::placeholder {
-  color: rgb(var(--orbit-fg) / .28);
+  color: var(--ui-muted);
 }
 
 .navigator-search kbd,
@@ -1730,13 +1730,13 @@ input:focus-visible {
   border: 1px solid rgb(var(--orbit-fg) / .09);
   border-radius: 6px;
   background: rgb(var(--orbit-fg) / .025);
-  color: rgb(var(--orbit-fg) / .42);
+  color: var(--ui-muted);
   font: inherit;
   font-size: 14px;
 }
 
 .navigator-results {
-  max-height: min(54vh, 430px);
+  max-height: min(54dvh, 430px);
   overflow-y: auto;
   padding: 4px 8px 8px;
   scrollbar-width: thin;
@@ -1781,7 +1781,7 @@ input:focus-visible {
 }
 
 .navigator-index {
-  color: rgb(var(--orbit-fg) / .3);
+  color: var(--ui-muted);
   font-size: 14px;
   font-weight: 650;
   letter-spacing: .12em;
@@ -1811,7 +1811,7 @@ input:focus-visible {
 
 .navigator-result-copy span,
 .navigator-result-description {
-  color: rgb(var(--orbit-fg) / .38);
+  color: var(--ui-muted);
   font-size: 14px;
 }
 
@@ -1826,7 +1826,7 @@ input:focus-visible {
 
 .navigator-route {
   justify-self: end;
-  color: rgb(var(--orbit-fg) / .34);
+  color: var(--ui-muted);
   font-size: 14px;
   font-weight: 620;
   text-transform: uppercase;
@@ -1838,7 +1838,7 @@ input:focus-visible {
 
 .navigator-empty {
   padding: 30px 18px 36px;
-  color: rgb(var(--orbit-fg) / .38);
+  color: var(--ui-muted);
   font-size: 14px;
   text-align: center;
 }
@@ -1849,7 +1849,7 @@ input:focus-visible {
   gap: 16px;
   padding: 12px 16px 13px;
   border-top: 1px solid rgb(var(--orbit-fg) / .075);
-  color: rgb(var(--orbit-fg) / .32);
+  color: var(--ui-muted);
   font-size: 14px;
 }
 
@@ -1876,8 +1876,8 @@ input:focus-visible {
   inset: 0;
   z-index: 2147483600;
   overflow: hidden;
-  background: #000;
-  color: #fff;
+  background: rgb(var(--ui-surface) / 1);
+  color: rgb(var(--ui-fg) / 1);
   opacity: 1;
   isolation: isolate;
   transition: opacity 620ms ease, visibility 620ms ease;
@@ -1899,13 +1899,13 @@ input:focus-visible {
   border: 0;
   border-radius: 999px;
   background: transparent;
-  color: rgb(var(--orbit-fg) / .46);
+  color: var(--ui-muted);
   cursor: pointer;
   font-size: 12px;
 }
 
 .startup-skip:hover {
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
 }
 
 .startup-trigger {
@@ -1935,7 +1935,7 @@ input:focus-visible {
   position: absolute;
   inset: 2rem;
   border-radius: 999px;
-  background: #fff;
+  background: rgb(var(--ui-contrast) / 1);
   box-shadow: 0 0 32px rgb(var(--orbit-fg) / .82);
 }
 
@@ -1949,7 +1949,7 @@ input:focus-visible {
   top: 5.7rem;
   width: 9rem;
   transform: translateX(-50%);
-  color: rgb(var(--orbit-fg) / .46);
+  color: var(--ui-muted);
   font-size: 12px;
   font-weight: 600;
   letter-spacing: .2em;
@@ -2183,7 +2183,7 @@ input:focus-visible {
   .arrival-landmark {
     width: 82px;
     height: 82px;
-    margin-top: 10vh;
+    margin-top: 10dvh;
   }
 
   .destination-preview h2 {
@@ -2475,8 +2475,8 @@ input:focus-visible {
 .arrow-system-control,
 .arrow-system-settings {
   display: inline-flex;
-  height: 32px;
-  min-height: 32px;
+  height: 44px;
+  min-height: 44px;
   align-items: center;
   justify-content: center;
   gap: 5px;
@@ -2543,7 +2543,7 @@ input:focus-visible {
   }
 
   .arrow-system-control {
-    width: 32px;
+    width: 44px;
     padding: 0;
   }
 }
@@ -2622,7 +2622,7 @@ input:focus-visible {
     max(20px, env(safe-area-inset-left));
   background:
     radial-gradient(circle at 50% 44%, rgb(var(--orbit-fg) / .045), transparent 30%),
-    #050505;
+    rgb(var(--ui-surface) / 1);
 }
 
 .arrow-auth-gate::before {
@@ -2670,7 +2670,7 @@ input:focus-visible {
 .arrow-auth-brand p,
 .arrow-auth-kicker {
   margin: 0;
-  color: rgb(var(--orbit-fg) / .35);
+  color: var(--ui-muted);
   font-size: 8px;
   font-weight: 700;
   letter-spacing: .18em;
@@ -2708,7 +2708,7 @@ input:focus-visible {
   align-items: center;
   gap: 10px;
   margin-top: 25px;
-  color: rgb(var(--orbit-fg) / .45);
+  color: var(--ui-muted);
   font-size: 11px;
 }
 
@@ -2716,7 +2716,7 @@ input:focus-visible {
   width: 8px;
   height: 8px;
   border-radius: 50%;
-  background: #fff;
+  background: rgb(var(--ui-contrast) / 1);
   box-shadow: 0 0 18px rgb(var(--orbit-fg) / .45);
   animation: arrow-auth-pulse 1.1s ease-in-out infinite alternate;
 }
@@ -2739,7 +2739,7 @@ input:focus-visible {
   margin-top: 25px;
   border: 1px solid rgb(var(--orbit-fg) / .13);
   background: rgb(var(--orbit-fg) / .035);
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
 }
 
 .arrow-auth-google:hover {
@@ -2752,7 +2752,7 @@ input:focus-visible {
   align-items: center;
   gap: 10px;
   margin: 15px 0;
-  color: rgb(var(--orbit-fg) / .28);
+  color: var(--ui-muted);
   font-size: 9px;
 }
 
@@ -2772,7 +2772,7 @@ input:focus-visible {
 }
 
 .arrow-auth-form label {
-  color: rgb(var(--orbit-fg) / .45);
+  color: var(--ui-muted);
   font-size: 10px;
   font-weight: 600;
 }
@@ -2784,22 +2784,22 @@ input:focus-visible {
   border-radius: 11px;
   background: rgb(var(--orbit-fg) / .035);
   padding: 0 13px;
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
   font-size: 13px;
 }
 
 .arrow-auth-form input::placeholder {
-  color: rgb(var(--orbit-fg) / .25);
+  color: var(--ui-muted);
 }
 
 .arrow-auth-form button {
-  border: 1px solid #fff;
-  background: #f7f7f5;
-  color: #080808;
+  border: 1px solid rgb(var(--ui-fg) / .18);
+  background: rgb(var(--ui-contrast) / 1);
+  color: var(--ui-on-contrast);
 }
 
 .arrow-auth-form button:hover {
-  background: #fff;
+  background: rgb(var(--ui-contrast) / 1);
 }
 
 .arrow-auth-google:disabled,
@@ -2833,7 +2833,7 @@ input:focus-visible {
 
 .arrow-auth-note span,
 .arrow-auth-legal {
-  color: rgb(var(--orbit-fg) / .36);
+  color: var(--ui-muted);
 }
 
 .arrow-auth-legal {
@@ -3021,8 +3021,8 @@ input:focus-visible {
   height: 19px;
   place-items: center;
   border-radius: 50%;
-  background: #f5f5f5;
-  color: #090909;
+  background: rgb(var(--ui-contrast) / 1);
+  color: var(--ui-on-contrast);
   font-size: 11px;
   font-weight: 800;
 }
@@ -3032,7 +3032,7 @@ input:focus-visible {
   transform: translateY(-1px);
   border-color: rgb(var(--orbit-fg) / .28);
   background: rgb(var(--orbit-fg) / .08);
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
 }
 
 .orbit-intro-enter:disabled {
@@ -3090,7 +3090,7 @@ input:focus-visible {
 .command-info-card > span,
 .command-system-card > div > span {
   margin: 0;
-  color: rgb(var(--orbit-fg) / .31);
+  color: var(--ui-muted);
   font-size: 8px;
   font-weight: 700;
   letter-spacing: .17em;
@@ -3110,7 +3110,7 @@ input:focus-visible {
   align-items: center;
   gap: 6px;
   padding-top: 5px;
-  color: rgb(var(--orbit-fg) / .34);
+  color: var(--ui-muted);
   font-size: 8px;
   font-weight: 600;
   white-space: nowrap;
@@ -3136,7 +3136,7 @@ input:focus-visible {
   border: 1px solid transparent;
   border-radius: 8px;
   background: transparent;
-  color: rgb(var(--orbit-fg) / .42);
+  color: var(--ui-muted);
   cursor: pointer;
   font-size: 9px;
 }
@@ -3145,7 +3145,7 @@ input:focus-visible {
 .command-back:focus-visible {
   border-color: rgb(var(--orbit-fg) / .08);
   background: rgb(var(--orbit-fg) / .04);
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
 }
 
 .command-account-strip {
@@ -3209,7 +3209,7 @@ input:focus-visible {
 .command-info-card small,
 .command-recent small {
   overflow: hidden;
-  color: rgb(var(--orbit-fg) / .34);
+  color: var(--ui-muted);
   font-size: 8px;
   line-height: 1.35;
   text-overflow: ellipsis;
@@ -3225,7 +3225,7 @@ input:focus-visible {
   border: 1px solid rgb(var(--orbit-fg) / .11);
   border-radius: 12px;
   background: rgb(var(--orbit-fg) / .028);
-  color: rgb(var(--orbit-fg) / .38);
+  color: var(--ui-muted);
   box-shadow: inset 0 1px rgb(var(--orbit-fg) / .02);
   transition: border-color 150ms ease, background 150ms ease;
 }
@@ -3247,13 +3247,13 @@ input:focus-visible {
 }
 
 .command-entry input::placeholder {
-  color: rgb(var(--orbit-fg) / .27);
+  color: var(--ui-muted);
 }
 
 .command-entry button {
   display: grid;
-  width: 28px;
-  height: 28px;
+  width: 44px;
+  height: 44px;
   place-items: center;
   border: 1px solid rgb(var(--orbit-fg) / .08);
   border-radius: 8px;
@@ -3263,7 +3263,7 @@ input:focus-visible {
 }
 
 .command-entry button:hover {
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
   background: rgb(var(--orbit-fg) / .08);
 }
 
@@ -3283,7 +3283,7 @@ input:focus-visible {
 .command-section-title button {
   border: 0;
   background: transparent;
-  color: rgb(var(--orbit-fg) / .28);
+  color: var(--ui-muted);
   cursor: pointer;
   font-size: 8px;
 }
@@ -3311,7 +3311,7 @@ input:focus-visible {
   border: 1px solid rgb(var(--orbit-fg) / .07);
   border-radius: 10px;
   background: rgb(var(--orbit-fg) / .018);
-  color: rgb(var(--orbit-fg) / .48);
+  color: var(--ui-muted);
   cursor: pointer;
   font-size: 8px;
   transition: background 150ms ease, border-color 150ms ease, transform 150ms ease;
@@ -3392,7 +3392,7 @@ input:focus-visible {
 }
 
 .command-recent > button:hover {
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
 }
 
 .command-settings-link {
@@ -3405,7 +3405,7 @@ input:focus-visible {
   padding: 0 3px;
   border: 0;
   background: transparent;
-  color: rgb(var(--orbit-fg) / .34);
+  color: var(--ui-muted);
   cursor: pointer;
   font-size: 9px;
 }
@@ -3453,14 +3453,14 @@ input:focus-visible {
 
 .command-presence-grid button {
   display: flex;
-  min-height: 35px;
+  min-height: 44px;
   align-items: center;
   gap: 7px;
   padding: 0 9px;
   border: 1px solid rgb(var(--orbit-fg) / .07);
   border-radius: 9px;
   background: rgb(var(--orbit-fg) / .015);
-  color: rgb(var(--orbit-fg) / .4);
+  color: var(--ui-muted);
   cursor: pointer;
   font-size: 9px;
 }
@@ -3479,7 +3479,7 @@ input:focus-visible {
 }
 
 .command-presence-grid button.is-active i {
-  background: #fff;
+  background: rgb(var(--ui-contrast) / 1);
   box-shadow: 0 0 9px rgb(var(--orbit-fg) / .4);
 }
 
@@ -3526,7 +3526,7 @@ input:focus-visible {
 }
 
 .command-system-card button {
-  min-height: 29px;
+  min-height: 44px;
   padding: 0 8px;
   border: 1px solid rgb(var(--orbit-fg) / .08);
   border-radius: 8px;
@@ -3538,7 +3538,7 @@ input:focus-visible {
 
 .command-system-card button:hover {
   background: rgb(var(--orbit-fg) / .06);
-  color: #fff;
+  color: rgb(var(--ui-fg) / 1);
 }
 
 .command-system-card.is-restricted {
@@ -3623,14 +3623,14 @@ button.command-connection-row:hover,
 
 .navigator-command-chips button {
   display: inline-flex;
-  min-height: 31px;
+  min-height: 44px;
   align-items: center;
   gap: 6px;
   padding: 0 9px;
   border: 1px solid rgb(var(--orbit-fg) / .075);
   border-radius: 999px;
   background: rgb(var(--orbit-fg) / .022);
-  color: rgb(var(--orbit-fg) / .42);
+  color: var(--ui-muted);
   cursor: pointer;
   font-size: 9px;
 }
@@ -3738,7 +3738,7 @@ button.command-connection-row:hover,
   }
 
   .command-quick-grid button {
-    min-height: 42px;
+    min-height: 44px;
   }
 
   .command-module-list,
@@ -3765,24 +3765,24 @@ button.command-connection-row:hover,
 .world-shell.reduce-motion .orbit-intro-card.is-collapsing {
   animation: none;
 }
-.orbit-extra-location { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; gap:8px; align-items:center; max-width:155px; padding:8px 10px; border:1px solid rgba(180,187,203,.28); background:rgba(14,17,23,.85); color:#f2f3f7; border-radius:12px; cursor:pointer; backdrop-filter:blur(12px); text-align:left; }
-.orbit-extra-location kbd { display:grid; place-items:center; width:24px; height:24px; border:1px solid #ffffff25; border-radius:50%; font-size:14px; flex-shrink:0; }
+.orbit-extra-location { position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); display:flex; gap:8px; align-items:center; max-width:155px; padding:8px 10px; border:1px solid rgba(180,187,203,.28); background:rgba(14,17,23,.85); color:rgb(var(--ui-fg) / 1); border-radius:12px; cursor:pointer; backdrop-filter:blur(12px); text-align:left; }
+.orbit-extra-location kbd { display:grid; place-items:center; width:24px; height:24px; border:1px solid rgb(var(--ui-fg) / .18); border-radius:50%; font-size:14px; flex-shrink:0; }
 .orbit-extra-location strong { font-size:14px; font-weight:500; display:block; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
-.orbit-extra-location small { font-size:12px; display:block; color:#a9afbe; max-width:105px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.orbit-extra-location small { font-size:12px; display:block; color:var(--ui-muted); max-width:105px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
 .orbit-smart-location { border-color:var(--arrow-accent-color,#869bdb); }
 .orbit-location-tools { position:absolute; bottom:14px; left:50%; transform:translateX(-50%); z-index:30; text-align:center; }
-.orbit-location-tools button,.orbit-location-editor button { border:1px solid #ffffff22; border-radius:8px; padding:8px 12px; color:inherit; background:#ffffff0c; cursor:pointer; font-size:14px; }
+.orbit-location-tools button,.orbit-location-editor button { border:1px solid rgb(var(--ui-fg) / .18); border-radius:8px; padding:8px 12px; color:inherit; background:rgb(var(--ui-contrast) / 0.047058823529411764); cursor:pointer; font-size:14px; }
 .orbit-location-tools p { font-size:12px; }
-.orbit-location-editor { position:absolute; z-index:60; right:18px; top:90px; width:min(380px,calc(100% - 36px)); max-height:calc(100% - 120px); overflow:auto; padding:22px; border:1px solid #ffffff24; background:#11141bea; color:#f2f3f7; border-radius:18px; backdrop-filter:blur(24px); }
+.orbit-location-editor { position:absolute; z-index:60; right:18px; top:90px; width:min(380px,calc(100% - 36px)); max-height:calc(100% - 120px); overflow:auto; padding:22px; border:1px solid rgb(var(--ui-fg) / .18); background:rgb(var(--ui-surface) / 0.9176470588235294); color:rgb(var(--ui-fg) / 1); border-radius:18px; backdrop-filter:blur(24px); }
 .orbit-location-editor header { display:flex; justify-content:space-between; align-items:center; }
 .orbit-location-editor h2 { font-size:20px; margin:0; }
-.orbit-location-editor p { color:#abb2c1; font-size:14px; line-height:1.6; }
+.orbit-location-editor p { color:var(--ui-muted); font-size:14px; line-height:1.6; }
 .orbit-location-editor form,.orbit-location-editor label { display:grid; gap:8px; font-size:14px; }
 .orbit-location-editor form { gap:16px; margin-top:16px; }
-.orbit-location-editor input,.orbit-location-editor select { background:#1b202a; color:inherit; border:1px solid #ffffff25; border-radius:8px; padding:12px; width:100%; }
+.orbit-location-editor input,.orbit-location-editor select { background:rgb(var(--ui-surface) / 1); color:inherit; border:1px solid rgb(var(--ui-fg) / .18); border-radius:8px; padding:12px; width:100%; }
 .orbit-pin-row { display:flex; gap:10px; padding:12px 0; align-items:center; }
 .orbit-pin-row span { flex:1; }
-.orbit-ship-control { display:grid; place-items:center; width:44px;height:44px; padding:0; border:1px solid #ffffff25; border-radius:50%; background:#11182770; color:inherit; cursor:pointer; pointer-events:auto; }
+.orbit-ship-control { display:grid; place-items:center; width:44px;height:44px; padding:0; border:1px solid rgb(var(--ui-fg) / .18); border-radius:50%; background:rgb(var(--ui-surface) / 0.4392156862745098); color:inherit; cursor:pointer; pointer-events:auto; }
 .craft-orbit { pointer-events:auto; }
 :root[data-arrow-theme="light"] .orbit-app { background:#edf0f5; color:#171b25; }
 :root[data-arrow-theme="light"] .orbit-command-panel { background:#ffffffed; color:#171b25; border-color:#171b2525; }

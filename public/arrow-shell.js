@@ -423,17 +423,23 @@
       content: root.querySelector('.arrow-os-content'),
       hover: false,
       pinned: false,
+      closeTimer: null,
     };
 
     state.instances.add(instance);
 
     root.addEventListener('mouseenter', () => {
+      if (instance.closeTimer !== null) clearTimeout(instance.closeTimer);
+      instance.closeTimer = null;
       instance.hover = true;
       setOpen(instance, true);
     });
     root.addEventListener('mouseleave', () => {
       instance.hover = false;
-      if (!instance.pinned && !state.activePanel) setOpen(instance, false);
+      instance.closeTimer = setTimeout(() => {
+        instance.closeTimer = null;
+        if (!instance.pinned && !state.activePanel && !instance.hover && !root.contains(document.activeElement)) setOpen(instance, false);
+      }, 180);
     });
     root.addEventListener('focusin', () => setOpen(instance, true));
     root.addEventListener('focusout', () => {
@@ -499,6 +505,7 @@
   }
 
   function setOpen(instance, open) {
+    if (!open && instance.closeTimer !== null) { clearTimeout(instance.closeTimer); instance.closeTimer = null; }
     instance.root.dataset.open = String(open);
     instance.trigger.setAttribute('aria-expanded', String(open));
     instance.trigger.setAttribute('aria-label', open ? 'Close ARROW controls' : 'Open ARROW controls');
@@ -1809,6 +1816,7 @@
   function pruneInstances() {
     state.instances.forEach(instance => {
       if (!document.documentElement.contains(instance.mount)) {
+        if (instance.closeTimer !== null) clearTimeout(instance.closeTimer);
         state.instances.delete(instance);
       }
     });
@@ -1848,6 +1856,16 @@
 
     if (state.activePanel) { event.preventDefault(); event.stopPropagation(); closePanel(); return; }
     if (event.defaultPrevented || (event.target instanceof Element && event.target.closest('input,textarea,select,[contenteditable="true"]'))) return;
+    const openTray = [...state.instances].find(instance => instance.root.dataset.open === 'true');
+    if (openTray) {
+      event.preventDefault();
+      event.stopPropagation();
+      state.instances.forEach(instance => { instance.pinned = false; instance.root.dataset.pinned = 'false'; setOpen(instance, false); });
+      openTray.trigger.focus({ preventScroll: true });
+      // Focusing the trigger opens the tray for keyboard entry; Escape must leave it closed.
+      setOpen(openTray, false);
+      return;
+    }
     const current = [...state.instances][0];
     if (current && current.module !== 'orbit') {
       event.preventDefault();

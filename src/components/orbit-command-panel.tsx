@@ -246,7 +246,6 @@ export function OrbitCommandPanel({
     setCommand('');
   };
 
-  const recentRows = allowedModules.slice(0, 3);
 
   return (
     <aside className="orbit-command-panel" aria-label="ARROW command panel">
@@ -263,7 +262,7 @@ export function OrbitCommandPanel({
           </h2>
         </div>
         {view === 'home' ? (
-          <span className="command-online"><i /> system online</span>
+          <span className="command-online"><i /> {statusSummary.active} centers</span>
         ) : (
           <button
             type="button"
@@ -332,42 +331,8 @@ export function OrbitCommandPanel({
             </div>
           </div>
 
-          <div className="command-section">
-            <div className="command-section-title">
-              <span>SYSTEM</span>
-              <button type="button" onClick={() => setView('system')}>
-                {statusSummary.active} centers
-              </button>
-            </div>
-            <div className="command-module-list">
-              {allowedModules.map(row => (
-                <button
-                  type="button"
-                  className="command-module-row"
-                  key={row.id}
-                  onClick={() => onFocusDestination(row.id)}
-                >
-                  <span className="command-module-icon"><ModuleIcon id={row.id} /></span>
-                  <span className="command-module-copy">
-                    <strong>{row.name}</strong>
-                    <small>{statuses[row.id]}</small>
-                  </span>
-                  <span className="command-status-dot" />
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="command-section command-recent">
-            <div className="command-section-title">
-              <span>RECENT SIGNALS</span>
-            </div>
-            {recentRows.map(row => (
-              <button type="button" key={row.id} onClick={() => onFocusDestination(row.id)}>
-                <span>{row.name}</span>
-                <small>{statuses[row.id]}</small>
-              </button>
-            ))}
+          <div className="command-home-footer">
+            <button type="button" className="command-settings-link" onClick={() => setView('system')}>System · {statusSummary.active} centers</button>
           </div>
 
           <button type="button" className="command-settings-link" onClick={() => setView('settings')}>
@@ -377,7 +342,7 @@ export function OrbitCommandPanel({
         </>
       )}
 
-      {view === 'home' && <div className="command-quick-grid"><button type="button" onClick={()=>openSystemPanel('support')}>ARROW support</button>{staff && <button type="button" onClick={()=>openSystemPanel('moderation')}>Staff control</button>}</div>}
+      {view === 'home' && <div className="command-home-footer"><button type="button" onClick={()=>openSystemPanel('support')}>ARROW support</button>{staff && <button type="button" onClick={()=>openSystemPanel('moderation')}>Staff control</button>}</div>}
       {view === 'profile' && (
         <div className="command-subview">
           <label className="command-field">
