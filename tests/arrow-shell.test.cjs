@@ -4,6 +4,7 @@ const { readFileSync } = require('node:fs');
 const { JSDOM } = require('jsdom');
 const source = readFileSync(process.env.ARROW_SHELL_SOURCE || 'public/arrow-shell.js', 'utf8');
 const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+function openStaffWorkspace(w) { const host=w.document.createElement('main');host.setAttribute('data-arrow-staff-workspace','');w.document.body.append(host);w.ArrowOS.openPanel('moderation','orbit',host); }
 
 test('reset preferences keeps account planning data and explains what it changes',async()=>{
   const f=await fixture('relay');try{
@@ -240,7 +241,7 @@ test('tasks panel reads the canonical Supabase todos table', async () => {
 
 test('Full motion overrides an OS reduced-motion preference',async()=>{const f=await fixture();try{f.w.matchMedia=()=>({matches:true,addEventListener(){}});f.w.ArrowOS.applyMotion('full',true);assert.equal(f.w.document.documentElement.dataset.arrowMotion,'full');f.w.ArrowOS.applyMotion('system',true);assert.equal(f.w.document.documentElement.dataset.arrowMotion,'reduce');}finally{f.close();}});
 test('Support submits a location-scoped request through the existing RPC',async()=>{const f=await fixture('atlas');try{f.w.ArrowOS.openPanel('support','atlas');await delay(30);const form=f.w.document.querySelector('#arrow-support-form');form.querySelector('[name="subject"]').value='Map issue';form.querySelector('[name="description"]').value='Could not zoom';form.dispatchEvent(new f.w.Event('submit',{bubbles:true,cancelable:true}));await delay(30);const call=f.w.__fetchCalls.find(c=>c.url.endsWith('/rpc/submit_staff_request'));assert.ok(call);const body=JSON.parse(call.options.body);assert.equal(body.p_metadata.module,'atlas');assert.equal(body.p_subject,'[atlas] Map issue');}finally{f.close();}});
-test('Nonstaff users cannot see or call account controls',async()=>{const f=await fixture();try{f.w.ArrowOS.openPanel('moderation','orbit');await delay(30);assert.match(f.w.document.querySelector('.arrow-os-panel-body').textContent,/Staff access is required/);assert.ok(!f.w.__fetchCalls.some(c=>c.url.endsWith('/rpc/admin_list_users_v2')));}finally{f.close();}});
+test('Nonstaff users cannot see or call account controls',async()=>{const f=await fixture();try{openStaffWorkspace(f.w);await delay(30);assert.match(f.w.document.querySelector('.arrow-os-panel-body').textContent,/Staff access is required/);assert.ok(!f.w.__fetchCalls.some(c=>c.url.endsWith('/rpc/admin_list_users_v2')));}finally{f.close();}});
 
 test('concurrent shared panels refresh an expired session once',async()=>{
   const f=await fixture();try{
@@ -250,7 +251,7 @@ test('concurrent shared panels refresh an expired session once',async()=>{
   }finally{f.close();}
 });
 test('moderator controls expose project queues without owner account tools',async()=>{
- const f=await fixture();try{f.w.fetch=async(url)=>({ok:true,status:200,text:async()=>String(url).includes('/profiles?')?'[{"role":"moderator","banned_at":null}]':'[]',json:async()=>String(url).includes('/profiles?')?[{role:'moderator',banned_at:null}]:[]});f.w.ArrowOS.openPanel('moderation','orbit');await delay(30);assert.ok(f.w.document.querySelector('[data-queue="reports"]'));assert.ok(f.w.document.querySelector('[data-queue="email"]'));assert.equal(f.w.document.querySelector('[data-queue="users"]'),null);assert.equal(f.w.document.querySelector('[data-queue="audit"]'),null);}finally{f.close();}
+ const f=await fixture();try{f.w.fetch=async(url)=>({ok:true,status:200,text:async()=>String(url).includes('/profiles?')?'[{"role":"moderator","banned_at":null}]':'[]',json:async()=>String(url).includes('/profiles?')?[{role:'moderator',banned_at:null}]:[]});openStaffWorkspace(f.w);await delay(30);assert.ok(f.w.document.querySelector('[data-queue="reports"]'));assert.ok(f.w.document.querySelector('[data-queue="email"]'));assert.equal(f.w.document.querySelector('[data-queue="users"]'),null);assert.equal(f.w.document.querySelector('[data-queue="audit"]'),null);}finally{f.close();}
 });
 
 test('Back restores controls after a center departure and permits another navigation',async()=>{
@@ -282,7 +283,7 @@ test('owner overview renders readable metrics and storage without raw account id
       const data=path.includes('/profiles?')?[{role:'owner'}]:path.includes('owner_dashboard_stats')?{profiles:{total:19,active_7d:5},generated_at:'2026-10-02T00:00:00Z'}:path.includes('owner_storage_overview')?{file_total_bytes:1048576,top_users:[{id:'private-raw-id',display_name:'Test account',file_bytes:1024,total_bytes:2048}]}:[];
       return {ok:true,status:200,json:async()=>data,text:async()=>JSON.stringify(data)};
     };
-    f.w.ArrowOS.openPanel('moderation','orbit');await delay(30);
+    openStaffWorkspace(f.w);await delay(30);
     f.w.document.querySelector('[data-queue="overview"]').click();await delay(30);
     const panel=f.w.document.querySelector('.arrow-os-panel');
     assert.match(panel.textContent,/Active this week/);
@@ -363,3 +364,4 @@ test('shared shell discards a late private-data response after account switching
     await assert.rejects(request,/account changed/);
   }finally{f.close();}
 });
+
