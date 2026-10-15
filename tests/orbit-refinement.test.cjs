@@ -53,3 +53,17 @@ test('ship pulses without starting a game; staged mode swap, previews and Escape
   await fire(1050);await fire(2400);assert.ok(!w.document.querySelector('.world-shell').classList.contains('entertainment-mode'));
  }finally{await act(async()=>root.unmount());dom.window.close();for(const k of keys){if(previous[k])Object.defineProperty(global,k,previous[k]);else delete global[k];}}
 });
+
+test('Orbit staff entry follows experience previews and shared workspace actions use the shared shell',async()=>{
+ const dom=new JSDOM('<div id="root"></div>',{url:'https://example.test/orbit/',pretendToBeVisual:true});const w=dom.window;const keys=['window','document','HTMLElement','Element','navigator','IS_REACT_ACT_ENVIRONMENT'];const previous=Object.fromEntries(keys.map(k=>[k,Object.getOwnPropertyDescriptor(global,k)]));let role='owner';const opened=[];w.matchMedia=()=>({matches:false});w.ArrowOS={staffRole:async()=>role,openPanel:(...args)=>opened.push(args),navigate:(...args)=>opened.push(args)};
+ for(const key of keys)Object.defineProperty(global,key,{configurable:true,value:key==='IS_REACT_ACT_ENVIRONMENT'?true:w[key]});
+ const {createRoot}=require('react-dom/client');const root=createRoot(w.document.getElementById('root'));const {OrbitCommandPanel}=loader({window:w,document:w.document,localStorage:w.localStorage})('src/components/orbit-command-panel.tsx');
+ try{
+  await React.act(async()=>{root.render(React.createElement(OrbitCommandPanel,{statuses:{},relayOnlyAccess:false,onOpenNavigator(){},onFocusDestination(){},onOpenModule(){},onQuickCapture(){},onReplayIntro(){}}));await new Promise(resolve=>setTimeout(resolve,0));});
+  const button=label=>[...w.document.querySelectorAll('button')].find(node=>node.textContent.trim()===label);
+  assert.ok(button('Staff control'));
+  await React.act(async()=>{role='user';w.dispatchEvent(new w.CustomEvent('relay-role-preview-change'));});assert.equal(button('Staff control'),undefined);
+  await React.act(async()=>{role='moderator';w.dispatchEvent(new w.CustomEvent('relay-role-preview-change'));});assert.ok(button('Staff control'));
+  await React.act(async()=>{button('Notes').click();button('To-dos').click();button('Calendar').click();button('Contacts ↗').click();});assert.deepEqual(opened.map(call=>call[0]),['notes','tasks','calendar','/relay/contacts/']);
+ }finally{await React.act(async()=>root.unmount());dom.window.close();for(const key of keys){if(previous[key])Object.defineProperty(global,key,previous[key]);else delete global[key];}}
+});

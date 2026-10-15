@@ -26,6 +26,7 @@ type Presence = 'available' | 'focus' | 'school' | 'away';
 
 type ShellApi = {
   openPanel?: (name: string, module?: string, anchor?: HTMLElement | null) => void;
+  navigate?: (href: string, module?: string) => void;
 };
 
 type OrbitCommandPanelProps = {
@@ -80,7 +81,18 @@ export function OrbitCommandPanel({
   onReplayIntro,
 }: OrbitCommandPanelProps) {
   const [staff, setStaff] = useState(false);
-  useEffect(() => { let stopped=false; const check=async()=> { const os=(window as Window & {ArrowOS?:{staffRole?:()=>Promise<string>}}).ArrowOS; if(!os?.staffRole) { if(!stopped) setTimeout(check,350); return; } try {const role=await os.staffRole();if(!stopped)setStaff(['moderator','admin','owner'].includes(role));}catch{} }; void check();return()=>{stopped=true;}; },[]);
+  useEffect(() => {
+    let stopped=false;
+    let timer: ReturnType<typeof setTimeout> | undefined;
+    const check=async()=> {
+      const os=(window as Window & {ArrowOS?:{staffRole?:()=>Promise<string>}}).ArrowOS;
+      if(!os?.staffRole) { if(!stopped)timer=setTimeout(check,350);return; }
+      try {const role=await os.staffRole();if(!stopped)setStaff(['moderator','admin','owner'].includes(role));}catch{if(!stopped)setStaff(false);}
+    };
+    const onStorage=(event:StorageEvent)=>{if(event.key==='relay-owner-role-preview' || event.key==='sb-cnorozrjugxpanpfmssa-auth-token')void check();};
+    void check();window.addEventListener('relay-role-preview-change',check);window.addEventListener('storage',onStorage);window.addEventListener('focus',check);
+    return()=>{stopped=true;clearTimeout(timer);window.removeEventListener('relay-role-preview-change',check);window.removeEventListener('storage',onStorage);window.removeEventListener('focus',check);};
+  },[]);
   const [view, setView] = useState<CommandView>('home');
   const [command, setCommand] = useState('');
   const [displayName, setDisplayName] = useState('');
@@ -331,6 +343,16 @@ export function OrbitCommandPanel({
             </div>
           </div>
 
+          <div className="command-section">
+            <div className="command-section-title"><span>SHARED WORKSPACE</span></div>
+            <div className="command-quick-grid">
+              <button type="button" onClick={() => openSystemPanel('notes')}><span>Notes</span></button>
+              <button type="button" onClick={() => openSystemPanel('tasks')}><span>To-dos</span></button>
+              <button type="button" onClick={() => openSystemPanel('calendar')}><span>Calendar</span></button>
+              <button type="button" onClick={() => shellApi()?.navigate?.('/relay/contacts/','orbit')}><span>Contacts ↗</span></button>
+            </div>
+          </div>
+
           <div className="command-home-footer">
             <button type="button" className="command-settings-link" onClick={() => setView('system')}>System · {statusSummary.active} centers</button>
           </div>
@@ -374,9 +396,8 @@ export function OrbitCommandPanel({
           <div className="command-info-card">
             <span>ARROW ACCOUNT</span>
             <strong>{relayOnlyAccess ? 'Public Relay access' : 'Universal sign-in active'}</strong>
-            <small>
-              Orbit profile and presence are stored on this device right now. Account cloud sync can replace this local layer when it is connected.
-            </small>
+            <small>Display name and presence here are local Orbit preferences. Manage your shared account in Relay.</small>
+            <button type="button" onClick={() => shellApi()?.navigate?.('/relay/profile/','orbit')}>Manage shared account ↗</button>
           </div>
         </div>
       )}
