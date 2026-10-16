@@ -10,6 +10,32 @@ async function openOrbit(page: import('@playwright/test').Page) {
   await expect(page.locator('.world-shell')).toBeVisible();
 }
 
+test('Orbit hydrates without a React mismatch in full and Relay-only modes', async ({ page }) => {
+  const hydrationErrors: string[] = [];
+  const record = (message: string) => {
+    if (/hydration|React error #418|server rendered HTML|did not match/i.test(message)) {
+      hydrationErrors.push(message);
+    }
+  };
+  page.on('pageerror', error => record(error.message));
+  page.on('console', message => {
+    if (message.type() === 'error') record(message.text());
+  });
+  await page.emulateMedia({ reducedMotion: 'reduce' });
+  await page.addInitScript(() => {
+    localStorage.setItem('arrow-dev-auth-bypass-v1', '1');
+    localStorage.setItem('orbit-startup-seen-v2', '1');
+  });
+
+  await page.goto('/?access=relay-only');
+  await expect(page.locator('.world-shell')).toHaveAttribute('data-access-mode', 'relay-only');
+  await expect(hydrationErrors).toEqual([]);
+
+  await page.goto('/');
+  await expect(page.locator('.world-shell')).toHaveAttribute('data-access-mode', 'full');
+  await expect(hydrationErrors).toEqual([]);
+});
+
 test('Relay public access enters restricted Orbit without a second cross-domain login', async ({ page }) => {
   await page.goto('/?access=relay-only');
 
