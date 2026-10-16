@@ -649,7 +649,7 @@ export function OrbitWorld() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [accessMode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
