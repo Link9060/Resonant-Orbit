@@ -353,12 +353,14 @@ export function OrbitWorld() {
     lastY: 0,
   });
 
-  const [accessMode] = useState<'full' | 'relay-only'>(() => {
-    if (typeof window === 'undefined') return 'full';
-    return new URLSearchParams(window.location.search).get('access') === 'relay-only'
-      ? 'relay-only'
-      : 'full';
-  });
+  // Hydration must begin with identical markup on the server and in the browser.
+  // Start restricted, then resolve the URL after mount to avoid exposing extra
+  // destinations while the access mode is being determined.
+  const [accessMode, setAccessMode] = useState<'full' | 'relay-only'>('relay-only');
+  useEffect(() => {
+    const isRelayOnly = new URLSearchParams(window.location.search).get('access') === 'relay-only';
+    setAccessMode(isRelayOnly ? 'relay-only' : 'full');
+  }, []);
   const relayOnlyAccess = accessMode === 'relay-only';
   const destinationEnabled = (destination: Destination) =>
     !relayOnlyAccess || destination.id === 'relay';
@@ -647,7 +649,7 @@ export function OrbitWorld() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  }, [accessMode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
