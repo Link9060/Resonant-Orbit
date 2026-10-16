@@ -536,9 +536,11 @@ test('Navigator can open Orbit command-center views', async ({ page }) => {
   });
 
   await page.goto('/');
+  await expect(page.locator('.world-shell')).toHaveAttribute('data-access-mode', 'full');
   await page.keyboard.press('Control+K');
 
   const dialog = page.getByRole('dialog', { name: 'Orbit navigator' });
+  await expect(dialog).toBeVisible();
   const search = dialog.getByRole('textbox', { name: 'Search ARROW destinations' });
   await search.fill('profile');
 
@@ -560,7 +562,11 @@ test('Orbit command field is RAVIN-first for natural-language questions', async 
     localStorage.setItem('orbit-command-onboarding-v1', '1');
   });
 
-  await page.route('https://link9060.github.io/Project-R.A.V.I.N.-1.1/**', route => route.abort());
+  // Fulfill the external destination locally so CI validates the URL handoff
+  // without depending on GitHub Pages network access or a failed navigation.
+  await page.route('https://link9060.github.io/Project-R.A.V.I.N.-1.1/**', route =>
+    route.fulfill({ status: 200, contentType: 'text/html', body: '<!doctype html><title>RAVIN test</title>' }),
+  );
 
   await page.goto('/');
 
