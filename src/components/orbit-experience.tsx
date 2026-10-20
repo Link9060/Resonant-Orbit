@@ -77,7 +77,7 @@ export function OrbitExperience({ children }: { children: React.ReactNode }) {
     saveWidgets(next);
   };
   const widget = (id: WidgetId) => {
-    if (id === 'navigation') return <div className="adapt-destination-grid">{ARROW_DESTINATIONS.map(destination => <a key={destination.id} href={destination.href || '#'} aria-disabled={!destination.href} onClick={event => { if (!destination.href) event.preventDefault(); }}><strong>{destination.label}</strong><span>{destination.description}</span></a>)}</div>;
+    if (id === 'navigation') return <div className="adapt-destination-grid">{ARROW_DESTINATIONS.map(destination => <a key={destination.id} href={destination.href || '#'} aria-disabled={!destination.href} onClick={event => { if (!destination.href) event.preventDefault(); }}><strong>{destination.name}</strong><span>{destination.description}</span></a>)}</div>;
     if (id === 'tasks') return <><strong>{tasks.filter(task => !task.done).length} open tasks</strong><ul>{tasks.filter(task => !task.done).slice(0,5).map((task,index) => <li key={String(task.id || index)}>{String(task.text || task.title || 'Task')}</li>)}</ul><button onClick={() => openPanel('tasks')}>Manage tasks</button></>;
     if (id === 'notes') return <><p className="adapt-notes-preview">{notes.trim() || 'No notes yet. Capture an idea in the ARROW panel.'}</p><button onClick={() => openPanel('notes')}>Open notes</button></>;
     if (id === 'calendar') return <><strong>{events.length} saved events</strong><ul>{events.slice(0,4).map((event,index) => <li key={String(event.id || index)}>{String(event.title || 'Event')}</li>)}</ul><button onClick={() => openPanel('calendar')}>Open calendar</button></>;
