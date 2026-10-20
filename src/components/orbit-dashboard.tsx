@@ -279,6 +279,31 @@ export function OrbitDashboard() {
       <div><span className="adapt-eyebrow">ARROW · YOUR HOME SPACE</span><h1>Dashboard</h1><p>A home screen made your way.</p></div>
       <button type="button" className="adapt-edit-button" disabled={!owner || !ready} aria-pressed={editing} onClick={()=>setEditing(value=>!value)}>{editing?'Done':'Customize'}</button>
     </header>
+    <section className="adapt-identity-intro" aria-label="ARROW home identity">
+      <div className="adapt-intro-bloom">
+        <span className="adapt-intro-label">BLOOM / YOUR SPACE</span>
+        <strong>A little room for everything.</strong>
+        <p>Gather your thoughts, plans, and favorite tools in your own colorful corner of ARROW.</p>
+        <span className="adapt-intro-symbol" aria-hidden="true">✿</span>
+      </div>
+      <div className="adapt-intro-haven">
+        <span className="adapt-intro-label">A PLACE TO RETURN TO</span>
+        <strong>Make yourself at home.</strong>
+        <p>Your notes, the things ahead, and what matters today. All in one quiet place.</p>
+        <span className="adapt-intro-symbol" aria-hidden="true">❧</span>
+      </div>
+      <div className="adapt-intro-atelier">
+        <span className="adapt-intro-label">ARROW / THE PERSONAL EDITION</span>
+        <div className="adapt-atelier-hero-line"><strong>Everything, arranged.</strong><span>01 / HOME</span></div>
+        <p>An intentional view of the things shaping your day.</p>
+      </div>
+      <div className="adapt-intro-pulse">
+        <span className="adapt-intro-label">ARROW / LIVE CONTROL</span>
+        <strong>YOUR WORLD.<br/>YOUR RULES.</strong>
+        <p>One workspace. Every mission.</p>
+        <span className="adapt-intro-symbol" aria-hidden="true">↗</span>
+      </div>
+    </section>
     <p role="status" className="adapt-sync-status">{syncMessage}</p>
     {data.errors.length>0 && <p role="status" className="adapt-data-errors">{data.errors.join(' ')}</p>}
     <OrbitWidgetStudio
