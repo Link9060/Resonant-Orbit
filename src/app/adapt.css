@@ -1251,3 +1251,20 @@
     animation:none!important;transition:none!important;
   }
 }
+
+
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .orbit-identity-label {
+  padding:5px 9px;
+  border:1px solid var(--orbit-native-line);
+  background:color-mix(in srgb,var(--orbit-native-panel) 84%,var(--orbit-native-accent));
+  border-radius:9px;
+  color:var(--orbit-native-ink);
+  font-size:10px;
+  font-weight:780;
+  letter-spacing:.10em;
+  text-transform:uppercase;
+}
+.orbit-app[data-orbit-adapt="bloom"] .orbit-identity-label {border-radius:999px;}
+.orbit-app[data-orbit-adapt="haven"] .orbit-identity-label {border-left:3px solid var(--orbit-native-accent);border-radius:4px;}
+.orbit-app[data-orbit-adapt="atelier"] .orbit-identity-label {border-radius:0;border:0;border-bottom:1px solid var(--orbit-native-accent);}
+.orbit-app[data-orbit-adapt="pulse"] .orbit-identity-label {border-radius:3px 11px 3px 11px;border-color:var(--orbit-native-accent);}
