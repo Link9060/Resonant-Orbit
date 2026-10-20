@@ -1,18 +1,19 @@
 'use client';
 
 import {
-  applyDashboardPreset, DEFAULT_DASHBOARD_LAYOUT, DASHBOARD_PRESETS, DASHBOARD_SIZE_PRESETS,
-  applyDashboardSize, normalizeDashboardLayout,
+  applyDashboardPreset, DEFAULT_DASHBOARD_LAYOUT, DASHBOARD_PRESETS, normalizeDashboardLayout,
   type DashboardWidgetId, type DashboardWidgetPreference, type DashboardCustomPreset,
-  type DashboardPresetId, type DashboardWidgetSize,
+  type DashboardPresetId,
 } from '@/lib/dashboard-layout';
+import { packDashboard } from '@/lib/orbit-widget-grid';
+import { OrbitWidgetStudio } from '@/components/orbit-widget-studio';
 import {
   accountId, verified, localLayout, localPresets, writeLocalLayout, writeLocalPresets,
   hydrateAccount, persistLayout, persistPresets, fetchDashboard, emptyDashboard,
   createTask, markTask, createNote, widgetUrl, shell,
   type LiveDashboard, type Task,
 } from '@/lib/orbit-dashboard-sync';
-import { useCallback, useEffect, useRef, useState, type CSSProperties, type FormEvent, type ReactNode } from 'react';
+import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from 'react';
 
 const META: Record<DashboardWidgetId, { title: string; subtitle: string }> = {
   overview: { title: 'Daily overview', subtitle: 'Your day at a glance' },
@@ -37,7 +38,6 @@ const META: Record<DashboardWidgetId, { title: string; subtitle: string }> = {
   askravin: { title: 'RAVIN', subtitle: 'Start an AI conversation' },
 };
 const KEYS = { legacy: 'relay-dashboard-layout-v1', legacyOwner: 'relay-dashboard-custom-presets-owner-v1', weather: 'relay-dashboard-weather-zip-v1' };
-const ALL_SIZES = Object.keys(DASHBOARD_SIZE_PRESETS) as Array<Exclude<DashboardWidgetSize, 'custom'>>;
 const DEFAULT = DEFAULT_DASHBOARD_LAYOUT.map((item) => ({ ...item }));
 
 type Weather = { temp: number; hi: number; lo: number; precip: number; sunrise: string; sunset: string; unit: string; location: string };
@@ -121,7 +121,6 @@ export function OrbitDashboard() {
   const [prompt, setPrompt] = useState('');
   const [focusSeconds, setFocusSeconds] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
-  const dragId = useRef<DashboardWidgetId | null>(null);
   const version = useRef(0);
   const saveTimer = useRef<number | null>(null);
   const weather = useWeather();
@@ -152,7 +151,7 @@ export function OrbitDashboard() {
       try {
         const prefs = await hydrateAccount(owner);
         if (!active || version.current !== token || !verified(owner)) return;
-        setWidgets(prefs.widgets); setPresets(prefs.presets); setSyncMessage('Saved to your ARROW account');
+        setWidgets(packDashboard(prefs.widgets)); setPresets(prefs.presets); setSyncMessage('Saved to your ARROW account');
       } catch {
         if (!active || version.current !== token) return;
         setSyncMessage('Cloud layout unavailable. Edits will be saved on this device.');
@@ -191,7 +190,7 @@ export function OrbitDashboard() {
 
   function updateLayout(next: DashboardWidgetPreference[]) {
     if (!owner || !ready || !verified(owner)) return;
-    const normalized = normalizeDashboardLayout(next);
+    const normalized = packDashboard(normalizeDashboardLayout(next));
     setWidgets(normalized);
     writeLocalLayout(owner, normalized);
     setSyncMessage('Saving dashboard…');
@@ -209,28 +208,7 @@ export function OrbitDashboard() {
     try { await persistPresets(owner, safe); if (verified(owner)) setSyncMessage('Presets saved to your ARROW account'); }
     catch { if (verified(owner)) setSyncMessage('Preset cloud save failed. This device kept your changes.'); }
   }
-  function move(id: DashboardWidgetId, delta: number) {
-    const result = widgets.map((item) => ({ ...item }));
-    const index = result.findIndex((item) => item.id === id);
-    if (index < 0 || index + delta < 0 || index + delta >= result.length) return;
-    [result[index], result[index + delta]] = [result[index + delta], result[index]];
-    updateLayout(result);
-  }
-  function dropOn(target: DashboardWidgetId) {
-    const id = dragId.current;
-    if (!id || id === target) return;
-    dragId.current = null;
-    const next = widgets.map((item) => ({ ...item }));
-    const from = next.findIndex((item) => item.id === id), to = next.findIndex((item) => item.id === target);
-    if (from < 0 || to < 0) return;
-    const [moved] = next.splice(from, 1);
-    next.splice(to, 0, moved);
-    updateLayout(next);
-  }
-  function editWidget(id: DashboardWidgetId, patch: Partial<DashboardWidgetPreference>) {
-    updateLayout(widgets.map((item) => item.id === id ? { ...item, ...patch } : item));
-  }
-  function preset(type: DashboardPresetId) { updateLayout(applyDashboardPreset(widgets, type)); }
+  function preset(type: DashboardPresetId) { updateLayout(packDashboard(applyDashboardPreset(widgets, type))); }
   async function savePreset(e: FormEvent) {
     e.preventDefault();
     if (!presetName.trim()) return;
@@ -293,40 +271,36 @@ export function OrbitDashboard() {
       default: return <p className="adapt-small-muted">This widget is awaiting its integration.</p>;
     }
   }
-  const visible = widgets.filter((item)=>item.visible);
   return <div className="adapt-dashboard-inner">
-    <header className="adapt-dashboard-heading"><div><span className="adapt-eyebrow">YOUR ARROW · WIDGET STUDIO</span><h1>Dashboard</h1><p>Plan, communicate, and create in one place.</p></div><button type="button" className="adapt-edit-button" disabled={!owner || !ready} aria-pressed={editing} onClick={()=>setEditing(v=>!v)}>{editing?'Done editing':'Customize'}</button></header>
+    <header className="adapt-dashboard-heading">
+      <div><span className="adapt-eyebrow">ARROW · YOUR HOME SPACE</span><h1>Dashboard</h1><p>A home screen made your way.</p></div>
+      <button type="button" className="adapt-edit-button" disabled={!owner || !ready} aria-pressed={editing} onClick={()=>setEditing(value=>!value)}>{editing?'Done':'Customize'}</button>
+    </header>
     <p role="status" className="adapt-sync-status">{syncMessage}</p>
     {data.errors.length>0 && <p role="status" className="adapt-data-errors">{data.errors.join(' ')}</p>}
-    <div className="adapt-widget-grid">
-      {visible.map((item)=>{
-        const meta=META[item.id];
-        const style = { '--adapt-cols':item.cols,'--adapt-rows':item.rows } as CSSProperties;
-        return <article key={item.id} className="adapt-widget" style={style}
-          draggable={editing} onDragStart={()=>{dragId.current=item.id;}} onDragOver={e=>{if(editing)e.preventDefault();}} onDrop={e=>{if(editing){e.preventDefault();dropOn(item.id);}}} onDragEnd={()=>{dragId.current=null;}}>
-          <div className="adapt-widget-top"><strong>{meta.title}</strong><span aria-hidden="true">{editing?'⋮⋮':'✦'}</span></div>
-          <p className="adapt-widget-desc">{meta.subtitle}</p>
-          {editing ? <div className="adapt-widget-tools">
-            <button aria-label={'Move '+meta.title+' earlier'} onClick={()=>move(item.id,-1)} type="button">←</button>
-            <button aria-label={'Move '+meta.title+' later'} onClick={()=>move(item.id,1)} type="button">→</button>
-            <label><span className="sr-only">Size for {meta.title}</span><select value={item.size==='custom'?'custom':item.size} onChange={e=>{const size=e.target.value;if(size!=='custom')updateLayout(widgets.map(w=>w.id===item.id?applyDashboardSize(w,size as Exclude<DashboardWidgetSize,'custom'>):w));}}>{ALL_SIZES.map(size=><option key={size} value={size}>{DASHBOARD_SIZE_PRESETS[size].label}</option>)}{item.size==='custom'&&<option value="custom">Custom</option>}</select></label>
-            <button type="button" onClick={()=>editWidget(item.id,{visible:false})}>Hide</button>
-          </div> : <div className="adapt-widget-content">{content(item.id)}</div>}
-        </article>;
-      })}
-    </div>
-    {visible.length===0 && <p className="adapt-empty">Your canvas is empty. Choose Customize to add widgets.</p>}
-    {editing && <section className="adapt-widget-library" aria-label="Dashboard Studio">
-      <div className="adapt-widget-library-title"><h2>Widget Studio</h2><button type="button" onClick={()=>updateLayout(DEFAULT)}>Reset layout</button></div>
-      <p>Drag cards to reorder on desktop, or use the arrows and sizes. Your saved preferences use the same widget IDs as Relay.</p>
-      <div className="adapt-widget-library-items">{widgets.map(item=><button type="button" key={item.id} aria-pressed={item.visible} onClick={()=>editWidget(item.id,{visible:!item.visible})}>{item.visible?'✓':'+'} {META[item.id].title}</button>)}</div>
-      <h3>Starting layouts</h3><div className="adapt-widget-library-items">{DASHBOARD_PRESETS.map(item=><button type="button" key={item.id} onClick={()=>preset(item.id)}>{item.name}</button>)}</div>
-      <h3>Your saved layouts</h3>
-      <form className="adapt-input-form" onSubmit={e=>void savePreset(e)}><input maxLength={40} aria-label="Preset name" placeholder="Name this layout" value={presetName} onChange={e=>setPresetName(e.target.value)}/><button type="submit" disabled={!presetName.trim() || presets.length>=24}>Save preset</button></form>
-      <div className="adapt-widget-library-items">{presets.map(entry=><div className="adapt-preset" key={entry.id}><button type="button" onClick={()=>updateLayout(entry.widgets)}>{entry.name}</button><button type="button" aria-label={'Delete '+entry.name+' preset'} onClick={()=>{if(window.confirm('Delete preset '+entry.name+'?'))void updatePresets(presets.filter(item=>item.id!==entry.id));}}>×</button></div>)}</div>
-      <button type="button" className="adapt-import-button" onClick={importLegacy}>Import an older Relay layout from this device</button>
-      <p>Your cloud presets are shared with Relay. Your active Orbit layout uses its own account preference so Relay cannot overwrite it.</p>
-    </section>}
+    <OrbitWidgetStudio
+      widgets={widgets} meta={META} editing={editing} onEdit={setEditing}
+      disabled={!owner || !ready} onChange={updateLayout} renderWidget={content}
+      extra={<section className="adapt-widget-library orbit-studio-presets" aria-label="Layout presets">
+        <div className="adapt-widget-library-title">
+          <h2>Layouts</h2>
+          <button type="button" onClick={()=>updateLayout(DEFAULT)}>Reset layout</button>
+        </div>
+        <p>Choose a starting arrangement or save your own. Widget locations and sizes are included in saved layouts.</p>
+        <div className="adapt-widget-library-items">{DASHBOARD_PRESETS.map(item=><button type="button" key={item.id} onClick={()=>preset(item.id)}>{item.name}</button>)}</div>
+        <h3>Your saved layouts</h3>
+        <form className="adapt-input-form" onSubmit={e=>void savePreset(e)}>
+          <input maxLength={40} aria-label="Preset name" placeholder="Name this layout" value={presetName} onChange={e=>setPresetName(e.target.value)}/>
+          <button type="submit" disabled={!presetName.trim() || presets.length>=24}>Save</button>
+        </form>
+        <div className="adapt-widget-library-items">{presets.map(entry=><div className="adapt-preset" key={entry.id}>
+          <button type="button" onClick={()=>updateLayout(entry.widgets)}>{entry.name}</button>
+          <button type="button" aria-label={'Delete '+entry.name+' preset'} onClick={()=>{if(window.confirm('Delete preset '+entry.name+'?'))void updatePresets(presets.filter(item=>item.id!==entry.id));}}>×</button>
+        </div>)}</div>
+        <button type="button" className="adapt-import-button" onClick={importLegacy}>Import an older Relay layout</button>
+        <p>Existing Relay presets are preserved. Locations sync with your signed-in ARROW account.</p>
+      </section>}
+    />
   </div>;
 }
 function Metric({value,label}:{value:string;label:string}) { return <div className="adapt-metric"><strong>{value}</strong><span>{label}</span></div>; }
