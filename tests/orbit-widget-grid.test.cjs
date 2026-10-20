@@ -51,5 +51,5 @@ test('hidden widgets do not block available space and can be placed',()=>{
 });
 test('Orbit gallery offers suggestions, previews, size selection and direct placement',()=>{
  const src=fs.readFileSync(path.join(root,'src/components/orbit-widget-studio.tsx'),'utf8');
- for(const word of ['Recommended','Search widgets','Choose widget size','Add Widget','Auto place','placementFits','orbit-grid-cell','is-blocked','is-available']) assert.ok(src.includes(word),word);
+ for(const word of ['Recommended','Search widgets','Choose widget size','Add Widget','Auto place','placementFits','orbit-grid-cell',"'blocked'","'available'"]) assert.ok(src.includes(word),word);
 });
