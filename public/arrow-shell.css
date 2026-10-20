@@ -1280,3 +1280,15 @@ html[data-arrow-experience="glass"] .arrow-os-panel {
 .arrow-os-owner-note a:focus-visible {
   color: rgb(var(--arrow-os-fg));
 }
+
+/* ARROW Adapt: one identity selector, with independent user-controlled accent. */
+.arrow-os-identity-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:6px; }
+.arrow-os-custom-color { display:flex; align-items:center; justify-content:space-between; gap:12px; width:100%; padding:10px 12px; border:1px solid rgb(var(--arrow-os-fg) / .13); border-radius:12px; font-size:12px; }
+.arrow-os-custom-color input { width:48px; height:30px; border:0; padding:0; background:transparent; cursor:pointer; }
+html[data-arrow-accent="custom"] .arrow-os-root,
+html[data-arrow-accent="custom"] .arrow-os-panel { --arrow-os-accent:var(--arrow-custom-accent, #6785ff); }
+html[data-arrow-identity="bloom"] .arrow-os-panel { border-radius:24px; }
+html[data-arrow-identity="haven"] .arrow-os-panel { border-radius:18px; }
+html[data-arrow-identity="atelier"] .arrow-os-panel { border-radius:8px; }
+html[data-arrow-identity="pulse"] .arrow-os-panel { border-radius:15px; }
+@media(max-width:420px){.arrow-os-identity-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
