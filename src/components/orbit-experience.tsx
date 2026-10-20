@@ -58,7 +58,24 @@ export function OrbitExperience({ children }: { children: React.ReactNode }) {
       setEvents(getList('arrow_os_events_v1'));
       setIdentity(document.documentElement.dataset.arrowIdentity || 'core');
     };
-    const requested = new URLSearchParams(window.location.search).get('view');
+    const parameters = new URLSearchParams(window.location.search);
+    const relayLayout = parameters.get('relayLayout');
+    if (relayLayout && relayLayout.length < 300) {
+      const bridge: Record<string,WidgetId> = {
+        overview:'activity', weather:'activity', askravin:'ravin', tasks:'tasks',
+        calendar:'calendar', chats:'relay', quicklinks:'navigation', today:'activity',
+        quicknote:'notes', focus:'activity', schoolschedule:'calendar',
+        assignments:'tasks', momentum:'activity', ravinbrief:'ravin',
+        recentfiles:'atlas', countdowns:'calendar',
+      };
+      const mapped = [...new Set(relayLayout.split(',').map(id => bridge[id]).filter((id):id is WidgetId => Boolean(id)))];
+      if (mapped.length && !localStorage.getItem('arrow_orbit_relay_layout_imported_v1')) {
+        localStorage.setItem(STORAGE,JSON.stringify(mapped));
+        localStorage.setItem('arrow_orbit_relay_layout_imported_v1','true');
+        setWidgets(mapped);
+      }
+    }
+    const requested = parameters.get('view');
     setView(requested === 'dashboard' || (requested !== 'world' && localStorage.getItem(VIEW) === 'dashboard') ? 'dashboard' : 'world');
     sync();
     window.addEventListener('storage', sync);
