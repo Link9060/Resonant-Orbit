@@ -189,7 +189,7 @@
     document.documentElement.dataset.arrowAccent = normalized;
     document.documentElement.style.setProperty('--arrow-custom-accent', getCustomAccent());
 
-    const relayPalette = normalized === 'mono' ? 'monochrome' : normalized;
+    const relayPalette = normalized === 'mono' ? 'monochrome' : normalized === 'custom' ? 'custom' : normalized;
     try {
       localStorage.setItem('relay-experience-palette', relayPalette);
     } catch {}
@@ -892,7 +892,10 @@
         '</div>' +
       '</div>';
 
-    state.panelBody.querySelector('.arrow-os-custom-color input')?.addEventListener('input', event => applyCustomAccent(event.target.value, true));
+    state.panelBody.querySelector('.arrow-os-custom-color input')?.addEventListener('input', event => {
+      applyCustomAccent(event.target.value, true);
+      updateAppearanceState();
+    });
     state.panelBody.querySelectorAll('[data-identity-choice]').forEach(button => {
       button.addEventListener('click', () => applyIdentity(button.dataset.identityChoice, true));
     });
@@ -953,6 +956,8 @@
       applyTheme('system', false);
       applyMotion('system', false);
       applyExperienceChoice('balanced', false);
+      applyIdentity('core', false);
+      document.documentElement.style.setProperty('--arrow-custom-accent', getCustomAccent());
       applyAccent('mono', false);
       stopFocusTimer(false);
       state.focusRemaining = 25 * 60;
@@ -993,6 +998,7 @@
       applyTheme(getThemeChoice(), false);
       applyMotion(getMotionChoice(), false);
       applyExperienceChoice(getExperienceChoice(), false);
+      applyIdentity(getIdentityChoice(), false);
       applyAccent(readString(STORAGE.accent, 'mono'), false);
       stopFocusTimer(false);
       restoreFocusState();
