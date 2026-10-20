@@ -78,3 +78,16 @@ export function highlightedCells(
   }
   return { green, red, valid: placementFits(widgets, id, point, cols, rows) };
 }
+
+
+/** Responsive content variants, independent of overall screen size. */
+export function widgetLayoutKind(cols: number, rows: number): 'compact'|'wide'|'expanded'|'tall'|'standard' {
+  if (cols <= 3 || rows <= 1) return 'compact';
+  if (cols >= 8 && rows >= 3) return 'expanded';
+  if (cols >= 8) return 'wide';
+  if (rows >= 4) return 'tall';
+  return 'standard';
+}
+export function previewFootprint(cols: number, rows: number) {
+  return { cols: Math.max(2,Math.min(GRID_COLUMNS,Math.round(cols))), rows: Math.max(1,Math.min(6,Math.round(rows))) };
+}
