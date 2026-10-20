@@ -8,6 +8,8 @@
     theme: 'arrow_os_theme_v1',
     motion: 'arrow_os_motion_v1',
     accent: 'arrow_os_accent_v1',
+    customAccent: 'arrow_os_custom_accent_v1',
+    identity: 'arrow_adapt_identity_v1',
     experience: 'arrow_os_experience_v1',
     focusMinutes: 'arrow_os_focus_minutes_v1',
     focusState: 'arrow_os_focus_state_v1',
@@ -158,11 +160,34 @@
     if (state.activePanel === 'appearance') updateAppearanceState();
   }
 
+  const IDENTITIES = [['core','Core'],['bloom','Bloom'],['haven','Haven'],['atelier','Atelier'],['pulse','Pulse']];
+  function getIdentityChoice() {
+    const value = readString(STORAGE.identity, 'core');
+    return IDENTITIES.some(([id]) => id === value) ? value : 'core';
+  }
+  function applyIdentity(choice, persist = false) {
+    const normalized = IDENTITIES.some(([id]) => id === choice) ? choice : 'core';
+    if (persist) writeString(STORAGE.identity, normalized);
+    document.documentElement.dataset.arrowIdentity = normalized;
+    window.dispatchEvent(new CustomEvent('arrow:identitychange', { detail: { identity: normalized } }));
+    if (state.activePanel === 'appearance') updateAppearanceState();
+  }
+  function getCustomAccent() {
+    const value = readString(STORAGE.customAccent, '#6785ff');
+    return /^#[0-9a-fA-F]{6}$/.test(value) ? value : '#6785ff';
+  }
+  function applyCustomAccent(value, persist = false) {
+    if (!/^#[0-9a-fA-F]{6}$/.test(value)) return;
+    if (persist) writeString(STORAGE.customAccent, value);
+    document.documentElement.style.setProperty('--arrow-custom-accent', value);
+    applyAccent('custom', persist);
+  }
   function applyAccent(accent, persist = false) {
-    const allowed = new Set(ACCENTS.map(([value]) => value));
+    const allowed = new Set([...ACCENTS.map(([value]) => value), 'custom']);
     const normalized = allowed.has(accent) ? accent : 'mono';
     if (persist) writeString(STORAGE.accent, normalized);
     document.documentElement.dataset.arrowAccent = normalized;
+    document.documentElement.style.setProperty('--arrow-custom-accent', getCustomAccent());
 
     const relayPalette = normalized === 'mono' ? 'monochrome' : normalized;
     try {
@@ -812,6 +837,7 @@
     const choices = {
       theme: getThemeChoice(), motion: getMotionChoice(),
       experience: getExperienceChoice(), accent: readString(STORAGE.accent, 'mono'),
+      identity: getIdentityChoice(),
     };
     Object.entries(choices).forEach(([kind, value]) => {
       state.panelBody.querySelectorAll('[data-' + kind + '-choice]').forEach(button => {
@@ -827,10 +853,17 @@
     const motion = getMotionChoice();
     const accent = readString(STORAGE.accent, 'mono');
     const experience = getExperienceChoice();
+    const identity = getIdentityChoice();
 
     state.panelBody.innerHTML =
       '<div class="arrow-os-section">' +
-        '<span class="arrow-os-section-label">EXPERIENCE</span>' +
+        '<span class="arrow-os-section-label">ARROW ADAPT IDENTITY</span>' +
+        '<div class="arrow-os-segmented arrow-os-identity-grid">' +
+          IDENTITIES.map(([value,label]) => '<button type="button" data-identity-choice="' + value + '" class="' + (identity === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
+        '</div>' +
+      '</div>' +
+      '<div class="arrow-os-section">' +
+        '<span class="arrow-os-section-label">BEHAVIOR</span>' +
         '<div class="arrow-os-segmented arrow-os-experience-grid">' +
           [['balanced','Balanced'],['quiet','Quiet'],['dynamic','Dynamic'],['glass','Glass']].map(([value,label]) => '<button type="button" data-experience-choice="' + value + '" class="' + (experience === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
         '</div>' +
@@ -855,9 +888,14 @@
               '<i style="--swatch:' + color + '"></i><span>' + label + '</span>' +
             '</button>'
           ).join('') +
+          '<label class="arrow-os-custom-color"><span>Custom color</span><input type="color" aria-label="Choose custom accent color" value="' + getCustomAccent() + '"></label>' +
         '</div>' +
       '</div>';
 
+    state.panelBody.querySelector('.arrow-os-custom-color input')?.addEventListener('input', event => applyCustomAccent(event.target.value, true));
+    state.panelBody.querySelectorAll('[data-identity-choice]').forEach(button => {
+      button.addEventListener('click', () => applyIdentity(button.dataset.identityChoice, true));
+    });
     state.panelBody.querySelectorAll('[data-experience-choice]').forEach(button => {
       button.addEventListener('click', () => applyExperienceChoice(button.dataset.experienceChoice, true));
     });
@@ -1336,6 +1374,8 @@
     if (event.key === STORAGE.motion) applyMotion(getMotionChoice(), false);
     if (event.key === STORAGE.experience) applyExperienceChoice(getExperienceChoice(), false);
     if (event.key === STORAGE.accent) applyAccent(readString(STORAGE.accent, 'mono'), false);
+    if (event.key === STORAGE.customAccent) applyAccent(readString(STORAGE.accent, 'mono'), false);
+    if (event.key === STORAGE.identity) applyIdentity(getIdentityChoice(), false);
     if (event.key === STORAGE.focusState || event.key === STORAGE.focusMinutes) {
       stopFocusTimer(false);
       restoreFocusState();
