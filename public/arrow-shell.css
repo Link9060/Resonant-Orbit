@@ -1304,3 +1304,40 @@ html[data-arrow-identity="bloom"] .arrow-os-panel-navgroup button { border-radiu
 html[data-arrow-identity="atelier"] .arrow-os-panel-navgroup button { border-radius:0; text-transform:uppercase; letter-spacing:.1em; }
 html[data-arrow-identity="pulse"] .arrow-os-panel-navgroup button[aria-current="page"] { box-shadow:0 0 15px color-mix(in srgb,var(--arrow-os-accent) 22%,transparent); }
 @media(max-width:420px){.arrow-os-panel-navigation{padding:10px}.arrow-os-panel-navgroup button{padding:6px 7px;}}
+
+/* Appearance journey: theme → preview and confirmation → optional accent. */
+.arrow-os-appearance-flow { display:grid; gap:18px; }
+.arrow-os-appearance-flow .arrow-os-section { margin:0; }
+.arrow-os-appearance-flow .arrow-os-section-label { display:block; margin:0 0 9px; }
+.arrow-os-appearance-flow .arrow-os-theme-select .arrow-os-section-label:not(:first-child),
+.arrow-os-appearance-flow .arrow-os-appearance-extra .arrow-os-section-label:not(:first-child) { margin-top:14px; }
+.arrow-os-identity-preview { --preview-surface:#16191e; --preview-text:#fff; --preview-soft:#323945;
+  display:grid; gap:12px; padding:16px; margin:12px 0; background:var(--preview-surface);
+  color:var(--preview-text); border:1px solid color-mix(in srgb,var(--preview-text) 16%,transparent);
+  border-radius:15px; min-height:138px; }
+.arrow-os-identity-preview[data-theme="light"] { --preview-surface:#f1f2f4; --preview-text:#20242b; --preview-soft:#cfd4d9; }
+.arrow-os-identity-preview[data-identity="bloom"] { border-radius:25px; --preview-surface:#dfeee4; --preview-text:#173827; --preview-soft:#a3cdb0; }
+.arrow-os-identity-preview[data-identity="haven"] { border-radius:22px; --preview-surface:#eae0d5; --preview-text:#45382e; --preview-soft:#cdb9a6; }
+.arrow-os-identity-preview[data-identity="atelier"] { border-radius:0; --preview-surface:#e8e6de; --preview-text:#202020; --preview-soft:#bfbdb3; }
+.arrow-os-identity-preview[data-identity="pulse"] { border-radius:7px; --preview-surface:#101d39; --preview-text:#e5f5ff; --preview-soft:#32639a; }
+.arrow-os-preview-head { display:flex; justify-content:space-between; align-items:center; gap:10px; }
+.arrow-os-preview-head strong { font-size:15px; }
+.arrow-os-preview-head span { font-size:10px; opacity:.7; }
+.arrow-os-preview-layout { display:grid; grid-template-columns:24% 1fr; gap:9px; min-height:50px; }
+.arrow-os-preview-layout > i,.arrow-os-preview-layout > div > i { display:block; background:var(--preview-soft); border-radius:5px; }
+.arrow-os-preview-layout > div { display:grid; grid-template-columns:1fr 1fr; gap:7px; }
+.arrow-os-preview-layout > div > i:first-child { grid-column:span 2; }
+.arrow-os-identity-preview[data-identity="atelier"] .arrow-os-preview-layout i { border-radius:0; }
+.arrow-os-preview-caption { font-size:10px; opacity:.7; }
+.arrow-os-theme-finish { display:block; width:100%; margin-top:15px; padding:10px 14px; border:1px solid rgb(var(--arrow-os-fg) / .28); border-radius:10px;
+  background:rgb(var(--arrow-os-fg) / .11); color:rgb(var(--arrow-os-fg)); cursor:pointer; font-weight:680; }
+.arrow-os-theme-finish:hover { background:rgb(var(--arrow-os-fg) / .17); }
+.arrow-os-color-section { border-top:1px solid rgb(var(--arrow-os-fg) / .22); padding-top:15px; }
+.arrow-os-identity-preview[data-theme="dark"][data-identity="atelier"] { --preview-surface:#202020; --preview-text:#f4f2ec; --preview-soft:#444; }
+.arrow-os-identity-preview[data-theme="dark"][data-identity="bloom"] { --preview-surface:#163225; --preview-text:#e0f6e5; --preview-soft:#336949; }
+.arrow-os-identity-preview[data-theme="dark"][data-identity="haven"] { --preview-surface:#2b241f; --preview-text:#f6e7d4; --preview-soft:#625040; }
+
+/* Atelier always uses real opaque paper/ink surfaces, never glass. */
+html[data-arrow-identity="atelier"] .arrow-os-panel,
+html[data-arrow-identity="atelier"] .arrow-os-island { backdrop-filter:none; -webkit-backdrop-filter:none; border-radius:0; background:rgb(var(--arrow-os-bg)); }
+html[data-arrow-identity="atelier"] .arrow-os-panel :is(.arrow-os-settings-card,.arrow-os-owner-note,.arrow-os-identity-preview) { backdrop-filter:none; }
