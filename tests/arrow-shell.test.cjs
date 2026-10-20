@@ -226,3 +226,24 @@ test('Adapt identity is the sole owner of Relay structural experience', async ()
     assert.equal(f.w.localStorage.getItem('relay-experience-mode'), 'nexus');
   } finally { f.close(); }
 });
+
+test('appearance order is theme selection, preview/finalize, optional color', async () => {
+  const f = await fixture('orbit');
+  try {
+    f.w.ArrowOS.openPanel('appearance', 'orbit');
+    const sections = [...f.w.document.querySelectorAll('.arrow-os-appearance-flow > .arrow-os-section')];
+    assert.equal(sections.length, 3);
+    assert.ok(sections[0].classList.contains('arrow-os-theme-select'));
+    assert.ok(sections[1].classList.contains('arrow-os-theme-review'));
+    assert.ok(sections[2].classList.contains('arrow-os-color-section'));
+    f.w.document.querySelector('[data-identity-choice="atelier"]').click();
+    assert.equal(f.w.document.querySelector('.arrow-os-identity-preview').dataset.identity, 'atelier');
+    f.w.document.querySelector('[data-theme-choice="light"]').click();
+    assert.equal(f.w.document.documentElement.dataset.arrowTheme, 'light');
+    assert.equal(f.w.document.querySelector('.arrow-os-identity-preview').dataset.theme, 'light');
+    assert.equal(f.w.document.querySelector('.arrow-os-panel').dataset.hostTheme, 'light');
+    f.w.document.querySelector('.arrow-os-theme-finish').click();
+    assert.match(f.w.document.querySelector('.arrow-os-theme-finish').textContent, /saved/i);
+    assert.ok(f.w.document.querySelector('.arrow-os-custom-color input'));
+  } finally { f.close(); }
+});
