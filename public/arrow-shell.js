@@ -1436,7 +1436,7 @@
       if (target.origin === location.origin) return;
       const allowed = target.hostname === 'enterarrow.com' ||
         target.hostname === 'www.enterarrow.com' ||
-        (target.hostname === 'link9060.github.io' && /^\\/Resonant-(?:Orbit|Relay|Waypoint|Field)\\/|^\\/Project-R\\.A\\.V\\.I\\.N\\.-1\\.1\\//.test(target.pathname));
+        (target.hostname === 'link9060.github.io' && ['/Resonant-Orbit/', '/Resonant-Relay/', '/Resonant-Waypoint/', '/Resonant-Field/', '/Project-R.A.V.I.N.-1.1/'].some(prefix => target.pathname.startsWith(prefix)));
       if (!allowed) return;
       target.searchParams.set('arrowAdapt', getIdentityChoice());
       target.searchParams.set('arrowAccent', readString(STORAGE.accent, 'mono'));
