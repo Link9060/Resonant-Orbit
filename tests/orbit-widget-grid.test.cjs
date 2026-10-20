@@ -78,7 +78,7 @@ test('edit mode and gallery reuse real live content instead of placeholder mocks
  assert.ok(src.includes('renderWidget(preview.id,preview.cols,preview.rows)'));
  assert.ok(src.includes("aria-label=\"Custom widget width in grid columns\""));
  assert.ok(src.includes("aria-label=\"Custom widget height in grid rows\""));
- assert.ok(src.includes("data-widget-layout={widgetLayoutKind"));
+ assert.ok(src.includes("layout={widgetLayoutKind"));
  assert.ok(src.includes("setDragging({ id:item.id"));
  assert.ok(src.includes("highlightedCells(packed, candidate.id"));
  assert.ok(src.includes("commit({x,y},dragging)"));
