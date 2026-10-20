@@ -466,7 +466,8 @@
   }
   .orbit-widget-board.is-editing { min-width:780px; }
   .orbit-widget-board.is-editing .orbit-positioned-widget {
-    grid-column:var(--orbit-widget-column,auto); min-height:0; grid-row:auto;
+    grid-column:var(--orbit-widget-column,auto)!important;
+    grid-row:var(--orbit-widget-row,auto)!important; min-height:0;
   }
   .orbit-widget-gallery-backdrop { padding:0; align-items:end; }
   .orbit-widget-gallery { width:100%; max-height:91dvh; padding:21px; border-radius:24px 24px 0 0!important; }
