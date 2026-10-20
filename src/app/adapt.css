@@ -826,3 +826,253 @@
     animation:none!important;transition:none!important;
   }
 }
+
+
+/* ── ARROW Adapt V: native widget compositions ───────────────────────────
+   New DOM patterns per identity, not a palette override. These selectors are
+   identity-scoped on each React component so the Preview Lab can render any
+   identity without changing global account or theme settings.
+*/
+.adapt-native-widget {
+  position:relative;isolation:isolate;min-width:0;
+}
+.adapt-native-widget .adapt-native-header {
+  flex:none;position:relative;z-index:2;
+}
+.adapt-native-widget .adapt-widget-content {
+  position:relative;z-index:2;
+}
+.adapt-native-widget .native-bloom-ornament,
+.adapt-native-widget .native-haven-margin,
+.adapt-native-widget .native-atelier-mast-rule,
+.adapt-native-widget .native-pulse-trace {
+  pointer-events:none;
+}
+.adapt-native-widget .native-bloom-spark,
+.adapt-native-widget .native-haven-rule,
+.adapt-native-widget .native-atelier-symbol,
+.adapt-native-widget .native-pulse-symbol { flex:none; }
+/* Bloom: applet composition with illustrated icon, stacked heading, playful
+   decoration and a lightweight colored-content stage. */
+.adapt-native-widget.native-bloom {
+  padding:16px 18px 18px!important;
+  border-radius:30px!important;
+}
+.adapt-native-widget.native-bloom .native-bloom-ornament {
+  position:absolute;right:-9px;top:-35px;
+  font-size:124px;line-height:1;color:var(--arrow-adapt-secondary,#c1a5d0);
+  opacity:.12;transform:rotate(-19deg);
+}
+.adapt-native-widget.native-bloom .native-bloom-header {
+  display:flex;align-items:center;gap:10px;
+  border:0;padding:0 0 13px;
+}
+.adapt-native-widget.native-bloom .native-bloom-icon {
+  display:grid;place-items:center;flex:0 0 39px;
+  height:39px;border-radius:14px;font-size:21px;
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#be85ae) 20%,var(--adapt-surface));
+  color:var(--adapt-ink);box-shadow:inset 0 1px #ffffff45;
+}
+.adapt-native-widget.native-bloom .native-header-copy {
+  display:flex;flex:1;min-width:0;flex-direction:column;gap:2px;
+}
+.adapt-native-widget.native-bloom .native-header-copy strong {
+  font-size:14px;line-height:1.25;font-weight:800;
+}
+.adapt-native-widget.native-bloom .native-header-copy small {
+  font-size:10px;line-height:1.3;color:var(--adapt-muted);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.adapt-native-widget.native-bloom .native-bloom-spark {
+  font-size:24px;color:var(--arrow-adapt-primary,#be85ae);opacity:.6;
+}
+.adapt-native-widget.native-bloom .native-content-bloom {
+  padding:10px 8px 8px;
+  border-radius:16px;background:color-mix(in srgb,var(--adapt-surface) 80%,transparent);
+}
+/* Haven: paper note with a ruled folio header and footer; textual hierarchy
+   replaces technical badges. */
+.adapt-native-widget.native-haven {
+  padding:19px 22px 25px 28px!important;
+  border-radius:5px 18px 18px 5px!important;
+}
+.adapt-native-widget.native-haven .native-haven-margin {
+  position:absolute;inset:0 auto 0 12px;width:1px;
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#8b9e79) 30%,transparent);
+}
+.adapt-native-widget.native-haven .native-haven-header {
+  display:grid;grid-template-columns:1fr auto;gap:7px;
+  border:0;border-bottom:1px solid color-mix(in srgb,var(--arrow-adapt-primary,#8b9e79) 30%,var(--adapt-border));
+  padding-bottom:12px;margin-bottom:4px;
+}
+.adapt-native-widget.native-haven .native-haven-index {
+  grid-column:1/-1;font-family:var(--arrow-font-body,system-ui);
+  font-size:9px;font-weight:700;letter-spacing:.16em;color:var(--adapt-muted);
+}
+.adapt-native-widget.native-haven .native-haven-header strong {
+  font-family:var(--arrow-font-display,Georgia,serif)!important;
+  font-size:clamp(14px,1.7vw,23px);font-weight:500;line-height:1.18;
+}
+.adapt-native-widget.native-haven .native-haven-rule {
+  align-self:center;font-size:17px;color:var(--arrow-adapt-primary,#8b9e79);
+}
+.adapt-native-widget.native-haven .native-haven-footer {
+  position:absolute;right:15px;bottom:8px;font-size:8px;
+  color:var(--adapt-muted);letter-spacing:.13em;
+}
+/* Atelier: asymmetric editorial header with a folio number column, a
+   horizontal mast-rule and a small endnote in the bottom margin. */
+.adapt-native-widget.native-atelier {
+  padding:18px 19px 25px!important;border-radius:1px!important;
+  border:1px solid var(--adapt-border)!important;
+  border-top:2px solid var(--adapt-ink)!important;
+  box-shadow:none!important;background:transparent!important;
+}
+.adapt-native-widget.native-atelier .native-atelier-mast-rule {
+  position:absolute;left:0;top:0;bottom:0;width:1px;
+  background:color-mix(in srgb,var(--adapt-ink) 18%,transparent);
+}
+.adapt-native-widget.native-atelier .native-atelier-header {
+  display:grid;grid-template-columns:37px minmax(0,1fr) auto;
+  align-items:start;gap:10px;margin-bottom:10px;padding-bottom:12px;
+  border:0;border-bottom:1px solid var(--adapt-border);
+}
+.adapt-native-widget.native-atelier .native-atelier-index {
+  font-size:19px;line-height:1.15;
+  font-family:var(--arrow-font-display,Georgia,serif);
+  font-weight:400;color:var(--adapt-muted);
+}
+.adapt-native-widget.native-atelier .native-header-copy {
+  display:grid;min-width:0;gap:3px;
+}
+.adapt-native-widget.native-atelier .native-header-copy small {
+  font-family:var(--arrow-font-body,system-ui);
+  font-size:8px;letter-spacing:.17em;text-transform:uppercase;color:var(--adapt-muted);
+}
+.adapt-native-widget.native-atelier .native-header-copy strong {
+  font-family:var(--arrow-font-display,Georgia,serif)!important;
+  font-weight:400;letter-spacing:-.04em;
+  font-size:clamp(15px,2vw,25px);line-height:1.16;
+}
+.adapt-native-widget.native-atelier .native-atelier-symbol {
+  font-size:13px;color:var(--adapt-muted);
+}
+.adapt-native-widget.native-atelier .native-atelier-footer {
+  position:absolute;bottom:8px;left:18px;
+  font-size:8px;letter-spacing:.18em;color:var(--adapt-muted);text-transform:uppercase;
+}
+.adapt-native-widget.native-atelier .adapt-widget-content {
+  padding-top:4px;
+}
+/* Pulse: command module HUD, live status pill, upper telemetry bar and
+   interactive content stage. */
+.adapt-native-widget.native-pulse {
+  padding:17px 18px 23px!important;
+  border-radius:5px 23px 5px 23px!important;
+  overflow:hidden;
+}
+.adapt-native-widget.native-pulse .native-pulse-trace {
+  display:flex;gap:4px;position:absolute;right:15px;top:0;height:3px;
+}
+.adapt-native-widget.native-pulse .native-pulse-trace i {
+  width:20px;background:var(--arrow-adapt-primary,#9174ec);transform:skew(-24deg);
+}
+.adapt-native-widget.native-pulse .native-pulse-trace i:nth-child(2) {width:12px;opacity:.65;}
+.adapt-native-widget.native-pulse .native-pulse-trace i:nth-child(3) {width:7px;opacity:.4;}
+.adapt-native-widget.native-pulse .native-pulse-header {
+  display:grid;grid-template-columns:auto minmax(0,1fr) auto;align-items:center;
+  gap:11px;padding:0 0 12px;margin-bottom:4px;
+  border-bottom:1px solid color-mix(in srgb,var(--arrow-adapt-secondary,#a992ff) 35%,var(--adapt-border));
+}
+.adapt-native-widget.native-pulse .native-pulse-live {
+  display:flex;align-items:center;gap:4px;font-size:9px;
+  font-family:var(--arrow-font-body,system-ui);
+  font-weight:850;letter-spacing:.065em;color:var(--arrow-adapt-primary,#a992ff);
+}
+.adapt-native-widget.native-pulse .native-pulse-live i {
+  width:6px;height:6px;display:inline-block;border-radius:50%;
+  background:currentColor;box-shadow:0 0 9px currentColor;
+}
+.adapt-native-widget.native-pulse .native-header-copy {
+  display:grid;gap:3px;
+}
+.adapt-native-widget.native-pulse .native-header-copy small {
+  font-size:8px;letter-spacing:.14em;color:var(--adapt-muted);
+}
+.adapt-native-widget.native-pulse .native-header-copy strong {
+  font-size:clamp(13px,1.7vw,19px);font-weight:850;
+  text-transform:uppercase;letter-spacing:-.045em;
+}
+.adapt-native-widget.native-pulse .native-pulse-symbol {
+  font-size:23px;color:var(--arrow-adapt-secondary,#a992ff);
+}
+.adapt-native-widget.native-pulse .native-pulse-footer {
+  position:absolute;bottom:8px;right:15px;font-size:8px;
+  color:var(--adapt-muted);letter-spacing:.12em;
+}
+/* Compact footprints switch internal composition instead of merely shrinking. */
+.adapt-native-widget[data-widget-layout="compact"].native-bloom { padding:8px 10px!important; }
+.adapt-native-widget[data-widget-layout="compact"].native-bloom .native-bloom-icon {
+  width:24px;height:24px;flex-basis:24px;border-radius:9px;font-size:14px;
+}
+.adapt-native-widget[data-widget-layout="compact"].native-bloom .native-bloom-header {
+  gap:5px;padding:0;margin:0;
+}
+.adapt-native-widget[data-widget-layout="compact"].native-bloom .native-header-copy small,
+.adapt-native-widget[data-widget-layout="compact"].native-bloom .native-bloom-spark {
+  display:none;
+}
+.adapt-native-widget[data-widget-layout="compact"].native-bloom .native-content-bloom {background:transparent;padding:3px 0;}
+.adapt-native-widget[data-widget-layout="compact"].native-haven { padding:10px 12px 14px 18px!important; }
+.adapt-native-widget[data-widget-layout="compact"].native-haven .native-haven-header {gap:3px;padding-bottom:3px;}
+.adapt-native-widget[data-widget-layout="compact"].native-haven .native-haven-index,
+.adapt-native-widget[data-widget-layout="compact"].native-haven .native-haven-footer {display:none;}
+.adapt-native-widget[data-widget-layout="compact"].native-atelier { padding:10px 12px 14px!important; }
+.adapt-native-widget[data-widget-layout="compact"].native-atelier .native-atelier-header {grid-template-columns:minmax(0,1fr) auto;gap:4px;padding-bottom:4px;}
+.adapt-native-widget[data-widget-layout="compact"].native-atelier .native-atelier-index,
+.adapt-native-widget[data-widget-layout="compact"].native-atelier .native-header-copy small,
+.adapt-native-widget[data-widget-layout="compact"].native-atelier .native-atelier-footer {display:none;}
+.adapt-native-widget[data-widget-layout="compact"].native-pulse {padding:8px 10px!important;}
+.adapt-native-widget[data-widget-layout="compact"].native-pulse .native-pulse-header {grid-template-columns:1fr auto;gap:4px;padding-bottom:4px;}
+.adapt-native-widget[data-widget-layout="compact"].native-pulse .native-pulse-live,
+.adapt-native-widget[data-widget-layout="compact"].native-pulse .native-header-copy small,
+.adapt-native-widget[data-widget-layout="compact"].native-pulse .native-pulse-footer {display:none;}
+/* Native gallery: different component composition, same list semantics. */
+.native-gallery-heading {display:grid;gap:5px;min-width:0;}
+.native-gallery-heading h2 {margin:0;font-size:27px;letter-spacing:-.04em;}
+.native-gallery-heading p {font-size:11px;line-height:1.4;color:var(--adapt-muted);margin:0;}
+.native-gallery-overline {font-size:9px;letter-spacing:.15em;color:var(--adapt-muted);}
+.native-gallery-bloom {grid-template-columns:35px 1fr;}
+.native-gallery-bloom .native-gallery-glyph {grid-row:1/span 2;font-size:31px;color:var(--arrow-adapt-primary,#af80a8);}
+.native-gallery-bloom h2 {font-weight:840;}
+.native-gallery-bloom p {grid-column:2;}
+.native-gallery-haven h2 {font-family:var(--arrow-font-display,Georgia,serif);font-weight:500;}
+.native-gallery-atelier {border-top:2px solid var(--adapt-ink);padding-top:9px;}
+.native-gallery-atelier h2 {font-family:var(--arrow-font-display,Georgia,serif);font-size:34px;font-weight:400;}
+.native-gallery-pulse h2 {text-transform:uppercase;font-weight:850;letter-spacing:-.055em;}
+.native-gallery-pulse .native-gallery-overline {color:var(--arrow-adapt-primary,#9b7deb);font-weight:800;}
+.native-gallery-row {position:relative;}
+.native-gallery-row-bloom {border-radius:23px!important;gap:15px;}
+.native-gallery-row-bloom .orbit-gallery-item-icon {border-radius:16px;background:color-mix(in srgb,var(--arrow-adapt-secondary,#e3c8e1) 34%,var(--adapt-surface));}
+.native-gallery-row-haven {border-radius:8px!important;border-left:3px solid var(--arrow-adapt-primary,#879a7d)!important;}
+.native-gallery-row-haven .orbit-gallery-item-icon {border-radius:4px;background:transparent;font-size:20px;}
+.native-gallery-row-atelier {border-radius:0!important;border:0!important;border-bottom:1px solid var(--adapt-border)!important;background:transparent!important;}
+.native-gallery-row-atelier .orbit-gallery-item-icon {display:none;}
+.native-gallery-row-index {font-size:15px;color:var(--adapt-muted);}
+.native-gallery-row-atelier strong {font-family:var(--arrow-font-display,Georgia,serif);font-size:16px;font-weight:400;}
+.native-gallery-row-pulse {border-radius:4px 17px 4px 17px!important;border-color:color-mix(in srgb,var(--arrow-adapt-primary,#9b7deb) 38%,var(--adapt-border))!important;}
+.native-gallery-row-pulse strong {font-weight:850;text-transform:uppercase;}
+.native-gallery-signal {margin-left:auto;font-size:13px;color:var(--arrow-adapt-primary,#9b7deb);}
+.native-gallery-row-pulse .orbit-gallery-item-tail {margin-left:0;}
+/* Responsive rules for narrow live previews and preserved editor actions. */
+@container (max-width:250px) {
+  .adapt-native-widget .native-haven-index,
+  .adapt-native-widget .native-atelier-index,
+  .adapt-native-widget .native-pulse-live {display:none;}
+  .adapt-native-widget .native-header-copy small {display:none;}
+  .adapt-native-widget.native-pulse .native-pulse-header {grid-template-columns:1fr auto;}
+  .adapt-native-widget.native-atelier .native-atelier-header {grid-template-columns:1fr auto;}
+}
+@media(prefers-reduced-motion:reduce) {
+  :root:not([data-arrow-motion="full"]) .adapt-native-widget * {transition:none!important;animation:none!important;}
+}
