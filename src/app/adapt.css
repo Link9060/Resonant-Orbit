@@ -1,0 +1,80 @@
+/* ARROW Adapt beta: only the new dashboard receives identity-specific styling.
+   The existing immersive Orbit world is intentionally left untouched. */
+.adapt-world-layer { position:absolute; inset:0; min-height:100dvh; }
+.adapt-world-layer[aria-hidden="true"] { visibility:hidden; pointer-events:none; }
+.adapt-view-switch { display:flex; padding:3px; gap:3px; pointer-events:auto; border:1px solid var(--line); border-radius:999px; background:rgb(12 15 21 / .88); backdrop-filter:blur(16px); }
+.adapt-view-switch button { appearance:none; min-height:34px; padding:6px 13px; border:0; border-radius:999px; color:#ced3dc; background:transparent; font-size:12px; font-weight:650; cursor:pointer; }
+.adapt-view-switch button[aria-pressed="true"] { color:#101216; background:#f3f4f6; }
+.adapt-view-switch button:focus-visible { outline:2px solid #bbc6db; outline-offset:2px; }
+
+.adapt-dashboard {
+  --adapt-bg:#07090d; --adapt-surface:#141821; --adapt-border:#343945;
+  --adapt-ink:#f7f8fb; --adapt-muted:#a4afbd; --adapt-accent:#dfe8f5;
+  --adapt-on-accent:#121722; --adapt-radius:13px;
+  position:absolute; inset:0; z-index:25; height:100dvh; overflow-y:auto;
+  background:var(--adapt-bg); color:var(--adapt-ink);
+  padding:105px 24px 82px; overscroll-behavior:contain;
+}
+[data-orbit-adapt="bloom"] .adapt-dashboard {
+  --adapt-bg:#fbf3fa; --adapt-surface:#fffaff; --adapt-border:#e9cee4;
+  --adapt-ink:#543f58; --adapt-muted:#866e86; --adapt-accent:#a95998;
+  --adapt-on-accent:#fff; --adapt-radius:24px;
+  background:radial-gradient(circle at 15% 8%,#f6ddf2,transparent 45%),var(--adapt-bg);
+}
+[data-orbit-adapt="haven"] .adapt-dashboard {
+  --adapt-bg:#e9e8dc; --adapt-surface:#f6f4eb; --adapt-border:#cad0bd;
+  --adapt-ink:#38483d; --adapt-muted:#647264; --adapt-accent:#476b58;
+  --adapt-on-accent:#fff; --adapt-radius:16px;
+}
+[data-orbit-adapt="atelier"] .adapt-dashboard {
+  --adapt-bg:#f1eee7; --adapt-surface:#fcfaf6; --adapt-border:#d9d1c4;
+  --adapt-ink:#282522; --adapt-muted:#7d756c; --adapt-accent:#292420;
+  --adapt-on-accent:#fff; --adapt-radius:3px;
+}
+[data-orbit-adapt="pulse"] .adapt-dashboard {
+  --adapt-bg:#16132b; --adapt-surface:#262040; --adapt-border:#605181;
+  --adapt-ink:#f8f3ff; --adapt-muted:#c4b7e1; --adapt-accent:#b9a0ff;
+  --adapt-on-accent:#1c1233; --adapt-radius:18px;
+  background:radial-gradient(circle at 90% 4%,#513889,transparent 42%),var(--adapt-bg);
+}
+.adapt-dashboard-inner { max-width:1150px; margin:0 auto; }
+.adapt-dashboard-heading { display:flex; align-items:end; justify-content:space-between; gap:15px; margin:0 0 25px; }
+.adapt-eyebrow { color:var(--adapt-muted); letter-spacing:.2em; font-size:10px; font-weight:750; }
+.adapt-dashboard h1 { margin:8px 0; font-weight:640; font-size:clamp(30px,4vw,49px); letter-spacing:-.045em; }
+[data-orbit-adapt="atelier"] .adapt-dashboard h1 { font-family:Georgia,serif; font-weight:400; letter-spacing:-.035em; }
+.adapt-dashboard-heading p { margin:0; color:var(--adapt-muted); font-size:14px; }
+.adapt-dashboard button, .adapt-dashboard select { font:inherit; cursor:pointer; }
+.adapt-dashboard button:focus-visible, .adapt-dashboard select:focus-visible { outline:2px solid var(--adapt-accent); outline-offset:3px; }
+.adapt-edit-button { background:var(--adapt-accent); color:var(--adapt-on-accent); border:0; border-radius:var(--adapt-radius); padding:11px 17px; font-weight:650; font-size:13px!important; min-height:42px; }
+.adapt-widget-grid { display:grid; grid-template-columns:repeat(12,minmax(0,1fr)); gap:14px; }
+.adapt-widget { display:flex; flex-direction:column; min-height:167px; padding:20px; border:1px solid var(--adapt-border); background:var(--adapt-surface); border-radius:var(--adapt-radius); grid-column:span 6; overflow:hidden; }
+.adapt-widget-small { grid-column:span 3; }
+.adapt-widget-medium { grid-column:span 6; }
+.adapt-widget-wide { grid-column:span 12; }
+.adapt-widget-top { display:flex; justify-content:space-between; align-items:center; gap:12px; font-size:17px; font-weight:700; }
+.adapt-widget-top span:last-child { opacity:.45; }
+.adapt-widget p { color:var(--adapt-muted); line-height:1.5; margin:13px 0 auto; font-size:13px; }
+.adapt-widget-open { display:inline-flex; align-self:start; align-items:center; gap:12px; padding:9px 13px; border:1px solid var(--adapt-border); color:var(--adapt-ink); background:transparent; border-radius:calc(var(--adapt-radius) * .65); margin-top:18px; font-size:12px!important; }
+.adapt-widget-open:hover { border-color:var(--adapt-accent); }
+.adapt-widget-tools { display:flex; flex-wrap:wrap; align-items:center; gap:6px; margin-top:16px; }
+.adapt-widget-tools button,.adapt-widget-tools select,.adapt-widget-library button { padding:8px 10px; border:1px solid var(--adapt-border); border-radius:9px; background:transparent; color:var(--adapt-ink); font-size:12px; }
+.adapt-widget-tools select { background:var(--adapt-surface); }
+.adapt-widget-library { margin-top:20px; padding:22px; border:1px solid var(--adapt-border); border-radius:var(--adapt-radius); background:var(--adapt-surface); }
+.adapt-widget-library-title { display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.adapt-widget-library-title h2 { font-size:18px; margin:0; }
+.adapt-widget-library-items { display:flex; flex-wrap:wrap; gap:9px; padding:16px 0; }
+.adapt-widget-library button[aria-pressed="true"] { background:var(--adapt-accent); color:var(--adapt-on-accent); }
+.adapt-widget-library p { font-size:12px; color:var(--adapt-muted); line-height:1.5; }
+.adapt-import-button { margin-top:6px; }
+.adapt-empty { margin:30px 0; color:var(--adapt-muted); }
+@media(max-width:900px) { .adapt-widget-small { grid-column:span 6; } .adapt-view-switch button { padding:6px 11px; } }
+@media(max-width:680px) {
+  .adapt-dashboard { padding:96px 16px 120px; }
+  .adapt-dashboard-heading { align-items:start; }
+  .adapt-widget,.adapt-widget-small,.adapt-widget-medium,.adapt-widget-wide { grid-column:span 12; }
+  .adapt-widget { min-height:146px; padding:16px; }
+  .adapt-view-switch button { min-height:38px; padding:6px 9px; font-size:11px; }
+  .orbit-header-right .header-meta { display:none; }
+  .adapt-edit-button { padding:9px 12px; }
+}
+@media(prefers-reduced-motion:reduce) { .adapt-widget, .adapt-view-switch { transition:none!important; } }
