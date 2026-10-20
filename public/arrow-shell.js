@@ -143,18 +143,8 @@
     const normalized = ['balanced', 'quiet', 'dynamic', 'glass'].includes(choice) ? choice : 'balanced';
     document.documentElement.dataset.arrowExperience = normalized;
 
-    const relayMap = {
-      balanced: 'flow',
-      quiet: 'still',
-      dynamic: 'spark',
-      glass: 'lucid',
-    };
-
-    try {
-      localStorage.setItem('relay-experience-mode', relayMap[normalized] || 'flow');
-    } catch {}
-
-    window.dispatchEvent(new CustomEvent('relay-experience-change'));
+    // The Behavior preference adjusts motion/material independently.
+    // Adapt identity exclusively owns Relay's structural experience mode.
     window.dispatchEvent(new CustomEvent('arrow:experiencechange', { detail: { experience: normalized } }));
 
     if (state.activePanel === 'appearance') updateAppearanceState();
