@@ -3826,3 +3826,36 @@ button.command-connection-row:hover,
 .orbit-location-editor { overscroll-behavior:contain; scrollbar-gutter:stable; }
 @media(max-width:680px) { .orbit-location-editor { max-height:calc(100dvh - 120px); } .command-presence-grid { grid-template-columns:repeat(2,minmax(0,1fr)); } .orbit-command-panel { max-height:calc(100dvh - 150px); } }
 @media(prefers-reduced-motion:reduce) { :is(.orbit-app,.world-shell,.orbit-command-panel) { scroll-behavior:auto; } }
+
+
+/* Mode parity for the immersive Orbit interface, command center and navigator.
+   Does not replace the existing world art or Core geometry. */
+:root[data-arrow-experience="balanced"] :is(.orbit-command-panel,.navigator-panel,.orbit-search-panel,.orbit-location-editor,.command-info-card) {
+  backdrop-filter:none; box-shadow:0 12px 34px #0002;
+}
+:root[data-arrow-experience="quiet"] :is(.orbit-command-panel,.navigator-panel,.orbit-search-panel,.orbit-location-editor,.command-info-card,.command-system-card,.orbit-extra-location) {
+  backdrop-filter:none!important; box-shadow:none!important;
+  border-color:var(--line)!important; background:var(--panel-strong)!important;
+  color:var(--text);
+}
+:root[data-arrow-experience="quiet"] :is(.ambient-wash,.world-noise) { opacity:0!important; }
+:root[data-arrow-experience="dynamic"] :is(.orbit-command-panel,.navigator-panel,.orbit-search-panel,.orbit-location-editor,.command-info-card,.command-system-card,.orbit-extra-location) {
+  border-color:rgb(var(--arrow-accent-rgb,130,150,190) / .35)!important;
+  box-shadow:0 14px 43px rgb(var(--arrow-accent-rgb,130,150,190) / .14)!important;
+}
+:root[data-arrow-experience="dynamic"] :is(.command-quick-grid button,.navigator-result,.orbit-shortcut) {
+  transition:transform 230ms ease,background-color 230ms ease,border-color 230ms ease;
+}
+@media(hover:hover) { :root[data-arrow-experience="dynamic"] :is(.command-quick-grid button,.navigator-result,.orbit-shortcut):hover { transform:translateY(-2px); } }
+:root[data-arrow-experience="glass"] :is(.orbit-command-panel,.navigator-panel,.orbit-search-panel,.orbit-location-editor,.command-info-card,.command-system-card,.orbit-extra-location) {
+  background:color-mix(in srgb,var(--panel-strong) 72%,transparent)!important;
+  backdrop-filter:blur(28px) saturate(1.3)!important;
+  -webkit-backdrop-filter:blur(28px) saturate(1.3)!important;
+  border-color:color-mix(in srgb,var(--text) 24%,transparent)!important;
+  box-shadow:inset 0 1px #ffffff20,0 20px 48px #0003!important;
+  color:var(--text);
+}
+:root[data-arrow-theme="light"][data-arrow-experience="glass"] :is(.orbit-command-panel,.navigator-panel,.orbit-search-panel,.command-info-card) {
+  background:rgb(255 255 255 / .8)!important;
+}
+:root[data-arrow-motion="reduce"] :is(.orbit-command-panel,.navigator-panel,.orbit-search-panel,.orbit-location-editor) { transition:none!important; animation:none!important; }
