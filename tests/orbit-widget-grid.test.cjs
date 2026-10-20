@@ -53,3 +53,33 @@ test('Orbit gallery offers suggestions, previews, size selection and direct plac
  const src=fs.readFileSync(path.join(root,'src/components/orbit-widget-studio.tsx'),'utf8');
  for(const word of ['Recommended','Search widgets','Choose widget size','Add Widget','Auto place','placementFits','orbit-grid-cell',"'blocked'","'available'"]) assert.ok(src.includes(word),word);
 });
+
+
+test('custom sizes clamp to twelve columns and six rows and select adaptive layouts',()=>{
+ assert.deepEqual(grid.previewFootprint(13,9),{cols:12,rows:6});
+ assert.deepEqual(grid.previewFootprint(0,-5),{cols:2,rows:1});
+ assert.equal(grid.widgetLayoutKind(3,1),'compact');
+ assert.equal(grid.widgetLayoutKind(9,2),'wide');
+ assert.equal(grid.widgetLayoutKind(9,4),'expanded');
+ assert.equal(grid.widgetLayoutKind(4,5),'tall');
+ assert.equal(grid.widgetLayoutKind(6,2),'standard');
+});
+test('custom dimensions require an open footprint, not just a free starting cell',()=>{
+ const layout=[block('tasks',4,1,5,3),block('weather',0,0,3,3)];
+ assert.equal(grid.placeWidget(layout,'weather',{x:3,y:0},6,4),null);
+ const moved=grid.placeWidget(layout,'weather',{x:0,y:5},11,6);
+ assert.ok(moved);
+ assert.equal(moved.find(w=>w.id==='weather').cols,11);
+ assert.equal(moved.find(w=>w.id==='weather').rows,6);
+});
+test('edit mode and gallery reuse real live content instead of placeholder mocks',()=>{
+ const src=fs.readFileSync(path.join(root,'src/components/orbit-widget-studio.tsx'),'utf8');
+ assert.ok(src.includes('renderWidget(item.id,item.cols,item.rows)'));
+ assert.ok(src.includes('renderWidget(preview.id,preview.cols,preview.rows)'));
+ assert.ok(src.includes("aria-label=\"Custom widget width in grid columns\""));
+ assert.ok(src.includes("aria-label=\"Custom widget height in grid rows\""));
+ assert.ok(src.includes("data-widget-layout={widgetLayoutKind"));
+ assert.ok(src.includes("setDragging({ id:item.id"));
+ assert.ok(src.includes("highlightedCells(packed, candidate.id"));
+ assert.ok(src.includes("commit({x,y},dragging)"));
+});
