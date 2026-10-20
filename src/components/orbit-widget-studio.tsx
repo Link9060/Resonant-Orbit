@@ -19,7 +19,7 @@ const GROUPS: Record<WidgetGroup, DashboardWidgetId[]> = {
   Communication: ['chats', 'askravin', 'ravinbrief', 'quicknote'],
   Utilities: ['weather', 'sun', 'quicklinks'],
 };
-const SIZES: SizeName[] = ['extra-small', 'small', 'medium', 'wide', 'large', 'extra-wide', 'tall'];
+const SIZES: SizeName[] = ['extra-small','small','skinny','medium','tall','wide','extra-wide','large','extra-tall'];
 const COLORS: Partial<Record<DashboardWidgetId, string>> = {
   weather: '☀', tasks: '✓', calendar: '▦', askravin: '✦', chats: '◇', quicknote: '✎',
   focus: '◷', overview: '◈', sun: '☀', quicklinks: '↗', dayprogress: '◉', countdowns: '◷',
@@ -73,7 +73,7 @@ export function OrbitWidgetStudio({
     setPlacing(null); setHover(null);
   };
   const startPlacing = (value: Pick) => {
-    setPreview(null); setGallery(false); setPlacing(value); setHover(null);
+    setDragging(null); setPreview(null); setGallery(false); setPlacing(value); setHover(null);
     setHint('Hover over the grid: green cells are available; red cells are blocked. Tap a green region to place.');
     onEdit(true);
   };
@@ -149,7 +149,9 @@ export function OrbitWidgetStudio({
             }}
           />;
         })}
-        {visible.map(item => <article key={item.id} className="adapt-widget orbit-positioned-widget"
+        {visible.map(item => <article key={item.id}
+          className={'adapt-widget orbit-positioned-widget' + (editing ? ' is-live-edit' : '')}
+          data-widget-layout={widgetLayoutKind(item.cols,item.rows)}
           style={{ gridColumn:(item.x+1)+' / span '+item.cols,gridRow:(item.y+1)+' / span '+item.rows, '--orbit-widget-column':(item.x+1)+' / span '+item.cols,'--orbit-widget-row':(item.y+1)+' / span '+item.rows } as CSSProperties}
           draggable={editing && !placing}
           onDragStart={event => {
@@ -162,16 +164,17 @@ export function OrbitWidgetStudio({
           onDragEnd={() => { setDragging(null);setHover(null); }}
         >
           <div className="adapt-widget-top"><strong>{meta[item.id].title}</strong><span aria-hidden="true">{COLORS[item.id] || '✦'}</span></div>
-          {editing ? <>
-            <p className="adapt-widget-desc">{item.cols} × {item.rows} cells</p>
+          <div className="adapt-widget-content" inert={editing} aria-hidden={editing}>
+            {renderWidget(item.id,item.cols,item.rows)}
+          </div>
+          {editing && <div className="orbit-widget-edit-overlay">
+            <div className="orbit-widget-size-stamp">{item.cols} × {item.rows} · Live preview</div>
             <div className="orbit-widget-edit-actions">
-              <button type="button" onClick={() => {
-                startPlacing({id:item.id,size:item.size,cols:item.cols,rows:item.rows,moving:true});
-              }}>Move</button>
+              <button type="button" onClick={() => startPlacing({id:item.id,size:item.size,cols:item.cols,rows:item.rows,moving:true})}>Move</button>
               <button type="button" onClick={() => chooseWidget(item.id)}>Resize</button>
               <button type="button" aria-label={'Remove '+meta[item.id].title} onClick={() => remove(item.id)}>−</button>
             </div>
-          </> : <div className="adapt-widget-content">{renderWidget(item.id)}</div>}
+          </div>}
         </article>)}
       </div>
     </div>
@@ -215,12 +218,27 @@ export function OrbitWidgetStudio({
               <span className="orbit-preview-size-icon" style={{ width:Math.max(25,DASHBOARD_SIZE_PRESETS[size].cols*4),height:Math.max(15,DASHBOARD_SIZE_PRESETS[size].rows*9) }}/>
               <span>{DASHBOARD_SIZE_PRESETS[size].label}</span><small>{DASHBOARD_SIZE_PRESETS[size].cols} × {DASHBOARD_SIZE_PRESETS[size].rows}</small>
             </button>)}
+            <button type="button" aria-pressed={preview.size==='custom'} onClick={()=>setPreview({ ...preview,size:'custom' })}>
+              <span className="orbit-preview-size-icon orbit-preview-custom-icon">↔</span>
+              <span>Custom</span><small>{preview.cols} × {preview.rows}</small>
+            </button>
           </div>
+          {preview.size==='custom' && <div className="orbit-custom-size-editor">
+            <div className="orbit-custom-size-heading"><strong>Custom dimensions</strong><small>Drag sliders or enter grid cells. Changes preview instantly.</small></div>
+            <label><span>Width <strong>{preview.cols} / 12 columns</strong></span>
+              <input type="range" min={2} max={12} step={1} value={preview.cols} onChange={event=>setPreview(customSize(preview,'cols',Number(event.target.value)))}/>
+              <input type="number" min={2} max={12} value={preview.cols} aria-label="Custom widget width in grid columns" onChange={event=>setPreview(customSize(preview,'cols',Number(event.target.value)))}/>
+            </label>
+            <label><span>Height <strong>{preview.rows} / 6 rows</strong></span>
+              <input type="range" min={1} max={6} step={1} value={preview.rows} onChange={event=>setPreview(customSize(preview,'rows',Number(event.target.value)))}/>
+              <input type="number" min={1} max={6} value={preview.rows} aria-label="Custom widget height in grid rows" onChange={event=>setPreview(customSize(preview,'rows',Number(event.target.value)))}/>
+            </label>
+          </div>}
           <div className="orbit-gallery-cta">
             <button type="button" className="orbit-gallery-primary" onClick={()=>startPlacing(preview)}>{preview.moving?'Choose location':'Add Widget'}</button>
             <button type="button" onClick={()=>automatic(preview)}>Auto place</button>
           </div>
-          <p className="orbit-gallery-footnote">After adding, tap an empty green part of the grid to choose its exact position. Red cells mean the widget won't fit.</p>
+          <p className="orbit-gallery-footnote">Live preview uses your widget data. Choose a size, then place in a green region, or let ARROW auto-place it.</p>
         </>}
       </section>
     </div>}
