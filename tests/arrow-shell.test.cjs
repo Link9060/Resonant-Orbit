@@ -335,11 +335,27 @@ test('settings exposes account, notification, help and legal destinations in bet
   const f=await fixture('orbit','','enabled','https://link9060.github.io/Resonant-Relay/arrow/orbit/');try{f.w.ArrowOS.openPanel('settings','orbit');const links=[...f.w.document.querySelectorAll('.arrow-os-settings-actions a')].map(a=>a.href);for(const path of ['profile/','profile/#notifications','help/','privacy/','terms/'])assert.ok(links.some(href=>href.endsWith('/Resonant-Relay/'+path)),path);}finally{f.close();}
 });
 
-test('hover tray survives the gap and cancels pending closure on reentry',async()=>{
- const f=await fixture();try{const root=f.w.document.querySelector('.arrow-os-root');root.dispatchEvent(new f.w.MouseEvent('mouseenter'));assert.equal(root.dataset.open,'true');root.dispatchEvent(new f.w.MouseEvent('mouseleave'));await delay(60);assert.equal(root.dataset.open,'true');root.dispatchEvent(new f.w.MouseEvent('mouseenter'));await delay(200);assert.equal(root.dataset.open,'true');root.dispatchEvent(new f.w.MouseEvent('mouseleave'));await delay(200);assert.equal(root.dataset.open,'false');}finally{f.close();}
+test('command dock opens on intention, stays pinned across pointer gaps, and closes on click',async()=>{
+ const f=await fixture();try{
+  const root=f.w.document.querySelector('.arrow-os-root');
+  const trigger=root.querySelector('.arrow-os-trigger');
+  root.dispatchEvent(new f.w.MouseEvent('mouseenter'));assert.equal(root.dataset.open,'false');
+  trigger.click();assert.equal(root.dataset.open,'true');
+  root.dispatchEvent(new f.w.MouseEvent('mouseleave'));await delay(220);assert.equal(root.dataset.open,'true');
+  root.dispatchEvent(new f.w.MouseEvent('mouseenter'));await delay(40);assert.equal(root.dataset.open,'true');
+  trigger.click();assert.equal(root.dataset.open,'false');
+ }finally{f.close();}
 });
-test('Escape closes an open tray and focuses its trigger before any center navigation',async()=>{
- const f=await fixture('relay','','enabled','https://enterarrow.com/relay/');try{const root=f.w.document.querySelector('.arrow-os-root');root.dispatchEvent(new f.w.MouseEvent('mouseenter'));f.w.document.body.dispatchEvent(new f.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));assert.equal(root.dataset.open,'false');assert.ok(root.contains(f.w.document.activeElement));assert.equal(f.w.document.querySelector('.arrow-os-handoff'),null);}finally{f.close();}
+test('Escape closes the intentional command dock and restores trigger focus',async()=>{
+ const f=await fixture('relay','','enabled','https://enterarrow.com/relay/');
+ try{
+  const root=f.w.document.querySelector('.arrow-os-root');
+  root.querySelector('.arrow-os-trigger').click();assert.equal(root.dataset.open,'true');
+  f.w.document.body.dispatchEvent(new f.w.KeyboardEvent('keydown',{key:'Escape',bubbles:true,cancelable:true}));
+  assert.equal(root.dataset.open,'false');
+  assert.ok(root.contains(f.w.document.activeElement));
+  assert.equal(f.w.document.querySelector('.arrow-os-handoff'),null);
+ }finally{f.close();}
 });
 
 
