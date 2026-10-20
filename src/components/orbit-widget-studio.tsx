@@ -7,7 +7,7 @@ import {
 } from '@/lib/dashboard-layout';
 import {
   GRID_COLUMNS, packDashboard, placementFits, placeWidget, autoPlaceWidget,
-  highlightedCells, gridRows, type GridPoint,
+  highlightedCells, gridRows, widgetLayoutKind, previewFootprint, type GridPoint,
 } from '@/lib/orbit-widget-grid';
 
 type SizeName = Exclude<DashboardWidgetSize, 'custom'>;
@@ -24,7 +24,13 @@ const COLORS: Partial<Record<DashboardWidgetId, string>> = {
   weather: '☀', tasks: '✓', calendar: '▦', askravin: '✦', chats: '◇', quicknote: '✎',
   focus: '◷', overview: '◈', sun: '☀', quicklinks: '↗', dayprogress: '◉', countdowns: '◷',
 };
-type Pick = { id: DashboardWidgetId; size: SizeName; moving: boolean };
+type Pick = { id: DashboardWidgetId; size: DashboardWidgetSize; cols: number; rows: number; moving: boolean };
+function fromSize(value: Pick, size: SizeName): Pick { return { ...value, size, ...DASHBOARD_SIZE_PRESETS[size] }; }
+function customSize(value: Pick, axis: 'cols'|'rows', valueToSet: number): Pick {
+  return { ...value, size:'custom', ...previewFootprint(
+    axis === 'cols' ? valueToSet : value.cols, axis === 'rows' ? valueToSet : value.rows
+  ) };
+}
 export function OrbitWidgetStudio({
   widgets, meta, editing, onChange, onEdit, disabled, renderWidget, extra,
 }: {
@@ -34,7 +40,7 @@ export function OrbitWidgetStudio({
   onChange: (layout: DashboardWidgetPreference[]) => void;
   onEdit: (editing: boolean) => void;
   disabled: boolean;
-  renderWidget: (id: DashboardWidgetId) => ReactNode;
+  renderWidget: (id: DashboardWidgetId, cols: number, rows: number) => ReactNode;
   extra: ReactNode;
 }) {
   const [gallery, setGallery] = useState(false);
@@ -42,14 +48,15 @@ export function OrbitWidgetStudio({
   const [category, setCategory] = useState<WidgetGroup>('Recommended');
   const [preview, setPreview] = useState<Pick | null>(null);
   const [placing, setPlacing] = useState<Pick | null>(null);
+  const [dragging, setDragging] = useState<Pick | null>(null);
   const [hover, setHover] = useState<GridPoint | null>(null);
   const [hint, setHint] = useState('Choose an empty space to place your widget.');
   const packed = useMemo(() => packDashboard(widgets), [widgets]);
   const visible = packed.filter(w => w.visible);
-  const boardRows = editing ? Math.max(gridRows(widgets), placing ? (hover?.y ?? 0) + DASHBOARD_SIZE_PRESETS[placing.size].rows + 4 : 12) : Math.max(1, ...visible.map(w => w.y + w.rows));
-  const selected = placing ? DASHBOARD_SIZE_PRESETS[placing.size] : null;
-  const tiles = useMemo(() => placing && selected ? highlightedCells(packed, placing.id, hover, selected.cols, selected.rows) : null,
-    [packed, placing, hover, selected]);
+  const candidate = dragging || placing;
+  const boardRows = editing ? Math.max(gridRows(widgets), candidate ? (hover?.y ?? 0) + candidate.rows + 4 : 12) : Math.max(1, ...visible.map(w => w.y + w.rows));
+  const tiles = useMemo(() => candidate ? highlightedCells(packed, candidate.id, hover, candidate.cols, candidate.rows) : null,
+    [packed, candidate, hover]);
   const library = useMemo(() => {
     const set = new Set(GROUPS[category]);
     const all = Object.keys(meta) as DashboardWidgetId[];
@@ -61,7 +68,7 @@ export function OrbitWidgetStudio({
   const chooseWidget = (id: DashboardWidgetId) => {
     const prior = packed.find(w => w.id === id);
     const available = SIZES.find(s => DASHBOARD_SIZE_PRESETS[s].cols === prior?.cols && DASHBOARD_SIZE_PRESETS[s].rows === prior?.rows);
-    setPreview({ id, size: available || 'medium', moving: Boolean(prior?.visible) });
+    setPreview({ id, size: available || 'custom', cols:prior?.cols || 6, rows:prior?.rows || 2, moving: Boolean(prior?.visible) });
     setGallery(true);
     setPlacing(null); setHover(null);
   };
@@ -72,19 +79,17 @@ export function OrbitWidgetStudio({
   };
   const commit = (point: GridPoint, candidate = placing) => {
     if (!candidate) return;
-    const size = DASHBOARD_SIZE_PRESETS[candidate.size];
-    if (!placementFits(packed, candidate.id, point, size.cols, size.rows)) {
+    if (!placementFits(packed, candidate.id, point, candidate.cols, candidate.rows)) {
       setHint('That area is blocked. Choose another green region.');
       setHover(point); return;
     }
-    const result = placeWidget(packed, candidate.id, point, size.cols, size.rows);
+    const result = placeWidget(packed, candidate.id, point, candidate.cols, candidate.rows);
     if (!result) return;
     onChange(result.map(item => item.id === candidate.id ? { ...item, size:candidate.size } : item));
     setPlacing(null); setHover(null); setHint(meta[candidate.id].title + ' placed successfully.');
   };
   const automatic = (candidate: Pick) => {
-    const size = DASHBOARD_SIZE_PRESETS[candidate.size];
-    const result = autoPlaceWidget(packed, candidate.id, size.cols, size.rows);
+    const result = autoPlaceWidget(packed, candidate.id, candidate.cols, candidate.rows);
     if (result) {
       onChange(result.map(item => item.id === candidate.id ? { ...item, size:candidate.size } : item));
       setHint(meta[candidate.id].title + ' added at the first available location.');
@@ -97,71 +102,71 @@ export function OrbitWidgetStudio({
     setHint(meta[id].title + ' removed from dashboard. You can re-add it from the gallery.');
   };
   const boardStyle = { '--orbit-grid-rows':boardRows } as CSSProperties;
-  const currentPreview = preview ? DASHBOARD_SIZE_PRESETS[preview.size] : null;
+  const currentPreview = preview ? { cols:preview.cols, rows:preview.rows } : null;
 
   return <>
     {editing && <div className="orbit-studio-toolbar">
-      <div><strong>Arrange your space</strong><span>Drag widgets or choose Move. Place only on open cells.</span></div>
+      <div><strong>Arrange your space</strong><span>Widget contents stay visible. Drag or tap Move and watch cells turn green or red.</span></div>
       <div className="orbit-studio-toolbar-actions">
         <button type="button" onClick={() => { setGallery(true); setPlacing(null); }} disabled={disabled}>+ Add Widgets</button>
-        <button type="button" onClick={() => { onEdit(false); setPlacing(null); setGallery(false); setPreview(null); }}>Done</button>
+        <button type="button" onClick={() => { onEdit(false); setPlacing(null); setDragging(null); setGallery(false); setPreview(null); }}>Done</button>
       </div>
     </div>}
     {editing && <div className="orbit-placement-status" role="status">
       <span className="orbit-legend-green"/><span>Available</span>
       <span className="orbit-legend-red"/><span>Blocked</span>
-      <strong>{placing ? 'Placing ' + meta[placing.id].title : hint}</strong>
+      <strong>{candidate ? (dragging ? 'Dragging ' : 'Placing ') + meta[candidate.id].title + (tiles ? tiles.valid ? ' · fits here' : ' · blocked' : '') : hint}</strong>
       {placing && <button type="button" onClick={() => { setPlacing(null); setHover(null); }}>Cancel placement</button>}
     </div>}
     <div className={'orbit-grid-scroller' + (editing ? ' is-editing' : '')}>
-      <div className={'orbit-widget-board' + (editing ? ' is-editing' : '') + (placing ? ' is-placing' : '')}
+      <div className={'orbit-widget-board' + (editing ? ' is-editing' : '') + (candidate ? ' is-placing' : '') + (dragging ? ' is-dragging' : '')}
         style={boardStyle}
         onDragOver={event => { if (editing) event.preventDefault(); }}
       >
         {editing && Array.from({ length:boardRows * GRID_COLUMNS }, (_, index) => {
           const x=index%GRID_COLUMNS, y=Math.floor(index/GRID_COLUMNS), key=x+':'+y;
-          const active=placing && hover && x>=hover.x && x<hover.x+DASHBOARD_SIZE_PRESETS[placing.size].cols &&
-            y>=hover.y && y<hover.y+DASHBOARD_SIZE_PRESETS[placing.size].rows;
+          const active=candidate && hover && x>=hover.x && x<hover.x+candidate.cols &&
+            y>=hover.y && y<hover.y+candidate.rows;
           const state=active ? tiles?.red.has(key) ? 'blocked' : 'available' : 'neutral';
           return <button key={key} type="button"
             className={'orbit-grid-cell is-' + state}
             style={{ gridColumn:x+1,gridRow:y+1 }}
             aria-label={'Column '+(x+1)+', row '+(y+1)+(state==='blocked'?', blocked':'')}
-            tabIndex={placing ? 0 : -1} aria-hidden={!placing}
-            onPointerEnter={() => { if (placing) setHover({x,y}); }}
+            tabIndex={placing && !dragging ? 0 : -1} aria-hidden={!placing || Boolean(dragging)}
+            onPointerEnter={() => { if (candidate && !dragging) setHover({x,y}); }}
             onFocus={() => { if (placing) setHover({x,y}); }}
             onClick={() => { if (placing) commit({x,y}); }}
             onDragOver={event => {
               if (!editing) return;
               event.preventDefault();
-              if (placing) setHover({x,y});
+              if (candidate) setHover({x,y});
             }}
             onDrop={event => {
               event.preventDefault();
-              const id=event.dataTransfer.getData('text/plain') as DashboardWidgetId;
-              const existing=packed.find(w=>w.id===id && w.visible);
-              if (!existing) return;
-              const size=SIZES.find(s=>DASHBOARD_SIZE_PRESETS[s].cols===existing.cols && DASHBOARD_SIZE_PRESETS[s].rows===existing.rows) || 'medium';
-              const candidate={id,size,moving:true};
-              const point={x,y};
-              const next=placeWidget(packed,id,point,existing.cols,existing.rows);
-              if(next) { onChange(next);setHint(meta[id].title+' moved.');setPlacing(null);setHover(null); }
-              else { setHint('Blocked. Move to green squares.');setPlacing(candidate);setHover(point); }
+              if (!dragging) return;
+              commit({x,y},dragging);
+              setDragging(null);setHover(null);
             }}
           />;
         })}
         {visible.map(item => <article key={item.id} className="adapt-widget orbit-positioned-widget"
           style={{ gridColumn:(item.x+1)+' / span '+item.cols,gridRow:(item.y+1)+' / span '+item.rows, '--orbit-widget-column':(item.x+1)+' / span '+item.cols,'--orbit-widget-row':(item.y+1)+' / span '+item.rows } as CSSProperties}
           draggable={editing && !placing}
-          onDragStart={event => { if (editing) event.dataTransfer.setData('text/plain',item.id); }}
+          onDragStart={event => {
+            if (!editing) return;
+            event.dataTransfer.effectAllowed='move';
+            event.dataTransfer.setData('text/plain',item.id);
+            setDragging({ id:item.id, size:item.size, cols:item.cols, rows:item.rows, moving:true });
+            setHover(null);
+          }}
+          onDragEnd={() => { setDragging(null);setHover(null); }}
         >
           <div className="adapt-widget-top"><strong>{meta[item.id].title}</strong><span aria-hidden="true">{COLORS[item.id] || '✦'}</span></div>
           {editing ? <>
             <p className="adapt-widget-desc">{item.cols} × {item.rows} cells</p>
             <div className="orbit-widget-edit-actions">
               <button type="button" onClick={() => {
-                const size=SIZES.find(s=>DASHBOARD_SIZE_PRESETS[s].cols===item.cols && DASHBOARD_SIZE_PRESETS[s].rows===item.rows) || 'medium';
-                startPlacing({id:item.id,size,moving:true});
+                startPlacing({id:item.id,size:item.size,cols:item.cols,rows:item.rows,moving:true});
               }}>Move</button>
               <button type="button" onClick={() => chooseWidget(item.id)}>Resize</button>
               <button type="button" aria-label={'Remove '+meta[item.id].title} onClick={() => remove(item.id)}>−</button>
@@ -196,15 +201,17 @@ export function OrbitWidgetStudio({
         </> : <>
           <button type="button" className="orbit-gallery-back" onClick={()=>setPreview(null)}>← All widgets</button>
           <div className="orbit-gallery-widget-heading"><span className="orbit-gallery-item-icon">{COLORS[preview.id] || '✦'}</span><div><h3>{meta[preview.id].title}</h3><p>{meta[preview.id].subtitle}</p></div></div>
-          <div className="orbit-widget-visual-preview" aria-label="Widget appearance preview">
-            <div className="orbit-preview-tile" style={{ '--preview-cols':currentPreview?.cols,'--preview-rows':currentPreview?.rows } as CSSProperties}>
-              <small>{meta[preview.id].title}</small><strong>{preview.id==='weather'?'72°':preview.id==='tasks'?'3 tasks':preview.id==='askravin'?'Ask anything':preview.id==='calendar'?'Next up':COLORS[preview.id] || '✦'}</strong>
-              <span>{meta[preview.id].subtitle}</span>
-            </div>
+          <div className="orbit-widget-visual-preview" aria-label="Live widget preview in selected size">
+            <article className="adapt-widget orbit-preview-tile"
+              data-widget-layout={widgetLayoutKind(preview.cols,preview.rows)}
+              style={{ '--preview-cols':currentPreview?.cols,'--preview-rows':currentPreview?.rows } as CSSProperties}>
+              <div className="adapt-widget-top"><strong>{meta[preview.id].title}</strong><span aria-hidden="true">{COLORS[preview.id] || '✦'}</span></div>
+              <div className="adapt-widget-content" inert aria-hidden="true">{renderWidget(preview.id,preview.cols,preview.rows)}</div>
+            </article>
           </div>
           <h4 className="orbit-preview-size-label">Choose widget size</h4>
           <div className="orbit-preview-size-options" role="group" aria-label="Widget size">
-            {SIZES.map(size=><button type="button" key={size} aria-pressed={preview.size===size} onClick={()=>setPreview({ ...preview,size })}>
+            {SIZES.map(size=><button type="button" key={size} aria-pressed={preview.size===size} onClick={()=>setPreview(fromSize(preview,size))}>
               <span className="orbit-preview-size-icon" style={{ width:Math.max(25,DASHBOARD_SIZE_PRESETS[size].cols*4),height:Math.max(15,DASHBOARD_SIZE_PRESETS[size].rows*9) }}/>
               <span>{DASHBOARD_SIZE_PRESETS[size].label}</span><small>{DASHBOARD_SIZE_PRESETS[size].cols} × {DASHBOARD_SIZE_PRESETS[size].rows}</small>
             </button>)}
