@@ -618,3 +618,211 @@
 @media(prefers-reduced-motion:reduce) {
  :root:not([data-arrow-motion="full"]) .orbit-widget-board.is-dragging .orbit-grid-cell { transition:none!important; }
 }
+
+
+/* ARROW Adapt III · Four truly different Orbit home canvases. Core stays original. */
+.adapt-identity-intro { display:none; }
+[data-orbit-adapt]:not([data-orbit-adapt="core"]) .adapt-identity-intro { display:block; margin:0 0 27px; }
+.adapt-identity-intro > div { display:none; position:relative; overflow:hidden; }
+[data-orbit-adapt="bloom"] .adapt-intro-bloom,
+[data-orbit-adapt="haven"] .adapt-intro-haven,
+[data-orbit-adapt="atelier"] .adapt-intro-atelier,
+[data-orbit-adapt="pulse"] .adapt-intro-pulse { display:flex; }
+.adapt-identity-intro .adapt-intro-label { font-size:10px;letter-spacing:.17em;font-weight:740;opacity:.72; }
+.adapt-identity-intro p { font-size:clamp(12px,1.6vw,15px);line-height:1.55;margin:10px 0 0;max-width:55ch; }
+.adapt-identity-intro .adapt-intro-symbol { position:absolute;pointer-events:none; }
+/* BLOOM: expressive home canvas, rounded floating cards, bouncy visual hierarchy. */
+[data-orbit-adapt="bloom"] .adapt-dashboard-inner { max-width:1160px; }
+[data-orbit-adapt="bloom"] .adapt-dashboard {
+  background:radial-gradient(circle at 10% 10%,color-mix(in srgb,var(--arrow-adapt-secondary) 34%,transparent),transparent 43%),
+             radial-gradient(circle at 93% 76%,color-mix(in srgb,var(--arrow-adapt-primary) 12%,transparent),transparent 44%),var(--adapt-bg);
+}
+[data-orbit-adapt="bloom"] .adapt-dashboard-heading { margin-bottom:12px; }
+[data-orbit-adapt="bloom"] .adapt-dashboard-heading h1 { font-weight:850;letter-spacing:-.065em; }
+[data-orbit-adapt="bloom"] .adapt-intro-bloom {
+  flex-direction:column;justify-content:center;min-height:176px;
+  padding:24px clamp(22px,4vw,43px);border:2px solid color-mix(in srgb,var(--arrow-adapt-secondary) 60%,var(--adapt-border));
+  border-radius:36px;
+  background:linear-gradient(128deg,color-mix(in srgb,var(--arrow-adapt-primary) 19%,var(--adapt-surface)),
+                                   color-mix(in srgb,var(--arrow-adapt-secondary) 34%,var(--adapt-surface)));
+  box-shadow:0 15px 39px color-mix(in srgb,var(--arrow-adapt-primary) 15%,transparent);
+}
+[data-orbit-adapt="bloom"] .adapt-intro-bloom strong {
+  font-family:var(--arrow-font-display);font-size:clamp(24px,3.5vw,42px);line-height:1.12;letter-spacing:-.06em;
+}
+[data-orbit-adapt="bloom"] .adapt-intro-bloom .adapt-intro-symbol {
+  font-size:clamp(75px,16vw,150px);opacity:.22;right:6%;top:0;
+}
+[data-orbit-adapt="bloom"] .orbit-positioned-widget,
+[data-orbit-adapt="bloom"] .adapt-widget-library,
+[data-orbit-adapt="bloom"] .orbit-studio-toolbar {
+  border:2px solid color-mix(in srgb,var(--arrow-adapt-secondary) 39%,var(--adapt-border));
+  border-radius:clamp(20px,var(--adapt-radius),33px)!important;
+  background:color-mix(in srgb,var(--adapt-surface) 90%,var(--arrow-adapt-secondary))!important;
+  box-shadow:0 11px 32px color-mix(in srgb,var(--arrow-adapt-primary) 11%,transparent);
+}
+[data-orbit-adapt="bloom"] .orbit-positioned-widget:nth-of-type(3n + 2) {
+  background:color-mix(in srgb,var(--adapt-surface) 89%,var(--arrow-adapt-primary))!important;
+}
+[data-orbit-adapt="bloom"] .adapt-widget-top span {
+  display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;
+  background:color-mix(in srgb,var(--arrow-adapt-primary) 19%,transparent);border-radius:50%;opacity:1;
+}
+[data-orbit-adapt="bloom"] .adapt-edit-button,
+[data-orbit-adapt="bloom"] :is(.orbit-studio-toolbar-actions button,.orbit-gallery-primary) {
+  border-radius:999px!important;
+}
+[data-orbit-adapt="bloom"] .orbit-widget-gallery { border-radius:36px!important; }
+[data-orbit-adapt="bloom"] :is(.orbit-gallery-item,.orbit-preview-size-options button) { border-radius:21px!important; }
+/* HAVEN: calm paper journal with a grounded table of contents. */
+[data-orbit-adapt="haven"] .adapt-dashboard {
+  background:repeating-linear-gradient(0deg,transparent 0 46px,color-mix(in srgb,var(--arrow-adapt-primary) 5%,transparent) 47px),
+             var(--adapt-bg);
+}
+[data-orbit-adapt="haven"] .adapt-dashboard-inner { max-width:1080px; }
+[data-orbit-adapt="haven"] .adapt-dashboard-heading {
+  padding-bottom:18px;border-bottom:1px solid color-mix(in srgb,var(--arrow-adapt-primary) 39%,var(--adapt-border));
+}
+[data-orbit-adapt="haven"] .adapt-dashboard-heading h1 { font-family:var(--arrow-font-display);font-weight:500;letter-spacing:-.035em; }
+[data-orbit-adapt="haven"] .adapt-intro-haven {
+  flex-direction:column;justify-content:center;min-height:174px;
+  padding:25px clamp(22px,4vw,42px);
+  background:color-mix(in srgb,var(--adapt-surface) 93%,var(--arrow-adapt-secondary));
+  border-left:5px solid var(--arrow-adapt-primary);
+  box-shadow:6px 8px 0 color-mix(in srgb,var(--arrow-adapt-primary) 10%,transparent);
+  border-radius:6px 18px 18px 6px;
+}
+[data-orbit-adapt="haven"] .adapt-intro-haven strong {
+  font-family:var(--arrow-font-display);font-size:clamp(26px,3.5vw,42px);font-weight:500;line-height:1.2;
+}
+[data-orbit-adapt="haven"] .adapt-intro-haven .adapt-intro-symbol {right:6%;top:12px;font-size:100px;opacity:.12;}
+[data-orbit-adapt="haven"] :is(.orbit-positioned-widget,.adapt-widget-library,.orbit-studio-toolbar,.orbit-widget-gallery) {
+  border-radius:11px!important;
+  background:color-mix(in srgb,var(--adapt-surface) 94%,var(--arrow-adapt-secondary))!important;
+  border-left:3px solid color-mix(in srgb,var(--arrow-adapt-primary) 53%,var(--adapt-border));
+  box-shadow:5px 7px 0 color-mix(in srgb,var(--arrow-adapt-primary) 8%,transparent);
+}
+[data-orbit-adapt="haven"] .adapt-widget-top {
+  padding-bottom:10px;border-bottom:1px solid color-mix(in srgb,var(--arrow-adapt-primary) 19%,var(--adapt-border));
+  font-family:var(--arrow-font-display);
+}
+[data-orbit-adapt="haven"] .adapt-edit-button { border-radius:12px!important; }
+/* ATELIER: editorial issue layout, oversized typography and architectural lines. */
+[data-orbit-adapt="atelier"] .adapt-dashboard { background:var(--adapt-bg); }
+[data-orbit-adapt="atelier"] .adapt-dashboard-inner { max-width:1320px; }
+[data-orbit-adapt="atelier"] .adapt-dashboard-heading {
+  padding:7px 0 22px;border-bottom:1px solid var(--adapt-ink);margin-bottom:17px;
+}
+[data-orbit-adapt="atelier"] .adapt-dashboard-heading h1 {
+  font-family:var(--arrow-font-display)!important;
+  font-size:clamp(35px,5vw,64px);font-weight:400;
+}
+[data-orbit-adapt="atelier"] .adapt-intro-atelier {
+  flex-direction:column;justify-content:center;min-height:172px;
+  padding:22px 0 30px;border-bottom:2px solid var(--arrow-adapt-primary);
+}
+[data-orbit-adapt="atelier"] .adapt-atelier-hero-line {display:flex;align-items:end;justify-content:space-between;gap:16px;}
+[data-orbit-adapt="atelier"] .adapt-atelier-hero-line strong {
+  font-family:var(--arrow-font-display);font-size:clamp(30px,5vw,66px);font-weight:400;letter-spacing:-.055em;line-height:1.08;
+}
+[data-orbit-adapt="atelier"] .adapt-atelier-hero-line span { font-size:11px;letter-spacing:.16em;flex:none; }
+[data-orbit-adapt="atelier"] .adapt-intro-atelier p {font-size:13px;}
+[data-orbit-adapt="atelier"] :is(.orbit-positioned-widget,.adapt-widget-library,.orbit-studio-toolbar,.orbit-widget-gallery) {
+  border-radius:2px!important;border:1px solid var(--adapt-border)!important;
+  background:transparent!important;box-shadow:none!important;
+}
+[data-orbit-adapt="atelier"] .orbit-positioned-widget {border-top:2px solid var(--adapt-ink)!important;}
+[data-orbit-adapt="atelier"] .adapt-widget-top {
+  font-family:var(--arrow-font-display);font-size:clamp(15px,2vw,24px);font-weight:400;
+  border-bottom:1px solid var(--adapt-border);padding-bottom:15px;
+}
+[data-orbit-adapt="atelier"] .adapt-widget-top span {font-size:11px;font-family:var(--arrow-font-body);opacity:.6;}
+[data-orbit-adapt="atelier"] .adapt-edit-button,
+[data-orbit-adapt="atelier"] :is(.orbit-studio-toolbar-actions button,.orbit-gallery-primary) {
+  border-radius:0!important;text-transform:uppercase;letter-spacing:.11em;font-size:11px!important;
+}
+[data-orbit-adapt="atelier"] .orbit-gallery-item {border-radius:1px!important;}
+/* PULSE: a powerful energetic home console with measured visual drama. */
+[data-orbit-adapt="pulse"] .adapt-dashboard {
+  background:radial-gradient(ellipse at 88% 4%,color-mix(in srgb,var(--arrow-adapt-primary) 32%,transparent),transparent 47%),
+             radial-gradient(ellipse at 15% 94%,color-mix(in srgb,var(--arrow-adapt-secondary) 18%,transparent),transparent 44%),var(--adapt-bg);
+}
+[data-orbit-adapt="pulse"] .adapt-dashboard-inner { max-width:1320px; }
+[data-orbit-adapt="pulse"] .adapt-dashboard-heading {
+  padding-bottom:13px;border-bottom:2px solid var(--arrow-adapt-secondary);
+}
+[data-orbit-adapt="pulse"] .adapt-dashboard-heading h1 {
+  font-family:var(--arrow-font-display);font-weight:850;
+  text-transform:uppercase;font-size:clamp(34px,5vw,61px);letter-spacing:-.07em;
+}
+[data-orbit-adapt="pulse"] .adapt-intro-pulse {
+  flex-direction:column;justify-content:center;min-height:210px;
+  padding:23px clamp(21px,4vw,47px);
+  border:2px solid var(--arrow-adapt-secondary);border-radius:8px 34px 8px 34px;
+  background:linear-gradient(120deg,color-mix(in srgb,var(--arrow-adapt-primary) 27%,var(--adapt-surface)),
+             color-mix(in srgb,var(--arrow-adapt-secondary) 10%,var(--adapt-surface)));
+  box-shadow:0 15px 50px color-mix(in srgb,var(--arrow-adapt-primary) 23%,transparent);
+}
+[data-orbit-adapt="pulse"] .adapt-intro-pulse strong {
+  font-family:var(--arrow-font-display);font-size:clamp(34px,6vw,71px);font-weight:850;
+  letter-spacing:-.075em;line-height:.97;
+}
+[data-orbit-adapt="pulse"] .adapt-intro-pulse p {font-weight:650;letter-spacing:.08em;text-transform:uppercase;}
+[data-orbit-adapt="pulse"] .adapt-intro-pulse .adapt-intro-symbol {
+  right:4%;top:0;font-size:clamp(100px,18vw,200px);font-weight:850;opacity:.14;
+}
+[data-orbit-adapt="pulse"] :is(.orbit-positioned-widget,.adapt-widget-library,.orbit-studio-toolbar,.orbit-widget-gallery) {
+  border-radius:6px 25px 6px 25px!important;
+  background:linear-gradient(143deg,color-mix(in srgb,var(--arrow-adapt-primary) 13%,var(--adapt-surface)),var(--adapt-surface))!important;
+  border:1px solid color-mix(in srgb,var(--arrow-adapt-secondary) 51%,var(--adapt-border))!important;
+  box-shadow:0 8px 28px color-mix(in srgb,var(--arrow-adapt-primary) 16%,transparent);
+}
+[data-orbit-adapt="pulse"] .adapt-widget-top {
+  font-weight:800;text-transform:uppercase;letter-spacing:-.035em;
+}
+[data-orbit-adapt="pulse"] .adapt-widget-top span {font-size:24px;color:var(--arrow-adapt-secondary);opacity:1;}
+[data-orbit-adapt="pulse"] .adapt-edit-button {
+  background:var(--arrow-adapt-gradient)!important;color:#fff!important;
+  border-radius:5px 15px 5px 15px!important;
+  text-transform:uppercase;letter-spacing:.04em;
+}
+/* Orbit's core world remains the same. Distinct shell/navigation chrome for other identities. */
+:root[data-arrow-adapt="bloom"] .orbit-header {
+  border-bottom:1px solid color-mix(in srgb,var(--arrow-adapt-secondary) 55%,transparent);
+  background:color-mix(in srgb,var(--arrow-design-surface) 90%,var(--arrow-adapt-secondary))!important;
+  box-shadow:0 8px 24px color-mix(in srgb,var(--arrow-adapt-primary) 12%,transparent);
+}
+:root[data-arrow-adapt="bloom"] .adapt-view-switch { border-radius:999px;background:color-mix(in srgb,var(--arrow-adapt-secondary) 22%,transparent); }
+:root[data-arrow-adapt="bloom"] .adapt-view-switch button[aria-pressed="true"] {
+  background:var(--arrow-adapt-primary);color:var(--arrow-accent-on,#fff);border-radius:999px;
+}
+:root[data-arrow-adapt="haven"] .orbit-header {
+  border-bottom:2px solid var(--arrow-adapt-primary);
+  background:color-mix(in srgb,var(--arrow-design-surface) 94%,var(--arrow-adapt-secondary))!important;
+}
+:root[data-arrow-adapt="haven"] .adapt-view-switch { border-radius:9px; }
+:root[data-arrow-adapt="atelier"] .orbit-header {
+  border-bottom:1px solid var(--arrow-design-fg);background:var(--arrow-design-surface)!important;
+}
+:root[data-arrow-adapt="atelier"] .suite-name {font-family:var(--arrow-font-display);font-size:20px;}
+:root[data-arrow-adapt="atelier"] .adapt-view-switch {border-radius:0;backdrop-filter:none;}
+:root[data-arrow-adapt="atelier"] .adapt-view-switch button {border-radius:0!important;text-transform:uppercase;letter-spacing:.1em;}
+:root[data-arrow-adapt="pulse"] .orbit-header {
+  border-bottom:2px solid var(--arrow-adapt-secondary);
+  background:linear-gradient(120deg,color-mix(in srgb,var(--arrow-adapt-primary) 16%,var(--arrow-design-surface)),var(--arrow-design-surface))!important;
+  box-shadow:0 8px 35px color-mix(in srgb,var(--arrow-adapt-primary) 19%,transparent);
+}
+:root[data-arrow-adapt="pulse"] .suite-name {font-weight:850;letter-spacing:-.055em;}
+:root[data-arrow-adapt="pulse"] .adapt-view-switch {border-color:var(--arrow-adapt-primary);border-radius:5px 15px 5px 15px;}
+:root[data-arrow-adapt="pulse"] .adapt-view-switch button[aria-pressed="true"] {background:var(--arrow-adapt-primary);color:var(--arrow-accent-on,#fff);}
+@media(max-width:680px) {
+  [data-orbit-adapt]:not([data-orbit-adapt="core"]) .adapt-identity-intro {margin-bottom:20px;}
+  [data-orbit-adapt]:not([data-orbit-adapt="core"]) .adapt-identity-intro > div {min-height:150px;padding:20px;}
+  [data-orbit-adapt="pulse"] .adapt-intro-pulse strong {font-size:clamp(28px,8vw,48px);}
+  [data-orbit-adapt="atelier"] .adapt-atelier-hero-line span {display:none;}
+}
+@media(prefers-reduced-motion:reduce) {
+  :root:not([data-arrow-motion="full"])[data-arrow-adapt] .adapt-dashboard :is(.adapt-widget,.adapt-intro-symbol) {
+    animation:none!important;transition:none!important;
+  }
+}
