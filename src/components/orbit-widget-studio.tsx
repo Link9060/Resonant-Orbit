@@ -1,6 +1,7 @@
 'use client';
 
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { NativeWidgetFrame, NativeGalleryHeading, NativeGalleryRow, useAdaptIdentity, widgetMark } from '@/components/adapt-native-ui';
 import {
   DASHBOARD_SIZE_PRESETS, type DashboardWidgetId, type DashboardWidgetPreference,
   type DashboardWidgetSize,
@@ -20,10 +21,6 @@ const GROUPS: Record<WidgetGroup, DashboardWidgetId[]> = {
   Utilities: ['weather', 'sun', 'quicklinks'],
 };
 const SIZES: SizeName[] = ['extra-small','small','skinny','medium','tall','wide','extra-wide','large','extra-tall'];
-const COLORS: Partial<Record<DashboardWidgetId, string>> = {
-  weather: '☀', tasks: '✓', calendar: '▦', askravin: '✦', chats: '◇', quicknote: '✎',
-  focus: '◷', overview: '◈', sun: '☀', quicklinks: '↗', dayprogress: '◉', countdowns: '◷',
-};
 type Pick = { id: DashboardWidgetId; size: DashboardWidgetSize; cols: number; rows: number; moving: boolean };
 function fromSize(value: Pick, size: SizeName): Pick { return { ...value, size, ...DASHBOARD_SIZE_PRESETS[size] }; }
 function customSize(value: Pick, axis: 'cols'|'rows', valueToSet: number): Pick {
@@ -43,6 +40,7 @@ export function OrbitWidgetStudio({
   renderWidget: (id: DashboardWidgetId, cols: number, rows: number) => ReactNode;
   extra: ReactNode;
 }) {
+  const identity = useAdaptIdentity();
   const [gallery, setGallery] = useState(false);
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<WidgetGroup>('Recommended');
@@ -149,9 +147,10 @@ export function OrbitWidgetStudio({
             }}
           />;
         })}
-        {visible.map(item => <article key={item.id}
-          className={'adapt-widget orbit-positioned-widget' + (editing ? ' is-live-edit' : '')}
-          data-widget-layout={widgetLayoutKind(item.cols,item.rows)}
+        {visible.map((item,index) => <NativeWidgetFrame key={item.id}
+          identity={identity} id={item.id} title={meta[item.id].title} subtitle={meta[item.id].subtitle}
+          number={index+1} layout={widgetLayoutKind(item.cols,item.rows)}
+          className={'orbit-positioned-widget' + (editing ? ' is-live-edit' : '')}
           style={{ gridColumn:(item.x+1)+' / span '+item.cols,gridRow:(item.y+1)+' / span '+item.rows, '--orbit-widget-column':(item.x+1)+' / span '+item.cols,'--orbit-widget-row':(item.y+1)+' / span '+item.rows } as CSSProperties}
           draggable={editing && !placing}
           onDragStart={event => {
@@ -162,27 +161,27 @@ export function OrbitWidgetStudio({
             setHover(null);
           }}
           onDragEnd={() => { setDragging(null);setHover(null); }}
-        >
-          <div className="adapt-widget-top"><strong>{meta[item.id].title}</strong><span aria-hidden="true">{COLORS[item.id] || '✦'}</span></div>
-          <div className="adapt-widget-content" inert={editing} aria-hidden={editing}>
-            {renderWidget(item.id,item.cols,item.rows)}
-          </div>
-          {editing && <div className="orbit-widget-edit-overlay">
+          editing={editing}
+          controls={editing && <div className="orbit-widget-edit-overlay">
             <div className="orbit-widget-size-stamp">{item.cols} × {item.rows} · Live preview</div>
             <div className="orbit-widget-edit-actions">
               <button type="button" onClick={() => startPlacing({id:item.id,size:item.size,cols:item.cols,rows:item.rows,moving:true})}>Move</button>
               <button type="button" onClick={() => chooseWidget(item.id)}>Resize</button>
               <button type="button" aria-label={'Remove '+meta[item.id].title} onClick={() => remove(item.id)}>−</button>
             </div>
-          </div>}
-        </article>)}
+          </div>}>
+          {renderWidget(item.id,item.cols,item.rows)}
+        </NativeWidgetFrame>)}
       </div>
     </div>
     {!visible.length && !editing && <div className="orbit-empty-studio"><strong>Your dashboard is a blank canvas.</strong><p>Choose Customize, then Add Widgets to create your first layout.</p></div>}
     {editing && extra}
     {editing && gallery && <div className="orbit-widget-gallery-backdrop" onMouseDown={event => { if (event.target === event.currentTarget) {setGallery(false);setPreview(null);} }}>
       <section className="orbit-widget-gallery" role="dialog" aria-modal="true" aria-label="Add ARROW widgets">
-        <div className="orbit-gallery-header"><div><small>ARROW WIDGET GALLERY</small><h2>Add Widgets</h2></div><button type="button" onClick={() => {setGallery(false);setPreview(null);}} aria-label="Close widget gallery">×</button></div>
+        <div className="orbit-gallery-header">
+          <NativeGalleryHeading identity={identity} subtitle="Choose a widget, inspect the real layout, and place it anywhere on your grid.">Add Widgets</NativeGalleryHeading>
+          <button type="button" onClick={() => {setGallery(false);setPreview(null);}} aria-label="Close widget gallery">×</button>
+        </div>
         {!preview ? <>
           <label className="orbit-gallery-search"><span>Search widgets</span><input autoFocus value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search tasks, weather, RAVIN…" /></label>
           <div className="orbit-gallery-categories" role="group" aria-label="Widget categories">
@@ -192,25 +191,24 @@ export function OrbitWidgetStudio({
           <div className="orbit-gallery-items">
             {library.map(id => {
               const active=widgets.find(w=>w.id===id)?.visible;
-              return <button key={id} type="button" className="orbit-gallery-item" onClick={()=>chooseWidget(id)}>
-                <span className="orbit-gallery-item-icon">{COLORS[id] || '✦'}</span>
-                <span><strong>{meta[id].title}</strong><small>{meta[id].subtitle}</small></span>
-                <span className="orbit-gallery-item-tail">{active?'Edit':'+'}</span>
-              </button>;
+              return <NativeGalleryRow key={id} identity={identity} icon={widgetMark(id)}
+                title={meta[id].title} subtitle={meta[id].subtitle}
+                active={Boolean(active)} onClick={()=>chooseWidget(id)}/>;
             })}
           </div>
           {library.length===0&&<p className="adapt-small-muted">No widgets match your search.</p>}
           <p className="orbit-gallery-footnote">Widgets use ARROW's existing features and account data. You can add each widget once and resize or reposition it any time.</p>
         </> : <>
           <button type="button" className="orbit-gallery-back" onClick={()=>setPreview(null)}>← All widgets</button>
-          <div className="orbit-gallery-widget-heading"><span className="orbit-gallery-item-icon">{COLORS[preview.id] || '✦'}</span><div><h3>{meta[preview.id].title}</h3><p>{meta[preview.id].subtitle}</p></div></div>
+          <div className="orbit-gallery-widget-heading"><span className="orbit-gallery-item-icon">{widgetMark(preview.id)}</span><div><h3>{meta[preview.id].title}</h3><p>{meta[preview.id].subtitle}</p></div></div>
           <div className="orbit-widget-visual-preview" aria-label="Live widget preview in selected size">
-            <article className="adapt-widget orbit-preview-tile"
-              data-widget-layout={widgetLayoutKind(preview.cols,preview.rows)}
+            <NativeWidgetFrame identity={identity} id={preview.id}
+              title={meta[preview.id].title} subtitle={meta[preview.id].subtitle}
+              number={1} layout={widgetLayoutKind(preview.cols,preview.rows)}
+              preview className="orbit-preview-tile"
               style={{ '--preview-cols':currentPreview?.cols,'--preview-rows':currentPreview?.rows } as CSSProperties}>
-              <div className="adapt-widget-top"><strong>{meta[preview.id].title}</strong><span aria-hidden="true">{COLORS[preview.id] || '✦'}</span></div>
-              <div className="adapt-widget-content" inert aria-hidden="true">{renderWidget(preview.id,preview.cols,preview.rows)}</div>
-            </article>
+              {renderWidget(preview.id,preview.cols,preview.rows)}
+            </NativeWidgetFrame>
           </div>
           <h4 className="orbit-preview-size-label">Choose widget size</h4>
           <div className="orbit-preview-size-options" role="group" aria-label="Widget size">
