@@ -335,14 +335,24 @@ test('settings exposes account, notification, help and legal destinations in bet
   const f=await fixture('orbit','','enabled','https://link9060.github.io/Resonant-Relay/arrow/orbit/');try{f.w.ArrowOS.openPanel('settings','orbit');const links=[...f.w.document.querySelectorAll('.arrow-os-settings-actions a')].map(a=>a.href);for(const path of ['profile/','profile/#notifications','help/','privacy/','terms/'])assert.ok(links.some(href=>href.endsWith('/Resonant-Relay/'+path)),path);}finally{f.close();}
 });
 
-test('command dock opens on intention, stays pinned across pointer gaps, and closes on click',async()=>{
+test('command dock opens on mouse hover, survives pointer gaps, and closes after leaving',async()=>{
+ const f=await fixture();try{
+  // A fine pointer opens on hover; fixture defaults to touch-like pointer.
+  f.w.matchMedia=(query)=>({matches:query.includes('(hover: hover)'),addEventListener(){}});
+  const root=f.w.document.querySelector('.arrow-os-root');
+  root.dispatchEvent(new f.w.MouseEvent('mouseenter'));assert.equal(root.dataset.open,'true');
+  root.dispatchEvent(new f.w.MouseEvent('mouseleave'));await delay(90);assert.equal(root.dataset.open,'true');
+  root.dispatchEvent(new f.w.MouseEvent('mouseenter'));await delay(300);assert.equal(root.dataset.open,'true');
+  root.dispatchEvent(new f.w.MouseEvent('mouseleave'));await delay(300);assert.equal(root.dataset.open,'false');
+ }finally{f.close();}
+});
+test('command dock remains usable with click or touch and deliberate pinning',async()=>{
  const f=await fixture();try{
   const root=f.w.document.querySelector('.arrow-os-root');
   const trigger=root.querySelector('.arrow-os-trigger');
   root.dispatchEvent(new f.w.MouseEvent('mouseenter'));assert.equal(root.dataset.open,'false');
   trigger.click();assert.equal(root.dataset.open,'true');
-  root.dispatchEvent(new f.w.MouseEvent('mouseleave'));await delay(220);assert.equal(root.dataset.open,'true');
-  root.dispatchEvent(new f.w.MouseEvent('mouseenter'));await delay(40);assert.equal(root.dataset.open,'true');
+  root.dispatchEvent(new f.w.MouseEvent('mouseleave'));await delay(300);assert.equal(root.dataset.open,'true');
   trigger.click();assert.equal(root.dataset.open,'false');
  }finally{f.close();}
 });
