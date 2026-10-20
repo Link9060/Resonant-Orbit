@@ -1292,3 +1292,15 @@ html[data-arrow-identity="haven"] .arrow-os-panel { border-radius:18px; }
 html[data-arrow-identity="atelier"] .arrow-os-panel { border-radius:8px; }
 html[data-arrow-identity="pulse"] .arrow-os-panel { border-radius:15px; }
 @media(max-width:420px){.arrow-os-identity-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
+
+/* Distinct ARROW panel regions: Workspace navigation and global System controls. */
+.arrow-os-panel-navigation { display:grid; gap:8px; padding:12px 16px; border-bottom:1px solid rgb(var(--arrow-os-fg) / .12); }
+.arrow-os-panel-navgroup { display:flex; align-items:center; flex-wrap:wrap; gap:5px; }
+.arrow-os-panel-navlabel { flex:0 0 100%; font-size:9px; letter-spacing:.2em; font-weight:700; opacity:.5; }
+.arrow-os-panel-navgroup button { cursor:pointer; border:1px solid transparent; background:transparent; color:rgb(var(--arrow-os-fg) / .65); border-radius:8px; padding:6px 9px; font-size:11px; }
+.arrow-os-panel-navgroup button[aria-current="page"] { color:rgb(var(--arrow-os-fg)); background:color-mix(in srgb,var(--arrow-os-accent) 13%,transparent); border-color:color-mix(in srgb,var(--arrow-os-accent) 26%,transparent); }
+.arrow-os-panel-navgroup button:focus-visible { outline:2px solid var(--arrow-os-accent); outline-offset:1px; }
+html[data-arrow-identity="bloom"] .arrow-os-panel-navgroup button { border-radius:999px; }
+html[data-arrow-identity="atelier"] .arrow-os-panel-navgroup button { border-radius:0; text-transform:uppercase; letter-spacing:.1em; }
+html[data-arrow-identity="pulse"] .arrow-os-panel-navgroup button[aria-current="page"] { box-shadow:0 0 15px color-mix(in srgb,var(--arrow-os-accent) 22%,transparent); }
+@media(max-width:420px){.arrow-os-panel-navigation{padding:10px}.arrow-os-panel-navgroup button{padding:6px 7px;}}
