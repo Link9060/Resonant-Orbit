@@ -1,5 +1,5 @@
 import { OrbitWorld } from '@/components/orbit-world';
-import { ArrowMarkIcon } from '@/components/orbit-icons';
+import { OrbitAdapt } from '@/components/orbit-adapt';
 import { ARROW_DESTINATIONS } from '@/lib/arrow-map';
 import { StartupSequence } from '@/components/startup-sequence';
 import { ArrowAuthGate } from '@/components/arrow-auth-gate';
@@ -11,30 +11,9 @@ export default function Home() {
   return (
     <ArrowAuthGate>
       <StartupSequence />
-      <main className="orbit-app">
-        <header className="orbit-header">
-          <div className="suite-lockup" aria-label="ARROW Orbit">
-            <span className="arrow-mark" aria-hidden="true">
-              <ArrowMarkIcon size={18} />
-            </span>
-            <span className="suite-name">ARROW</span>
-            <span className="suite-divider" />
-            <span className="product-name">Orbit</span>
-          </div>
-
-          <div className="orbit-header-right">
-            <div className="header-meta" aria-label="Orbit route summary">
-              <span>{destinationCount} centers</span>
-              <span>{liveRouteCount} available</span>
-            </div>
-            <div data-arrow-os-shell data-module="orbit" suppressHydrationWarning />
-          </div>
-        </header>
-
-        <section className="orbit-stage" aria-label="Orbit dashboard">
-          <OrbitWorld />
-        </section>
-      </main>
+      <OrbitAdapt destinationCount={destinationCount} liveRouteCount={liveRouteCount}>
+        <OrbitWorld />
+      </OrbitAdapt>
     </ArrowAuthGate>
   );
 }
