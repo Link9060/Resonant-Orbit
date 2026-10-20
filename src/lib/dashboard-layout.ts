@@ -40,6 +40,10 @@ export type DashboardWidgetPreference = {
   visible: boolean;
   cols: number;
   rows: number;
+  /** Grid column, zero-based. Optional for compatibility with old Relay layouts. */
+  x?: number;
+  /** Grid row, zero-based. Optional for compatibility with old Relay layouts. */
+  y?: number;
 };
 
 export type DashboardPresetId = 'balanced' | 'school' | 'focus' | 'communication' | 'blank';
@@ -152,7 +156,7 @@ export function normalizeDashboardLayout(value: unknown): DashboardWidgetPrefere
   const normalized: DashboardWidgetPreference[] = [];
   for (const raw of value) {
     if (!raw || typeof raw !== 'object') continue;
-    const item = raw as { id?: string; size?: string; visible?: unknown; cols?: unknown; rows?: unknown };
+    const item = raw as { id?: string; size?: string; visible?: unknown; cols?: unknown; rows?: unknown; x?: unknown; y?: unknown };
     const id = item.id as DashboardWidgetId;
     if (!validIds.has(id) || seen.has(id)) continue;
     seen.add(id);
@@ -168,6 +172,8 @@ export function normalizeDashboardLayout(value: unknown): DashboardWidgetPrefere
         ? requestedSize
         : closestDashboardSize(cols, rows),
       visible: item.visible !== false,
+      ...(typeof item.x === 'number' && Number.isFinite(item.x) ? { x: clamp(item.x, 0, 11) } : {}),
+      ...(typeof item.y === 'number' && Number.isFinite(item.y) ? { y: clamp(item.y, 0, 100) } : {}),
     });
   }
   for (const item of DEFAULT_DASHBOARD_LAYOUT) {
