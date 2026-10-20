@@ -1,4 +1,5 @@
 import { OrbitWorld } from '@/components/orbit-world';
+import { OrbitExperience } from '@/components/orbit-experience';
 import { ArrowMarkIcon } from '@/components/orbit-icons';
 import { ARROW_DESTINATIONS } from '@/lib/arrow-map';
 import { StartupSequence } from '@/components/startup-sequence';
@@ -32,7 +33,7 @@ export default function Home() {
         </header>
 
         <section className="orbit-stage" aria-label="Orbit dashboard">
-          <OrbitWorld />
+          <OrbitExperience><OrbitWorld /></OrbitExperience>
         </section>
       </main>
     </ArrowAuthGate>
