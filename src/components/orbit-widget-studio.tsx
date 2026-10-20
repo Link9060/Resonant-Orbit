@@ -46,7 +46,7 @@ export function OrbitWidgetStudio({
   const [hint, setHint] = useState('Choose an empty space to place your widget.');
   const packed = useMemo(() => packDashboard(widgets), [widgets]);
   const visible = packed.filter(w => w.visible);
-  const boardRows = Math.min(40, Math.max(gridRows(widgets), placing ? (hover?.y ?? 0) + DASHBOARD_SIZE_PRESETS[placing.size].rows + 4 : 12));
+  const boardRows = editing ? Math.max(gridRows(widgets), placing ? (hover?.y ?? 0) + DASHBOARD_SIZE_PRESETS[placing.size].rows + 4 : 12) : Math.max(1, ...visible.map(w => w.y + w.rows));
   const selected = placing ? DASHBOARD_SIZE_PRESETS[placing.size] : null;
   const tiles = useMemo(() => placing && selected ? highlightedCells(packed, placing.id, hover, selected.cols, selected.rows) : null,
     [packed, placing, hover, selected]);
@@ -127,6 +127,7 @@ export function OrbitWidgetStudio({
             className={'orbit-grid-cell is-' + state}
             style={{ gridColumn:x+1,gridRow:y+1 }}
             aria-label={'Column '+(x+1)+', row '+(y+1)+(state==='blocked'?', blocked':'')}
+            tabIndex={placing ? 0 : -1} aria-hidden={!placing}
             onPointerEnter={() => { if (placing) setHover({x,y}); }}
             onFocus={() => { if (placing) setHover({x,y}); }}
             onClick={() => { if (placing) commit({x,y}); }}
