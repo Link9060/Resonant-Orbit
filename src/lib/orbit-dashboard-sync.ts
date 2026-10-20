@@ -150,7 +150,7 @@ export async function markTask(owner: string, id: string, completed: boolean): P
 }
 export async function createNote(owner: string, note: string): Promise<void> {
   // Relay notes are stored as structured blocks, not a plain string.
-  await request(owner, '/rest/v1/notes', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: { user_id: owner, title: 'Quick Note', content: [{ type: 'paragraph', text: note }] } });
+  await request(owner, '/rest/v1/notes', { method: 'POST', headers: { Prefer: 'return=minimal' }, body: { user_id: owner, title: 'Quick Note', content: [{ id: crypto.randomUUID(), type: 'paragraph', text: note }] } });
 }
 export function widgetUrl(id: string): string {
   const shellHref = { overview:'/waypoint/', tasks:'/waypoint/?tab=today', calendar:'/waypoint/?tab=calendar', schoolschedule:'/waypoint/?tab=calendar', assignments:'/waypoint/?tab=today', chats:'/relay/chats/', askravin:'/ravin/', ravinbrief:'/ravin/', quicknote:'/relay/notes/', quicklinks:'/orbit/', focus:'/relay/focus/' } as Record<string,string>;
