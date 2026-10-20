@@ -585,3 +585,30 @@ test('Orbit command field is RAVIN-first for natural-language questions', async 
     }
   }).toBe('What should I work on next?');
 });
+
+test('Adapt appearance flows from theme to preview/finalization to color and Atelier panels are opaque', async ({ page }) => {
+  await openOrbit(page);
+  await page.getByRole('navigation', { name: 'Orbit layout' }).getByRole('button', { name: 'Dashboard' }).click();
+  await expect(page.getByRole('region', { name: 'Customizable Orbit dashboard' })).toBeVisible();
+
+  await page.evaluate(() => (window as Window & { ArrowOS?: { openPanel: (panel: string, module: string) => void } }).ArrowOS?.openPanel('appearance', 'orbit'));
+  const sections = page.locator('.arrow-os-appearance-flow > .arrow-os-section');
+  await expect(sections).toHaveCount(3);
+  await expect(sections.nth(0)).toContainText('CHOOSE YOUR THEME');
+  await expect(sections.nth(1)).toContainText('PREVIEW & FINISH');
+  await expect(sections.nth(2)).toContainText('COLOR CUSTOMIZATION');
+
+  await page.locator('[data-identity-choice="atelier"]').click();
+  await page.locator('[data-theme-choice="light"]').click();
+  await expect(page.locator('html')).toHaveAttribute('data-arrow-theme', 'light');
+  await expect(page.locator('.arrow-os-identity-preview')).toHaveAttribute('data-theme', 'light');
+  await expect(page.locator('.arrow-os-identity-preview')).toHaveAttribute('data-identity', 'atelier');
+  await page.locator('.arrow-os-theme-finish').click();
+  await expect(page.locator('.arrow-os-theme-finish')).toContainText('saved');
+
+  const bg = await page.locator('.adapt-widget').first().evaluate(element => getComputedStyle(element).backgroundColor);
+  expect(bg).toBe('rgb(255, 254, 250)');
+  const panelBg = await page.locator('.arrow-os-panel').evaluate(element => getComputedStyle(element).backgroundColor);
+  expect(panelBg).toMatch(/^rgb\(/);
+  await expect(page.locator('.arrow-os-custom-color input')).toBeAttached();
+});
