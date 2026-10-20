@@ -3,6 +3,7 @@ import Script from 'next/script';
 import './globals.css';
 import './entertainment.css';
 import './orbit-refinement.css';
+import './adapt.css';
 
 export const metadata: Metadata = {
   title: 'Orbit · ARROW',
