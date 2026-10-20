@@ -1396,6 +1396,8 @@
     attributeFilter: ['class', 'data-theme', 'data-arrow-theme'],
   });
 
+  applyIdentity(getIdentityChoice(), false);
+  document.documentElement.style.setProperty('--arrow-custom-accent', getCustomAccent());
   document.documentElement.dataset.arrowAccent = readString(STORAGE.accent, 'mono');
   if (readString(STORAGE.experience, '')) applyExperienceChoice(getExperienceChoice(), false);
   if (readString(STORAGE.accent, '')) applyAccent(readString(STORAGE.accent, 'mono'), false);
@@ -1430,6 +1432,8 @@
     applyTheme,
     applyMotion,
     applyAccent,
+    applyCustomAccent,
+    applyIdentity,
     applyExperienceChoice,
     launchToOrbit,
   };
