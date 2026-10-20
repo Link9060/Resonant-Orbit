@@ -40,7 +40,7 @@ for (const module of ['orbit', 'relay', 'atlas', 'ravin', 'waypoint']) {
       f.w.ArrowOS.openPanel('appearance', module);
       await delay(50);
       assert.ok(f.deliveries() < 100, 'mutation feedback loop');
-      for (const kind of ['theme', 'motion', 'experience', 'accent']) {
+      for (const kind of ['theme', 'motion', 'experience', 'accent', 'identity']) {
         for (const button of f.w.document.querySelectorAll(`[data-${kind}-choice]`)) {
           button.focus(); button.click();
           await delay(5);
@@ -168,5 +168,47 @@ test('a settings change in another tab preserves an unfinished task', async () =
     input.value = 'Unfinished draft';
     f.w.dispatchEvent(new f.w.StorageEvent('storage', {key:'arrow_os_theme_v1',newValue:'light'}));
     assert.equal(f.w.document.querySelector('.arrow-os-task-form input').value, 'Unfinished draft');
+  } finally { f.close(); }
+});
+
+test('Adapt identities persist and reject unknown values', async () => {
+  const f = await fixture('orbit');
+  try {
+    f.w.ArrowOS.applyIdentity('atelier', true);
+    assert.equal(f.w.localStorage.getItem('arrow_adapt_identity_v1'), 'atelier');
+    assert.equal(f.w.document.documentElement.dataset.arrowIdentity, 'atelier');
+    f.w.ArrowOS.applyIdentity('unknown', true);
+    assert.equal(f.w.document.documentElement.dataset.arrowIdentity, 'core');
+  } finally { f.close(); }
+});
+
+test('custom accent is editable, persists, and restores after storage changes', async () => {
+  const f = await fixture('orbit');
+  try {
+    f.w.ArrowOS.openPanel('appearance', 'orbit');
+    const input = f.w.document.querySelector('.arrow-os-custom-color input');
+    assert.ok(input, 'custom color chooser exists');
+    input.value = '#aabbcc';
+    input.dispatchEvent(new f.w.Event('input', { bubbles: true }));
+    assert.equal(f.w.localStorage.getItem('arrow_os_custom_accent_v1'), '#aabbcc');
+    assert.equal(f.w.document.documentElement.dataset.arrowAccent, 'custom');
+    assert.equal(f.w.document.documentElement.style.getPropertyValue('--arrow-custom-accent'), '#aabbcc');
+    f.w.localStorage.setItem('arrow_os_custom_accent_v1', '#123456');
+    f.w.dispatchEvent(new f.w.StorageEvent('storage', { key: 'arrow_os_custom_accent_v1' }));
+    assert.equal(f.w.document.documentElement.style.getPropertyValue('--arrow-custom-accent'), '#123456');
+  } finally { f.close(); }
+});
+
+test('reset restores Core identity and default accent', async () => {
+  const f = await fixture('orbit');
+  try {
+    f.w.ArrowOS.applyIdentity('pulse', true);
+    f.w.ArrowOS.applyCustomAccent('#778899', true);
+    f.w.ArrowOS.openPanel('settings', 'orbit');
+    f.w.document.querySelector('[data-settings-action="reset"]').click();
+    assert.equal(f.w.document.documentElement.dataset.arrowIdentity, 'core');
+    assert.equal(f.w.document.documentElement.dataset.arrowAccent, 'mono');
+    assert.equal(f.w.localStorage.getItem('arrow_adapt_identity_v1'), null);
+    assert.equal(f.w.localStorage.getItem('arrow_os_custom_accent_v1'), null);
   } finally { f.close(); }
 });
