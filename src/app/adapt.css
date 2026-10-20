@@ -138,3 +138,38 @@
   .adapt-input-form input { flex:1; }
 }
 @media(prefers-reduced-motion:reduce) { .adapt-meter-track i { transition:none; } }
+
+
+/* Per-identity two-tone palette colors provided by the shared ARROW shell.
+   Contrast-critical text/surface tokens remain from the selected Adapt identity. */
+[data-orbit-adapt="core"] .adapt-dashboard { --adapt-accent:var(--arrow-adapt-primary,#dfe8f5); }
+[data-orbit-adapt="bloom"] .adapt-dashboard {
+  --adapt-accent:var(--arrow-adapt-primary,#a95998);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#a95998) 24%,#e9cee4);
+  background:radial-gradient(circle at 15% 8%,color-mix(in srgb,var(--arrow-adapt-secondary,#efbad4) 48%,#fbf3fa),transparent 52%),var(--adapt-bg);
+}
+[data-orbit-adapt="haven"] .adapt-dashboard {
+  --adapt-accent:var(--arrow-adapt-primary,#476b58);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#476b58) 24%,#cad0bd);
+  background:radial-gradient(circle at 85% 5%,color-mix(in srgb,var(--arrow-adapt-secondary,#a9c29c) 30%,#e9e8dc),transparent 48%),var(--adapt-bg);
+}
+[data-orbit-adapt="atelier"] .adapt-dashboard {
+  --adapt-accent:var(--arrow-adapt-primary,#292420);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#94723f) 27%,#d9d1c4);
+  background:radial-gradient(circle at 70% 6%,color-mix(in srgb,var(--arrow-adapt-secondary,#d5bd8d) 24%,#f1eee7),transparent 48%),var(--adapt-bg);
+}
+[data-orbit-adapt="pulse"] .adapt-dashboard {
+  --adapt-accent:var(--arrow-adapt-secondary,#b9a0ff);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#854dff) 36%,#605181);
+  background:radial-gradient(circle at 90% 4%,color-mix(in srgb,var(--arrow-adapt-primary,#854dff) 65%,#16132b),transparent 48%),var(--adapt-bg);
+}
+[data-orbit-adapt]:not([data-orbit-adapt="core"]) .adapt-widget {
+  background:color-mix(in srgb,var(--adapt-surface) 94%,var(--arrow-adapt-secondary,#ffffff));
+}
+[data-orbit-adapt]:not([data-orbit-adapt="core"]) .adapt-edit-button {
+  background:var(--arrow-adapt-gradient,var(--adapt-accent));
+}
+[data-orbit-adapt="pulse"] .adapt-edit-button { color:#ffffff; }
+[data-orbit-adapt="pulse"] .adapt-dashboard-link:hover {
+  color:var(--arrow-adapt-secondary,#b9a0ff);
+}
