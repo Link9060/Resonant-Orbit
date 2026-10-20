@@ -391,3 +391,53 @@ test('shared shell discards a late private-data response after account switching
     await assert.rejects(request,/account changed/);
   }finally{f.close();}
 });
+
+
+test('Appearance exposes one theme setting and prominent per-identity color customization',async()=>{
+ const f=await fixture('relay');
+ try {
+  const w=f.w;
+  w.ArrowOS.openPanel('appearance','relay');
+  let panel=w.document.querySelector('.arrow-os-panel');
+  assert.equal(panel.querySelectorAll('[data-theme-choice]').length,3);
+  assert.equal(panel.querySelectorAll('[data-adapt-preview-choice]').length,5);
+  assert.equal(panel.querySelectorAll('[data-adapt-preview-apply]').length,1);
+  assert.equal(panel.querySelectorAll('[data-adapt-preview-theme]').length,0);
+  assert.equal(panel.querySelectorAll('[data-adapt-choice]').length,0);
+  const colors=panel.querySelector('.arrow-os-color-section');
+  assert.ok(colors,'colors must remain prominent outside collapsed advanced controls');
+  assert.equal(colors.closest('details'),null);
+  assert.ok(colors.querySelectorAll('[data-accent-choice]').length>=4);
+  assert.ok(colors.querySelector('[data-custom-accent]'));
+  assert.ok(colors.querySelector('[data-custom-hex]'));
+  assert.equal(panel.querySelector('.arrow-os-appearance-advanced').open,false);
+
+  panel.querySelector('[data-adapt-preview-choice="bloom"]').click();
+  assert.equal(w.localStorage.getItem('arrow_os_adapt_v1'),null,'preview must not save identity');
+  panel.querySelector('[data-adapt-preview-apply]').click();
+  assert.equal(w.localStorage.getItem('arrow_os_adapt_v1'),'bloom');
+  panel=w.document.querySelector('.arrow-os-panel');
+  assert.match(panel.querySelector('.arrow-os-color-head').textContent,/BLOOM/);
+  const hex=panel.querySelector('[data-custom-hex]');
+  hex.value='#19a7c4';
+  hex.dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.equal(w.document.documentElement.style.getPropertyValue('--arrow-accent-color'),'#19a7c4');
+  assert.equal(panel.querySelector('[data-accent-choice="custom"]').getAttribute('aria-pressed'),'true');
+  assert.equal(JSON.parse(w.localStorage.getItem('arrow_os_adapt_custom_colors_v1')).bloom,'#19a7c4');
+  assert.equal(JSON.parse(w.localStorage.getItem('arrow_os_adapt_palettes_v1')).bloom,'custom');
+  assert.equal(panel.querySelector('[data-adapt-preview-stage]').style.getPropertyValue('--lab-accent'),'#19a7c4');
+
+  hex.value='not-a-color';
+  hex.dispatchEvent(new w.Event('change',{bubbles:true}));
+  assert.equal(hex.getAttribute('aria-invalid'),'true');
+  assert.equal(w.document.documentElement.style.getPropertyValue('--arrow-accent-color'),'#19a7c4');
+
+  panel.querySelector('[data-adapt-preview-choice="core"]').click();
+  panel.querySelector('[data-adapt-preview-apply]').click();
+  assert.equal(w.localStorage.getItem('arrow_os_adapt_v1'),'core');
+  panel=w.document.querySelector('.arrow-os-panel');
+  panel.querySelector('[data-adapt-preview-choice="bloom"]').click();
+  panel.querySelector('[data-adapt-preview-apply]').click();
+  assert.equal(w.document.documentElement.style.getPropertyValue('--arrow-accent-color'),'#19a7c4','returning to identity restores its color');
+ } finally { f.close(); }
+});
