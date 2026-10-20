@@ -3835,3 +3835,40 @@ html[data-arrow-identity="pulse"] .adapt-widget-navigation { grid-column:span 4;
 html[data-arrow-identity="pulse"] .adapt-widget h2 { text-transform:uppercase; letter-spacing:.13em; font-size:13px; }
 @media(max-width:900px){ html[data-arrow-identity] .adapt-widget-grid { grid-template-columns:repeat(2,minmax(0,1fr));gap:12px; } html[data-arrow-identity] .adapt-widget { grid-column:span 1;min-width:0; } html[data-arrow-identity] .adapt-widget-navigation { grid-column:1/-1; } }
 @media(max-width:600px){ html[data-arrow-identity] .adapt-widget-grid { grid-template-columns:minmax(0,1fr); } html[data-arrow-identity] .adapt-widget {grid-column:1!important;} .adapt-preset-controls{flex-direction:column;align-items:stretch} .adapt-preset-controls :is(input,select){max-width:none;width:100%} }
+
+/* 2026-10 Adapt: explicit light palettes and opaque Atelier panels. */
+html[data-arrow-theme="light"] .adapt-dashboard { background:#f5f6f8; color:#1c2530; }
+html[data-arrow-theme="light"] .adapt-widget { background:#fff; border-color:#c8ced6; color:inherit; }
+html[data-arrow-theme="light"] .adapt-destination-grid a { background:#f2f4f7; border-color:#c8ced6; color:inherit; }
+html[data-arrow-theme="light"] .adapt-dashboard :is(button,input,select) { background:#fff; border-color:#9ba8b6; color:inherit; }
+html[data-arrow-theme="light"] .adapt-view-switch { background:#fff; border-color:#cbd5e1; box-shadow:0 10px 30px rgba(0,0,0,.12); }
+html[data-arrow-theme="light"] .adapt-view-switch button { color:#4b5563; }
+html[data-arrow-theme="light"] .adapt-view-switch button[aria-pressed="true"] { color:#fff; background:#253448; }
+html[data-arrow-theme="light"] .adapt-preset-controls { border-color:#c8ced6; background:#f8fafc; }
+html[data-arrow-theme="light"] .adapt-preset-controls option { background:#fff; color:#111; }
+html[data-arrow-theme="light"][data-arrow-identity="bloom"] .adapt-dashboard { background:#edf7f0; color:#183629; }
+html[data-arrow-theme="light"][data-arrow-identity="bloom"] .adapt-widget { background:#fff; border-color:#b6d9c3; }
+html[data-arrow-theme="light"][data-arrow-identity="haven"] .adapt-dashboard { background:#f7f1ea; color:#44382e; }
+html[data-arrow-theme="light"][data-arrow-identity="haven"] .adapt-widget { background:#fffaf4; border-color:#d9c7b8; }
+html[data-arrow-theme="light"][data-arrow-identity="pulse"] .adapt-dashboard { background:#e9f2ff; color:#132944; }
+html[data-arrow-theme="light"][data-arrow-identity="pulse"] .adapt-widget { background:#fff; border-color:#90b4e1; box-shadow:inset 0 1px 0 #bdd6f4; }
+html[data-arrow-theme="light"][data-arrow-identity="atelier"] .adapt-dashboard { background:#f5f2e9; color:#1f1f1f; }
+html[data-arrow-theme="light"][data-arrow-identity="atelier"] .adapt-widget,
+html[data-arrow-theme="light"][data-arrow-identity="atelier"] .adapt-destination-grid a,
+html[data-arrow-theme="light"][data-arrow-identity="atelier"] .adapt-dashboard button { background:#fffefa; color:#191919; border-color:#777; }
+html[data-arrow-theme="dark"][data-arrow-identity="atelier"] .adapt-dashboard { background:#191919; color:#f5f3eb; }
+html[data-arrow-theme="dark"][data-arrow-identity="atelier"] .adapt-widget,
+html[data-arrow-theme="dark"][data-arrow-identity="atelier"] .adapt-destination-grid a,
+html[data-arrow-theme="dark"][data-arrow-identity="atelier"] .adapt-dashboard button { background:#252525; color:#f5f3eb; border-color:#777; }
+html[data-arrow-identity="atelier"] .adapt-widget,
+html[data-arrow-identity="atelier"] .adapt-destination-grid a,
+html[data-arrow-identity="atelier"] .world-inspector,
+html[data-arrow-identity="atelier"] .orbit-navigator { backdrop-filter:none; -webkit-backdrop-filter:none; }
+html[data-arrow-identity="atelier"] .world-inspector,
+html[data-arrow-identity="atelier"] .orbit-navigator { background:#242424; border-color:#777; }
+html[data-arrow-theme="light"][data-arrow-identity="atelier"] .world-inspector,
+html[data-arrow-theme="light"][data-arrow-identity="atelier"] .orbit-navigator { background:#fffefa; border-color:#777; color:#222; }
+.adapt-import-notice { padding:10px 14px; border-radius:8px; border:1px solid currentColor; font-size:12px; }
+/* The immersive canvas intentionally stays dark: keep its original contrast when light dashboard is selected. */
+html[data-arrow-theme="light"] .world-shell { color:#f7f7f5; --text:#f7f7f5; --muted:rgba(247,247,245,.58); }
+@media(prefers-reduced-motion:reduce){.arrow-os-identity-preview,.adapt-widget{transition:none!important;}}
