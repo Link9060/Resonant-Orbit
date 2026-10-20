@@ -1412,8 +1412,40 @@
     attributeFilter: ['class', 'data-theme', 'data-arrow-theme'],
   });
 
-  applyIdentity(getIdentityChoice(), false);
+  // Carry Adapt preferences across separate ARROW origins without assuming
+  // localStorage is shared between GitHub Pages or custom domains.
+  const incomingAppearance = new URLSearchParams(location.search);
+  const incomingIdentity = incomingAppearance.get('arrowAdapt');
+  const incomingAccent = incomingAppearance.get('arrowAccent');
+  const incomingCustom = incomingAppearance.get('arrowCustom');
+  if (incomingIdentity && IDENTITIES.some(([id]) => id === incomingIdentity)) {
+    applyIdentity(incomingIdentity, true);
+  } else applyIdentity(getIdentityChoice(), false);
+  if (incomingCustom && /^#[0-9a-fA-F]{6}$/.test(incomingCustom)) {
+    writeString(STORAGE.customAccent, incomingCustom);
+  }
   document.documentElement.style.setProperty('--arrow-custom-accent', getCustomAccent());
+  if (incomingAccent && (ACCENTS.some(([id]) => id === incomingAccent) || incomingAccent === 'custom')) {
+    applyAccent(incomingAccent, true);
+  }
+  document.addEventListener('click', event => {
+    const anchor = event.target?.closest?.('a[href]');
+    if (!anchor || event.defaultPrevented) return;
+    try {
+      const target = new URL(anchor.href, location.href);
+      if (target.origin === location.origin) return;
+      const allowed = target.hostname === 'enterarrow.com' ||
+        target.hostname === 'www.enterarrow.com' ||
+        (target.hostname === 'link9060.github.io' && /^\\/Resonant-(?:Orbit|Relay|Waypoint|Field)\\/|^\\/Project-R\\.A\\.V\\.I\\.N\\.-1\\.1\\//.test(target.pathname));
+      if (!allowed) return;
+      target.searchParams.set('arrowAdapt', getIdentityChoice());
+      target.searchParams.set('arrowAccent', readString(STORAGE.accent, 'mono'));
+      if (readString(STORAGE.accent, 'mono') === 'custom') {
+        target.searchParams.set('arrowCustom', getCustomAccent());
+      } else target.searchParams.delete('arrowCustom');
+      anchor.href = target.toString();
+    } catch {}
+  }, true);
   document.documentElement.dataset.arrowAccent = readString(STORAGE.accent, 'mono');
   if (readString(STORAGE.experience, '')) applyExperienceChoice(getExperienceChoice(), false);
   if (readString(STORAGE.accent, '')) applyAccent(readString(STORAGE.accent, 'mono'), false);
