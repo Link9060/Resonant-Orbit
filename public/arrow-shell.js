@@ -218,6 +218,9 @@
 
   function hostIsDark() {
     const root = document.documentElement;
+    // Orbit owns a dark immersive canvas, but its dashboard can be light.
+    // Follow the explicitly resolved ARROW appearance instead of probing canvas pixels.
+    if ([...state.instances].some(instance => instance.module === 'orbit')) return root.dataset.arrowTheme !== 'light';
     if (root.dataset.theme === 'dark' || root.getAttribute('data-theme') === 'dark') return true;
     if (root.dataset.theme === 'light' || root.getAttribute('data-theme') === 'light') return false;
     if (root.classList.contains('dark')) return true;
@@ -866,63 +869,83 @@
     const identity = getIdentityChoice();
 
     state.panelBody.innerHTML =
-      '<div class="arrow-os-section">' +
-        '<span class="arrow-os-section-label">ARROW ADAPT IDENTITY</span>' +
-        '<div class="arrow-os-segmented arrow-os-identity-grid">' +
-          IDENTITIES.map(([value,label]) => '<button type="button" data-identity-choice="' + value + '" class="' + (identity === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
+      '<div class="arrow-os-appearance-flow">' +
+        '<div class="arrow-os-section arrow-os-theme-select">' +
+          '<span class="arrow-os-section-label">1 / CHOOSE YOUR THEME</span>' +
+          '<div class="arrow-os-segmented arrow-os-identity-grid">' +
+            IDENTITIES.map(([value,label]) => '<button type="button" data-identity-choice="' + value + '" class="' + (identity === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
+          '</div>' +
+          '<span class="arrow-os-section-label">LIGHT / DARK</span>' +
+          '<div class="arrow-os-segmented">' +
+            ['system','light','dark'].map(value => '<button type="button" data-theme-choice="' + value + '" class="' + (theme === value ? 'is-active' : '') + '">' + capitalize(value) + '</button>').join('') +
+          '</div>' +
         '</div>' +
-      '</div>' +
-      '<div class="arrow-os-section">' +
-        '<span class="arrow-os-section-label">BEHAVIOR</span>' +
-        '<div class="arrow-os-segmented arrow-os-experience-grid">' +
-          [['balanced','Balanced'],['quiet','Quiet'],['dynamic','Dynamic'],['glass','Glass']].map(([value,label]) => '<button type="button" data-experience-choice="' + value + '" class="' + (experience === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
+        '<div class="arrow-os-section arrow-os-theme-review">' +
+          '<span class="arrow-os-section-label">2 / PREVIEW & FINISH</span>' +
+          '<div class="arrow-os-identity-preview" aria-live="polite">' +
+            '<div class="arrow-os-preview-head"><strong data-arrow-preview-name></strong><span data-arrow-preview-mode></span></div>' +
+            '<div class="arrow-os-preview-layout"><i></i><div><i></i><i></i><i></i></div></div>' +
+            '<span class="arrow-os-preview-caption">This preview follows your current theme. Changes apply immediately.</span>' +
+          '</div>' +
+          '<div class="arrow-os-appearance-extra">' +
+            '<span class="arrow-os-section-label">BEHAVIOR</span>' +
+            '<div class="arrow-os-segmented arrow-os-experience-grid">' +
+              [['balanced','Balanced'],['quiet','Quiet'],['dynamic','Dynamic'],['glass','Glass']].map(([value,label]) => '<button type="button" data-experience-choice="' + value + '" class="' + (experience === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
+            '</div>' +
+            '<span class="arrow-os-section-label">MOTION</span>' +
+            '<div class="arrow-os-segmented">' +
+              [['system','System'],['full','Full'],['reduce','Reduced']].map(([value,label]) => '<button type="button" data-motion-choice="' + value + '" class="' + (motion === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
+            '</div>' +
+          '</div>' +
+          '<button type="button" class="arrow-os-theme-finish">Finish theme selection ✓</button>' +
         '</div>' +
-      '</div>' +
-      '<div class="arrow-os-section">' +
-        '<span class="arrow-os-section-label">THEME</span>' +
-        '<div class="arrow-os-segmented">' +
-          ['system','light','dark'].map(value => '<button type="button" data-theme-choice="' + value + '" class="' + (theme === value ? 'is-active' : '') + '">' + capitalize(value) + '</button>').join('') +
-        '</div>' +
-      '</div>' +
-      '<div class="arrow-os-section">' +
-        '<span class="arrow-os-section-label">MOTION</span>' +
-        '<div class="arrow-os-segmented">' +
-          [['system','System'],['full','Full'],['reduce','Reduced']].map(([value,label]) => '<button type="button" data-motion-choice="' + value + '" class="' + (motion === value ? 'is-active' : '') + '">' + label + '</button>').join('') +
-        '</div>' +
-      '</div>' +
-      '<div class="arrow-os-section">' +
-        '<span class="arrow-os-section-label">ACCENT</span>' +
-        '<div class="arrow-os-accents">' +
-          ACCENTS.map(([value,label,color]) =>
-            '<button type="button" data-accent-choice="' + value + '" class="' + (accent === value ? 'is-active' : '') + '">' +
-              '<i style="--swatch:' + color + '"></i><span>' + label + '</span>' +
-            '</button>'
-          ).join('') +
-          '<label class="arrow-os-custom-color"><span>Custom color</span><input type="color" aria-label="Choose custom accent color" value="' + getCustomAccent() + '"></label>' +
+        '<div class="arrow-os-section arrow-os-color-section">' +
+          '<span class="arrow-os-section-label">3 / COLOR CUSTOMIZATION</span>' +
+          '<div class="arrow-os-accents">' +
+            ACCENTS.map(([value,label,color]) =>
+              '<button type="button" data-accent-choice="' + value + '" class="' + (accent === value ? 'is-active' : '') + '">' +
+                '<i style="--swatch:' + color + '"></i><span>' + label + '</span>' +
+              '</button>'
+            ).join('') +
+            '<label class="arrow-os-custom-color"><span>Custom color</span><input type="color" aria-label="Choose custom accent color" value="' + getCustomAccent() + '"></label>' +
+          '</div>' +
         '</div>' +
       '</div>';
 
+    const updatePreview = () => {
+      const name = IDENTITIES.find(([value]) => value === getIdentityChoice())?.[1] || 'Core';
+      state.panelBody.querySelector('[data-arrow-preview-name]').textContent = name;
+      state.panelBody.querySelector('[data-arrow-preview-mode]').textContent = resolveTheme(getThemeChoice()) === 'dark' ? 'Dark preview' : 'Light preview';
+      const preview = state.panelBody.querySelector('.arrow-os-identity-preview');
+      preview.dataset.identity = getIdentityChoice();
+      preview.dataset.theme = resolveTheme(getThemeChoice());
+    };
     state.panelBody.querySelector('.arrow-os-custom-color input')?.addEventListener('input', event => {
       applyCustomAccent(event.target.value, true);
       updateAppearanceState();
     });
     state.panelBody.querySelectorAll('[data-identity-choice]').forEach(button => {
-      button.addEventListener('click', () => applyIdentity(button.dataset.identityChoice, true));
+      button.addEventListener('click', () => { applyIdentity(button.dataset.identityChoice, true); updatePreview(); });
     });
     state.panelBody.querySelectorAll('[data-experience-choice]').forEach(button => {
       button.addEventListener('click', () => applyExperienceChoice(button.dataset.experienceChoice, true));
     });
     state.panelBody.querySelectorAll('[data-theme-choice]').forEach(button => {
-      button.addEventListener('click', () => applyTheme(button.dataset.themeChoice, true));
+      button.addEventListener('click', () => { applyTheme(button.dataset.themeChoice, true); updatePreview(); });
     });
     state.panelBody.querySelectorAll('[data-motion-choice]').forEach(button => {
       button.addEventListener('click', () => applyMotion(button.dataset.motionChoice, true));
     });
     state.panelBody.querySelectorAll('[data-accent-choice]').forEach(button => {
-      button.addEventListener('click', () => {
-        applyAccent(button.dataset.accentChoice, true);
-      });
+      button.addEventListener('click', () => applyAccent(button.dataset.accentChoice, true));
     });
+    state.panelBody.querySelector('.arrow-os-theme-finish').addEventListener('click', () => {
+      const button = state.panelBody.querySelector('.arrow-os-theme-finish');
+      button.textContent = 'Theme saved ✓  ·  Color is optional below';
+      button.setAttribute('aria-label','Theme selection saved. Color customization is optional below.');
+      state.panelBody.querySelector('.arrow-os-color-section')?.scrollIntoView?.({ behavior: 'smooth', block: 'nearest' });
+    });
+    updatePreview();
   }
 
   function renderSettings() {
