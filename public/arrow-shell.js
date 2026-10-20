@@ -169,6 +169,11 @@
     const normalized = IDENTITIES.some(([id]) => id === choice) ? choice : 'core';
     if (persist) writeString(STORAGE.identity, normalized);
     document.documentElement.dataset.arrowIdentity = normalized;
+    // Relay's existing layout engine provides real compositional differences.
+    // Adapt is the single selector; legacy Relay mode follows its identity.
+    const relayIdentityModes = { core: 'flow', bloom: 'aura', haven: 'still', atelier: 'slate', pulse: 'nexus' };
+    try { localStorage.setItem('relay-experience-mode', relayIdentityModes[normalized]); } catch {}
+    window.dispatchEvent(new CustomEvent('relay-experience-change'));
     window.dispatchEvent(new CustomEvent('arrow:identitychange', { detail: { identity: normalized } }));
     if (state.activePanel === 'appearance') updateAppearanceState();
   }
