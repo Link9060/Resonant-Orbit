@@ -151,7 +151,7 @@ export function OrbitWidgetStudio({
           />;
         })}
         {visible.map(item => <article key={item.id} className="adapt-widget orbit-positioned-widget"
-          style={{ gridColumn:(item.x+1)+' / span '+item.cols,gridRow:(item.y+1)+' / span '+item.rows }}
+          style={{ gridColumn:(item.x+1)+' / span '+item.cols,gridRow:(item.y+1)+' / span '+item.rows, '--orbit-widget-column':(item.x+1)+' / span '+item.cols,'--orbit-widget-row':(item.y+1)+' / span '+item.rows } as CSSProperties}
           draggable={editing && !placing}
           onDragStart={event => { if (editing) event.dataTransfer.setData('text/plain',item.id); }}
         >
