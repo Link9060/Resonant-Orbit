@@ -212,3 +212,17 @@ test('reset restores Core identity and default accent', async () => {
     assert.equal(f.w.localStorage.getItem('arrow_os_custom_accent_v1'), null);
   } finally { f.close(); }
 });
+
+test('Adapt identity is the sole owner of Relay structural experience', async () => {
+  const f = await fixture('relay');
+  try {
+    f.w.ArrowOS.applyIdentity('bloom', true);
+    assert.equal(f.w.localStorage.getItem('relay-experience-mode'), 'aura');
+    f.w.ArrowOS.applyExperienceChoice('dynamic', true);
+    assert.equal(f.w.localStorage.getItem('relay-experience-mode'), 'aura');
+    f.w.ArrowOS.applyIdentity('atelier', true);
+    assert.equal(f.w.localStorage.getItem('relay-experience-mode'), 'slate');
+    f.w.ArrowOS.applyIdentity('pulse', true);
+    assert.equal(f.w.localStorage.getItem('relay-experience-mode'), 'nexus');
+  } finally { f.close(); }
+});
