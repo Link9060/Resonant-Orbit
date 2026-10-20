@@ -39,10 +39,11 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
       setOwner(user);
       setView(savedView(user));
     };
-    const themeOnly = () => {
-      const next=identity();
+    const themeOnly = (event: Event) => {
+      const announced = (event as CustomEvent<{identity?: Identity}>).detail?.identity;
+      const next=announced && OPTIONS.includes(announced) ? announced : identity();
       setTheme(next);
-      document.documentElement.dataset.arrowAdapt=next;
+      if (document.documentElement.dataset.arrowAdapt !== next) document.documentElement.dataset.arrowAdapt=next;
     };
     sync();
     window.addEventListener('storage',sync);
@@ -63,6 +64,7 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
         </div>
         <div className="orbit-header-right">
           <div className="header-meta" aria-label="Orbit route summary">
+            {theme!=='core' && <span className="orbit-identity-label" aria-label={'Current ARROW identity: '+theme}>{theme}</span>}
             <span>{destinationCount} centers</span><span>{liveRouteCount} available</span>
           </div>
           <div className="adapt-view-switch" role="group" aria-label="Orbit display">
