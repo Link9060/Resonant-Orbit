@@ -49,7 +49,8 @@ export function OrbitExperience({ children }: { children: React.ReactNode }) {
       setEvents(getList('arrow_os_events_v1'));
       setIdentity(document.documentElement.dataset.arrowIdentity || 'core');
     };
-    setView(localStorage.getItem(VIEW) === 'dashboard' ? 'dashboard' : 'world');
+    const requested = new URLSearchParams(window.location.search).get('view');
+    setView(requested === 'dashboard' || (requested !== 'world' && localStorage.getItem(VIEW) === 'dashboard') ? 'dashboard' : 'world');
     sync();
     window.addEventListener('storage', sync);
     window.addEventListener('arrow-os:datachange', sync);
