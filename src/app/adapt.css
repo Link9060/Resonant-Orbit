@@ -476,3 +476,145 @@
 @media(prefers-reduced-motion:reduce) {
   :root:not([data-arrow-motion="full"]) .orbit-widget-gallery * { transition:none!important; animation:none!important; }
 }
+
+
+/* Widget Studio 3.1: real-size adaptive cards, live editor, collision drag */
+.orbit-positioned-widget,
+.orbit-preview-tile { container-type:inline-size; }
+.orbit-widget-board .orbit-positioned-widget .adapt-widget-content {
+  min-height:0; flex:1; width:100%; overflow:auto; overscroll-behavior:contain;
+}
+.orbit-widget-board .orbit-positioned-widget.is-live-edit .adapt-widget-content {
+  user-select:none; pointer-events:none; opacity:.82; overflow:hidden;
+  mask-image:linear-gradient(to bottom,#000 52%,transparent 96%);
+}
+.orbit-widget-edit-overlay {
+  position:absolute; z-index:3; inset:auto 9px 8px;
+  display:flex; align-items:end; justify-content:space-between; gap:8px;
+  pointer-events:none;
+}
+.orbit-widget-size-stamp {
+  display:inline-flex; flex:0 1 auto; min-width:0;
+  background:color-mix(in srgb,var(--adapt-surface) 88%,transparent);
+  color:var(--adapt-muted); border:1px solid var(--adapt-border);
+  border-radius:8px; padding:5px 7px; font-size:10px;
+  backdrop-filter:blur(13px);
+}
+.orbit-widget-edit-overlay .orbit-widget-edit-actions {
+  display:flex; flex:0 0 auto; align-items:center; gap:4px; flex-wrap:nowrap; 
+  padding:5px; margin:0; border-radius:11px;
+  border:1px solid var(--adapt-border);
+  background:color-mix(in srgb,var(--adapt-surface) 93%,transparent);
+  box-shadow:0 7px 24px #0003;
+  backdrop-filter:blur(18px);
+  pointer-events:auto;
+}
+.orbit-widget-edit-overlay .orbit-widget-edit-actions button,
+.orbit-widget-edit-overlay .orbit-widget-edit-actions button:last-child {
+  margin:0; min-width:32px; width:auto; min-height:32px;
+  padding:6px 8px; font-size:11px; font-weight:680; border:0;
+  background:transparent; color:var(--adapt-ink);
+}
+.orbit-widget-edit-overlay .orbit-widget-edit-actions button:is(:hover,:focus-visible) {
+  background:rgb(var(--arrow-accent-rgb,115,145,195) / .16);
+}
+.orbit-widget-board .orbit-positioned-widget[data-widget-layout="compact"] { padding:11px 12px; }
+.orbit-positioned-widget[data-widget-layout="compact"] .adapt-widget-top { font-size:12px; gap:5px; }
+.orbit-positioned-widget[data-widget-layout="compact"] .adapt-widget-top span { font-size:13px; }
+.orbit-positioned-widget[data-widget-layout="compact"] .adapt-widget-content { padding-top:5px; gap:4px; }
+.orbit-positioned-widget[data-widget-layout="compact"] .adapt-feature-number { font-size:23px; }
+.orbit-positioned-widget[data-widget-layout="compact"] .adapt-metric strong { font-size:22px; }
+.orbit-positioned-widget[data-widget-layout="compact"] .adapt-metric span { font-size:9px; }
+.orbit-positioned-widget[data-widget-layout="compact"] .orbit-widget-size-stamp { display:none; }
+.orbit-positioned-widget[data-widget-layout="compact"] .orbit-widget-edit-overlay {
+  justify-content:end; bottom:4px; right:4px;
+}
+.orbit-positioned-widget[data-widget-layout="compact"] .orbit-widget-edit-actions { padding:2px; gap:0; }
+.orbit-positioned-widget[data-widget-layout="compact"] .orbit-widget-edit-actions button,
+.orbit-positioned-widget[data-widget-layout="compact"] .orbit-widget-edit-actions button:last-child {
+  font-size:9px; min-width:24px; min-height:26px; padding:2px 4px;
+}
+.orbit-positioned-widget[data-widget-layout="wide"] .adapt-metrics { flex-wrap:nowrap; align-items:center; }
+.orbit-positioned-widget[data-widget-layout="wide"] .adapt-metric { min-width:0; }
+.orbit-positioned-widget[data-widget-layout="wide"] .adapt-weather { display:flex; align-items:center; gap:12px; }
+.orbit-positioned-widget[data-widget-layout="wide"] .adapt-data-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.orbit-positioned-widget[data-widget-layout="expanded"] .adapt-data-list {
+  grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px;
+}
+.orbit-positioned-widget[data-widget-layout="expanded"] .adapt-metrics {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.orbit-positioned-widget[data-widget-layout="expanded"] .adapt-metrics > p { grid-column:1 / -1; }
+.orbit-positioned-widget[data-widget-layout="tall"] .adapt-note-form textarea { min-height:130px; }
+.orbit-positioned-widget[data-widget-layout="tall"] .adapt-data-list { gap:11px; }
+.orbit-widget-board.is-dragging .orbit-grid-cell {
+  z-index:8; pointer-events:auto; border-style:solid;
+}
+.orbit-widget-board.is-dragging .orbit-positioned-widget,
+.orbit-widget-board.is-placing .orbit-positioned-widget { opacity:.59; pointer-events:none; }
+.orbit-widget-board.is-dragging .orbit-grid-cell.is-available,
+.orbit-widget-board.is-placing .orbit-grid-cell.is-available {
+  background:rgb(39 206 126 / .67)!important; border-color:#79ffc4!important;
+  box-shadow:inset 0 0 0 1px #1d8958,0 0 14px #15e68b55;
+}
+.orbit-widget-board.is-dragging .orbit-grid-cell.is-blocked,
+.orbit-widget-board.is-placing .orbit-grid-cell.is-blocked {
+  background:rgb(244 55 83 / .72)!important; border-color:#ff8596!important;
+  box-shadow:inset 0 0 0 1px #aa1730,0 0 14px #ff324e66;
+}
+/* Gallery renders exactly the same React content as the corresponding dashboard card. */
+.orbit-widget-visual-preview { min-height:235px; }
+.orbit-widget-visual-preview .orbit-preview-tile {
+  flex:none; width:min(100%,calc(var(--preview-cols,6) * 40px));
+  height:clamp(108px,calc(var(--preview-rows,2) * 80px),490px);
+  max-height:55dvh; display:flex; flex-direction:column;
+  justify-content:flex-start; gap:9px; min-height:0; padding:16px;
+  overflow:hidden; border-radius:var(--adapt-radius);
+}
+.orbit-preview-tile .adapt-widget-top { flex:none; }
+.orbit-preview-tile .adapt-widget-content {
+  flex:1; min-height:0; width:100%; overflow:hidden; pointer-events:none; padding-top:3px;
+}
+.orbit-preview-tile .adapt-widget-content :is(button,a,input,textarea,select) { pointer-events:none; }
+.orbit-preview-tile[data-widget-layout="compact"] { padding:10px; gap:4px; }
+.orbit-preview-tile[data-widget-layout="compact"] .adapt-widget-top { font-size:12px; }
+.orbit-preview-tile[data-widget-layout="compact"] .adapt-widget-content { gap:4px; }
+.orbit-preview-tile[data-widget-layout="compact"] .adapt-feature-number { font-size:24px; }
+.orbit-preview-tile[data-widget-layout="wide"] .adapt-metrics,
+.orbit-preview-tile[data-widget-layout="expanded"] .adapt-metrics {
+  display:grid; grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.orbit-preview-tile[data-widget-layout="expanded"] .adapt-data-list,
+.orbit-preview-tile[data-widget-layout="wide"] .adapt-data-list { grid-template-columns:repeat(2,minmax(0,1fr)); }
+.orbit-custom-size-editor {
+  margin-top:14px; padding:16px; border:1px solid var(--adapt-border);
+  border-radius:16px; background:var(--adapt-bg); display:grid; gap:12px;
+}
+.orbit-custom-size-heading { display:grid; gap:3px; }
+.orbit-custom-size-heading strong { font-size:13px; }
+.orbit-custom-size-heading small { font-size:11px; color:var(--adapt-muted); }
+.orbit-custom-size-editor label {
+  display:grid; grid-template-columns:minmax(115px,1fr) minmax(85px,2fr) 62px;
+  align-items:center; gap:11px; font-size:12px;
+}
+.orbit-custom-size-editor label span { display:grid; gap:4px; font-weight:650; }
+.orbit-custom-size-editor label span strong { font-size:10px; color:var(--adapt-muted); font-weight:500; }
+.orbit-custom-size-editor input[type=range] { width:100%; accent-color:var(--adapt-accent); }
+.orbit-custom-size-editor input[type=number] {
+  width:100%; min-width:0; padding:8px 5px;
+  text-align:center; border:1px solid var(--adapt-border);
+  border-radius:9px; background:var(--adapt-surface); color:var(--adapt-ink);
+  font-size:12px;
+}
+.orbit-preview-custom-icon {
+  display:flex!important; align-items:center; justify-content:center;
+  font-size:19px; font-weight:750; border-style:dashed!important;
+}
+@media(max-width:540px) {
+ .orbit-custom-size-editor label { grid-template-columns:1fr 65px; }
+ .orbit-custom-size-editor label span { grid-column:1 / -1; }
+ .orbit-gallery-item { min-height:64px; }
+}
+@media(prefers-reduced-motion:reduce) {
+ :root:not([data-arrow-motion="full"]) .orbit-widget-board.is-dragging .orbit-grid-cell { transition:none!important; }
+}
