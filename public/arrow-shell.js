@@ -422,6 +422,7 @@
         '<div><span>ARROW SYSTEM</span><h2 id="arrow-os-panel-title"></h2></div>' +
         '<button type="button" class="arrow-os-panel-close" aria-label="Close ARROW panel">' + icon('close') + '</button>' +
       '</header>' +
+      '<nav class="arrow-os-panel-navigation" aria-label="ARROW panel sections"></nav>' +
       '<div class="arrow-os-panel-body"></div>';
 
     document.body.appendChild(panel);
@@ -430,6 +431,10 @@
     state.panelTitle = panel.querySelector('h2');
 
     panel.querySelector('.arrow-os-panel-close').addEventListener('click', closePanel);
+    panel.querySelector('.arrow-os-panel-navigation').addEventListener('click', event => {
+      const button = event.target.closest('[data-arrow-panel-target]');
+      if (button) openPanel(button.dataset.arrowPanelTarget, state.activeModule || 'orbit', state.panelAnchor);
+    });
     panel.addEventListener('keydown', handlePanelKeydown);
     return panel;
   }
@@ -471,6 +476,7 @@
     positionPanel(state.panelAnchor || anchor || document.querySelector('.arrow-os-trigger'));
     updateHostTheme();
     renderPanel(name);
+    updatePanelNavigation();
 
     state.instances.forEach(instance => {
       setOpen(instance, true);
@@ -512,6 +518,15 @@
 
   function panelEmpty(copy) {
     return '<div class="arrow-os-empty">' + copy + '</div>';
+  }
+
+  function updatePanelNavigation() {
+    const container = state.panelEl?.querySelector('.arrow-os-panel-navigation');
+    if (!container) return;
+    const groups = [['WORKSPACE',['notes','tasks','calendar','links','focus']], ['SYSTEM',['appearance','settings']]];
+    container.innerHTML = groups.map(([label, tabs]) => '<div class="arrow-os-panel-navgroup" aria-label="' + label + '">' +
+      '<span class="arrow-os-panel-navlabel">' + label + '</span>' + tabs.map(tab =>
+      '<button type="button" data-arrow-panel-target="' + tab + '" aria-current="' + (state.activePanel === tab ? 'page' : 'false') + '">' + PANEL_LABELS[tab] + '</button>').join('') + '</div>').join('');
   }
 
   function renderPanel(name) {
