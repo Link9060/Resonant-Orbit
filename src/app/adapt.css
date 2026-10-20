@@ -1076,3 +1076,178 @@
 @media(prefers-reduced-motion:reduce) {
   :root:not([data-arrow-motion="full"]) .adapt-native-widget * {transition:none!important;animation:none!important;}
 }
+
+
+/* Adapt V.1: native identities now extend into the IMMERSIVE Orbit world.
+   Previously only the Widgets view was themed. Keep Core's original world
+   untouched, and derive all mode-specific colors from the shared ARROW
+   appearance palette, with separate light and dark surfaces. */
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) {
+  --orbit-native-accent:var(--arrow-adapt-primary,#a6a6bd);
+  --orbit-native-secondary:var(--arrow-adapt-secondary,#8b91b5);
+  --orbit-native-bg:#10121a;
+  --orbit-native-panel:#1c202c;
+  --orbit-native-ink:#f2f4fb;
+  --orbit-native-muted:#b0b9ca;
+  --orbit-native-line:color-mix(in srgb,var(--orbit-native-accent) 26%,#444a58);
+  color:var(--orbit-native-ink);
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) {
+  --orbit-native-bg:#f5f3f6;
+  --orbit-native-panel:#ffffff;
+  --orbit-native-ink:#272936;
+  --orbit-native-muted:#616779;
+  --orbit-native-line:color-mix(in srgb,var(--orbit-native-accent) 26%,#d3d3db);
+}
+.orbit-app[data-orbit-adapt="bloom"] {
+  --orbit-native-bg:#18121c;
+  --orbit-native-panel:#292031;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="bloom"] {
+  --orbit-native-bg:#fbf0f9;
+  --orbit-native-panel:#fffaff;
+  --orbit-native-ink:#3c2f3c;
+}
+.orbit-app[data-orbit-adapt="haven"] {
+  --orbit-native-bg:#121811;
+  --orbit-native-panel:#1c251b;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="haven"] {
+  --orbit-native-bg:#f0efe5;
+  --orbit-native-panel:#fbfaf3;
+  --orbit-native-ink:#2c3e32;
+}
+.orbit-app[data-orbit-adapt="atelier"] {
+  --orbit-native-bg:#171716;
+  --orbit-native-panel:#242421;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="atelier"] {
+  --orbit-native-bg:#f5f1e9;
+  --orbit-native-panel:#fffdf8;
+  --orbit-native-ink:#292620;
+}
+.orbit-app[data-orbit-adapt="pulse"] {
+  --orbit-native-bg:#140f27;
+  --orbit-native-panel:#251e41;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="pulse"] {
+  --orbit-native-bg:#f2effc;
+  --orbit-native-panel:#ffffff;
+  --orbit-native-ink:#282044;
+}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]),
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .world-shell {
+  background:radial-gradient(ellipse at 64% 40%,
+    color-mix(in srgb,var(--orbit-native-accent) 12%,transparent),transparent 45%),
+    var(--orbit-native-bg)!important;
+  color:var(--orbit-native-ink);
+}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) :is(
+ .orbit-header,.orbit-header .suite-lockup,.orbit-header .header-meta,
+ .orbit-header .adapt-view-switch,.orbit-command-panel,
+ .world-inspector,.stage-footer,.node-copy,.orbit-shortcut,
+ .command-entry,.command-info-card,.command-system-card,.command-account-strip,
+ .command-connection-row,.orbit-navigator) {
+  color:var(--orbit-native-ink);
+  border-color:var(--orbit-native-line);
+}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) :is(
+ .suite-lockup,.header-meta,.adapt-view-switch,.world-shell .orbit-command-panel,
+ .world-inspector,.orbit-shortcut,.node-copy,.command-entry,
+ .command-info-card,.command-system-card,.command-account-strip,
+ .command-connection-row,.orbit-navigator) {
+  background:var(--orbit-native-panel)!important;
+}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) :is(
+ .suite-name,.product-name,.header-meta,.command-panel-head h2,
+ .orbit-shortcut,.node-copy strong,.world-inspector h2) {color:var(--orbit-native-ink)!important;}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) :is(
+ .command-panel-head p,.command-online,.command-section-title > span,
+ .world-inspector > p,.node-status,.command-panel-head .eyebrow,
+ .stage-footer) {color:var(--orbit-native-muted)!important;}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .adapt-view-switch button {
+  color:var(--orbit-native-muted);border-radius:inherit;
+}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .adapt-view-switch button[aria-pressed="true"] {
+  background:var(--orbit-native-accent)!important;color:var(--arrow-accent-on,#fff)!important;
+}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .world-shell .orbit-command-panel {
+  border:1px solid var(--orbit-native-line)!important;
+  box-shadow:0 13px 38px color-mix(in srgb,var(--orbit-native-accent) 12%,transparent)!important;
+}
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .orbit-shortcut:hover,
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .orbit-shortcut:focus-visible,
+.orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .command-entry:focus-within {
+  border-color:var(--orbit-native-accent)!important;
+  outline-color:var(--orbit-native-accent);
+}
+/* In light mode the white particle canvas must have dark points to remain
+   visible on an actual light world surface. Canvas state remains unchanged. */
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .world-canvas {
+  filter:invert(1) hue-rotate(12deg) contrast(.9);
+}
+.orbit-app[data-orbit-adapt="bloom"] :is(.suite-lockup,.adapt-view-switch,.orbit-shortcut,.command-info-card) {
+  border-radius:999px!important;
+}
+.orbit-app[data-orbit-adapt="bloom"] .world-shell .orbit-command-panel {
+  border-radius:29px!important;
+  border:2px solid var(--orbit-native-line)!important;
+}
+.orbit-app[data-orbit-adapt="bloom"] .node-copy {
+  border-radius:20px!important;
+  box-shadow:0 9px 28px color-mix(in srgb,var(--orbit-native-accent) 14%,transparent)!important;
+}
+.orbit-app[data-orbit-adapt="bloom"] .orbit-shortcut {
+  border-radius:19px!important;
+}
+.orbit-app[data-orbit-adapt="haven"] .world-shell .orbit-command-panel {
+  border-radius:8px 21px 21px 8px!important;
+  border-left:5px solid var(--orbit-native-accent)!important;
+  box-shadow:6px 8px 0 color-mix(in srgb,var(--orbit-native-accent) 11%,transparent)!important;
+}
+.orbit-app[data-orbit-adapt="haven"] :is(.suite-lockup,.node-copy,.orbit-shortcut,.command-info-card) {
+  border-radius:5px 12px 12px 5px!important;
+  border-left:3px solid var(--orbit-native-accent)!important;
+}
+.orbit-app[data-orbit-adapt="haven"] .command-panel-head h2 {
+  font-family:var(--arrow-font-display,Georgia,serif);font-weight:500;
+}
+.orbit-app[data-orbit-adapt="atelier"] .world-shell .orbit-command-panel {
+  border-radius:0!important;border:0!important;border-top:2px solid var(--orbit-native-ink)!important;
+  box-shadow:none!important;
+}
+.orbit-app[data-orbit-adapt="atelier"] :is(.suite-lockup,.adapt-view-switch,.orbit-shortcut,.node-copy,.command-entry,.command-info-card) {
+  border-radius:0!important;box-shadow:none!important;
+}
+.orbit-app[data-orbit-adapt="atelier"] :is(.suite-name,.product-name,.command-panel-head h2,.node-copy strong) {
+  font-family:var(--arrow-font-display,Georgia,serif);
+  font-weight:400;letter-spacing:-.03em;
+}
+.orbit-app[data-orbit-adapt="atelier"] :is(.orbit-shortcut,.command-info-card) {
+  border:0!important;border-bottom:1px solid var(--orbit-native-line)!important;
+}
+.orbit-app[data-orbit-adapt="pulse"] .world-shell .orbit-command-panel {
+  border-radius:4px 23px 4px 23px!important;
+  border:1px solid var(--orbit-native-secondary)!important;
+  background:linear-gradient(140deg,
+    color-mix(in srgb,var(--orbit-native-panel) 83%,var(--orbit-native-accent)),
+    var(--orbit-native-panel))!important;
+  box-shadow:0 13px 35px color-mix(in srgb,var(--orbit-native-accent) 18%,transparent)!important;
+}
+.orbit-app[data-orbit-adapt="pulse"] :is(.suite-lockup,.adapt-view-switch,.orbit-shortcut,.node-copy,.command-info-card) {
+  border-radius:4px 15px 4px 15px!important;
+  border-color:var(--orbit-native-accent)!important;
+}
+.orbit-app[data-orbit-adapt="pulse"] .adapt-view-switch button[aria-pressed="true"] {
+  box-shadow:inset 0 0 0 1px var(--orbit-native-secondary),0 0 20px color-mix(in srgb,var(--orbit-native-accent) 30%,transparent);
+}
+@media(max-width:760px) {
+  .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .world-shell .orbit-command-panel {
+    max-height:calc(100dvh - 180px);overflow-y:auto;
+  }
+}
+@media(prefers-reduced-motion:reduce) {
+  .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) :is(.orbit-command-panel,.suite-lockup,.node-copy,.orbit-shortcut) {
+    animation:none!important;transition:none!important;
+  }
+}
