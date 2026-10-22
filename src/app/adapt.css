@@ -1453,3 +1453,26 @@
 :root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] .incoming-source-label {
   color:var(--orbit-bh-void);
 }
+
+/* ORBIT LIGHT CANVAS CONTRAST GUARD
+   Force all rasterized dots to a dark, identity-specific ink on light surfaces.
+   This works even if an older white-particle buffer survives a React transition.
+   Black-hole transition graphics have their own palette and are unaffected. */
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .world-canvas {
+  opacity:1!important;
+  mix-blend-mode:multiply;
+  isolation:isolate;
+  transition:opacity 420ms ease,transform 680ms cubic-bezier(.16,1,.3,1),filter 420ms ease;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="bloom"] .world-canvas {
+  filter:brightness(0) saturate(100%) invert(27%) sepia(23%) saturate(1186%) hue-rotate(280deg) brightness(93%) contrast(95%)!important;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="haven"] .world-canvas {
+  filter:brightness(0) saturate(100%) invert(29%) sepia(20%) saturate(860%) hue-rotate(89deg) brightness(89%) contrast(93%)!important;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="atelier"] .world-canvas {
+  filter:brightness(0) saturate(100%) invert(15%) sepia(0%) saturate(0%) brightness(90%) contrast(98%)!important;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="pulse"] .world-canvas {
+  filter:brightness(0) saturate(100%) invert(25%) sepia(27%) saturate(1610%) hue-rotate(225deg) brightness(92%) contrast(99%)!important;
+}
