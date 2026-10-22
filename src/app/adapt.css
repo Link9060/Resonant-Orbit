@@ -1184,7 +1184,7 @@
 /* In light mode the white particle canvas must have dark points to remain
    visible on an actual light world surface. Canvas state remains unchanged. */
 :root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .world-canvas {
-  filter:invert(1) hue-rotate(12deg) contrast(.9);
+  filter:none; /* The canvas paints actual dark pigments in light mode. */
 }
 .orbit-app[data-orbit-adapt="bloom"] :is(.suite-lockup,.adapt-view-switch,.orbit-shortcut,.command-info-card) {
   border-radius:999px!important;
@@ -1296,7 +1296,7 @@
   -webkit-backdrop-filter:none;
 }
 :root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .world-canvas {
-  opacity:.95; filter:invert(1) contrast(1.25) saturate(.8);
+  opacity:1; filter:none; /* No inversion of already dark particles. */
 }
 :root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .orbit-links {
   filter:contrast(1.65); opacity:.95;
@@ -1320,3 +1320,136 @@
 :root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="atelier"] :is(
   .world-inspector,.orbit-shortcuts,.orbit-shortcut,.command-info-card,.command-entry,.command-system-card
 ) { background:#fffdf8!important; box-shadow:none!important; border-color:#aaa69c!important; }
+
+/* Orbit V: explicit particle pigments for both modes. Never invert the canvas.
+   Inversion turned renderer-native dark particles back into white dots. */
+.orbit-app[data-orbit-adapt="bloom"] { --orbit-dot-ink:#e9b7d7; }
+.orbit-app[data-orbit-adapt="haven"] { --orbit-dot-ink:#b6d2bd; }
+.orbit-app[data-orbit-adapt="atelier"] { --orbit-dot-ink:#eee5d5; }
+.orbit-app[data-orbit-adapt="pulse"] { --orbit-dot-ink:#b7b4ff; }
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="bloom"] { --orbit-dot-ink:#894473; }
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="haven"] { --orbit-dot-ink:#466852; }
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="atelier"] { --orbit-dot-ink:#34332f; }
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="pulse"] { --orbit-dot-ink:#57429b; }
+/* Black-hole palette is independent from the particles and adapts to the identity.
+   The event horizon remains deliberately dark while light-mode rings stay visible. */
+.orbit-app[data-orbit-adapt] {
+  --orbit-bh-primary:#e5e8ec;
+  --orbit-bh-secondary:#9ba7b5;
+  --orbit-bh-void:#05070c;
+  --orbit-bh-backdrop:#090b10;
+  --orbit-bh-fade:rgba(9,11,16,.7);
+  --orbit-bh-particle-rgb:229,232,236;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] {
+  --orbit-bh-primary:#3e566d;
+  --orbit-bh-secondary:#91a8b7;
+  --orbit-bh-void:#192c3d;
+  --orbit-bh-backdrop:#edf2f6;
+  --orbit-bh-fade:rgba(237,242,246,.67);
+  --orbit-bh-particle-rgb:55,81,104;
+}
+.orbit-app[data-orbit-adapt="bloom"] {
+  --orbit-bh-primary:#f2afd9;--orbit-bh-secondary:#ac76bb;
+  --orbit-bh-void:#281629;--orbit-bh-backdrop:#160f1d;
+  --orbit-bh-fade:rgba(22,15,29,.72);--orbit-bh-particle-rgb:239,170,211;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="bloom"] {
+  --orbit-bh-primary:#a64483;--orbit-bh-secondary:#cf85b3;
+  --orbit-bh-void:#48253d;--orbit-bh-backdrop:#fff4fb;
+  --orbit-bh-fade:rgba(255,244,251,.7);--orbit-bh-particle-rgb:139,59,111;
+}
+.orbit-app[data-orbit-adapt="haven"] {
+  --orbit-bh-primary:#b7d4b7;--orbit-bh-secondary:#799a81;
+  --orbit-bh-void:#14251c;--orbit-bh-backdrop:#0e1912;
+  --orbit-bh-fade:rgba(14,25,18,.72);--orbit-bh-particle-rgb:177,211,185;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="haven"] {
+  --orbit-bh-primary:#426c54;--orbit-bh-secondary:#8aac91;
+  --orbit-bh-void:#284634;--orbit-bh-backdrop:#f1f6ed;
+  --orbit-bh-fade:rgba(241,246,237,.7);--orbit-bh-particle-rgb:63,105,78;
+}
+.orbit-app[data-orbit-adapt="atelier"] {
+  --orbit-bh-primary:#e4d6bd;--orbit-bh-secondary:#98876f;
+  --orbit-bh-void:#171614;--orbit-bh-backdrop:#181715;
+  --orbit-bh-fade:rgba(24,23,21,.73);--orbit-bh-particle-rgb:224,212,188;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="atelier"] {
+  --orbit-bh-primary:#4c453b;--orbit-bh-secondary:#9c896c;
+  --orbit-bh-void:#302a24;--orbit-bh-backdrop:#f5f1e9;
+  --orbit-bh-fade:rgba(245,241,233,.7);--orbit-bh-particle-rgb:70,63,54;
+}
+.orbit-app[data-orbit-adapt="pulse"] {
+  --orbit-bh-primary:#b7a6ff;--orbit-bh-secondary:#62caff;
+  --orbit-bh-void:#161337;--orbit-bh-backdrop:#100c27;
+  --orbit-bh-fade:rgba(16,12,39,.73);--orbit-bh-particle-rgb:176,161,255;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="pulse"] {
+  --orbit-bh-primary:#6044ad;--orbit-bh-secondary:#368ec8;
+  --orbit-bh-void:#292151;--orbit-bh-backdrop:#f1effb;
+  --orbit-bh-fade:rgba(241,239,251,.7);--orbit-bh-particle-rgb:91,70,160;
+}
+.orbit-app[data-orbit-adapt] .incoming-flight-layer {
+  background:var(--orbit-bh-backdrop);
+  animation:orbit-adapt-blackhole-release 1280ms ease both;
+}
+@keyframes orbit-adapt-blackhole-release {
+  0%,34% { background:var(--orbit-bh-backdrop); }
+  68% { background:var(--orbit-bh-fade); }
+  100% { background:transparent; }
+}
+.orbit-app[data-orbit-adapt] .incoming-bh-halo {
+  background:radial-gradient(circle,transparent 0 12%,
+    color-mix(in srgb,var(--orbit-bh-primary) 6%,transparent) 13.5%,
+    color-mix(in srgb,var(--orbit-bh-secondary) 40%,transparent) 16.5%,
+    color-mix(in srgb,var(--orbit-bh-primary) 19%,transparent) 20.5%,
+    color-mix(in srgb,var(--orbit-bh-primary) 6%,transparent) 31%,transparent 58%);
+  box-shadow:0 0 85px color-mix(in srgb,var(--orbit-bh-secondary) 24%,transparent);
+}
+.orbit-app[data-orbit-adapt] .incoming-bh-disk-main {
+  background:linear-gradient(90deg,transparent 0 3%,
+    color-mix(in srgb,var(--orbit-bh-secondary) 21%,transparent) 9%,
+    var(--orbit-bh-secondary) 24%,
+    var(--orbit-bh-primary) 42%,
+    var(--orbit-bh-primary) 55%,
+    var(--orbit-bh-secondary) 76%,
+    color-mix(in srgb,var(--orbit-bh-primary) 15%,transparent) 92%,
+    transparent 100%);
+  box-shadow:0 0 16px var(--orbit-bh-primary),
+    0 0 46px color-mix(in srgb,var(--orbit-bh-secondary) 56%,transparent),
+    0 0 120px color-mix(in srgb,var(--orbit-bh-secondary) 25%,transparent);
+}
+.orbit-app[data-orbit-adapt] .incoming-bh-disk-far {
+  border-top-color:var(--orbit-bh-secondary);
+  border-bottom-color:var(--orbit-bh-secondary);
+  border-left-color:color-mix(in srgb,var(--orbit-bh-primary) 10%,transparent);
+  border-right-color:color-mix(in srgb,var(--orbit-bh-primary) 10%,transparent);
+  box-shadow:0 0 29px color-mix(in srgb,var(--orbit-bh-secondary) 44%,transparent);
+}
+.orbit-app[data-orbit-adapt] .incoming-bh-lens-upper {
+  border-top-color:var(--orbit-bh-primary);
+  border-left-color:color-mix(in srgb,var(--orbit-bh-secondary) 34%,transparent);
+}
+.orbit-app[data-orbit-adapt] .incoming-bh-lens-lower {
+  border-bottom-color:var(--orbit-bh-secondary);
+  border-right-color:color-mix(in srgb,var(--orbit-bh-secondary) 24%,transparent);
+}
+.orbit-app[data-orbit-adapt] .incoming-bh-photon-ring {
+  border-color:var(--orbit-bh-primary);
+  box-shadow:0 0 10px var(--orbit-bh-primary),
+    0 0 33px color-mix(in srgb,var(--orbit-bh-primary) 62%,transparent),
+    0 0 92px color-mix(in srgb,var(--orbit-bh-secondary) 30%,transparent);
+}
+.orbit-app[data-orbit-adapt] .incoming-bh-core {
+  background:var(--orbit-bh-void);
+  box-shadow:0 0 0 2px var(--orbit-bh-secondary),
+    0 0 24px 8px color-mix(in srgb,var(--orbit-bh-primary) 32%,transparent),
+    0 0 85px 18px color-mix(in srgb,var(--orbit-bh-secondary) 20%,transparent);
+}
+.orbit-app[data-orbit-adapt] .incoming-craft {
+  color:var(--orbit-bh-primary);
+  filter:drop-shadow(0 0 12px var(--orbit-bh-secondary));
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] .incoming-source-label {
+  color:var(--orbit-bh-void);
+}
