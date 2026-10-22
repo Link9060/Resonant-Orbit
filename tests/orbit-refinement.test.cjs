@@ -102,3 +102,20 @@ test('incoming black hole uses per-identity colors, including the release partic
  assert.match(world,/orbit-bh-particle-rgb/);
  assert.match(world,/isLight \? 'source-over' : 'lighter'/);
 });
+
+test('live Orbit paints Haven and other light particles from deterministic palettes',()=>{
+ const world=fs.readFileSync('src/components/orbit-world.tsx','utf8');
+ const css=fs.readFileSync('src/app/adapt.css','utf8');
+ const expected={bloom:'#683354',haven:'#284c37',atelier:'#252525',pulse:'#483781'};
+ assert.doesNotMatch(world,/getComputedStyle\(shell\)\.getPropertyValue\('--orbit-dot-ink'\)/,
+  'the particle renderer must not silently fall back when inherited styles fail');
+ for(const [identity,pigment] of Object.entries(expected)){
+   assert.ok(world.includes(identity+": { light: '"+pigment+"'"),identity+' must have a direct dark paint');
+   assert.ok(css.includes('data-orbit-adapt="'+identity+'"] .world-canvas'),
+     identity+' must have a light-canvas color guard');
+ }
+ assert.match(world,/canvas\.dataset\.orbitDotColor =/);
+ assert.match(world,/particleColor: currentParticleColor\(\)/);
+ assert.match(css,/mix-blend-mode:multiply/);
+ assert.match(css,/filter:brightness\(0\) saturate\(100%\)/);
+});
