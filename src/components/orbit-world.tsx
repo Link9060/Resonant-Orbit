@@ -168,6 +168,8 @@ function IncomingReformCanvas() {
       };
     });
 
+    const particleRgb = getComputedStyle(canvas).getPropertyValue('--orbit-bh-particle-rgb').trim() || '255,255,255';
+    const isLight = document.documentElement.dataset.arrowTheme === 'light';
     const startedAt = performance.now();
     const duration = 1040;
     let frame = 0;
@@ -177,7 +179,7 @@ function IncomingReformCanvas() {
       const elapsed = now - startedAt;
       const global = Math.min(1, elapsed / duration);
       context.clearRect(0, 0, width, height);
-      context.globalCompositeOperation = 'lighter';
+      context.globalCompositeOperation = isLight ? 'source-over' : 'lighter';
 
       for (const particle of particles) {
         const local = Math.max(0, Math.min(1, (elapsed - particle.delay) / (duration - particle.delay)));
@@ -192,14 +194,14 @@ function IncomingReformCanvas() {
         const tailY = y - Math.sin(spiral) * length * .72;
         const fade = Math.min(1, local * 4) * (1 - Math.max(0, (local - .9) / .1));
 
-        context.strokeStyle = `rgba(255,255,255,${particle.alpha * fade})`;
+        context.strokeStyle = `rgba(${particleRgb},${particle.alpha * fade})`;
         context.lineWidth = Math.max(.65, particle.size * .58);
         context.beginPath();
         context.moveTo(tailX, tailY);
         context.lineTo(x, y);
         context.stroke();
 
-        context.fillStyle = `rgba(255,255,255,${Math.min(1, particle.alpha * 1.22) * fade})`;
+        context.fillStyle = `rgba(${particleRgb},${Math.min(1, particle.alpha * 1.22) * fade})`;
         context.beginPath();
         context.arc(x, y, particle.size, 0, Math.PI * 2);
         context.fill();
@@ -765,6 +767,17 @@ export function OrbitWorld() {
     let lastPaint = 0;
     let sampleStarted = performance.now();
     let sampleFrames = 0;
+    let lastPigmentKey = '';
+    let particlePigment = '';
+    const currentParticleColor = () => {
+      const identity = shell.closest<HTMLElement>('[data-orbit-adapt]')?.dataset.orbitAdapt || 'core';
+      const key = document.documentElement.dataset.arrowTheme + ':' + identity;
+      if (key !== lastPigmentKey) {
+        lastPigmentKey = key;
+        particlePigment = identity === 'core' ? '' : getComputedStyle(shell).getPropertyValue('--orbit-dot-ink').trim();
+      }
+      return particlePigment;
+    };
 
     const resize = () => {
       const bounds = shell.getBoundingClientRect();
@@ -895,6 +908,7 @@ export function OrbitWorld() {
         reduceMotion: reduced,
         collapse,
         entertainment: entertainmentModeRef.current,
+        particleColor: currentParticleColor(),
       });
 
       if (!modeAnimation) drawOrbitSegments(
