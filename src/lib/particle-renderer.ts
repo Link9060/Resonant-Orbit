@@ -259,7 +259,9 @@ export function createCloudRenderer(compact = false, options: ParticleOptions = 
       if (motion.entertainment) {
         ctx.fillStyle = ['#c4b5fd', '#67e8f9', '#a5b4fc', '#f9a8d4', '#fcd34d'][point.layer];
       }
-      ctx.globalAlpha = Math.min(0.99, alpha + interaction * 0.22) * opacity * (1 - collapse * .88);
+      // Light paper surfaces need more ink density than dark/glowing scenes.
+      const contrastBoost = !dark && motion.particleColor ? 1.65 : 1;
+      ctx.globalAlpha = Math.min(0.99, (alpha + interaction * 0.22) * contrastBoost) * opacity * (1 - collapse * .88);
       ctx.fillRect(sx - grain / 2, sy - grain / 2, grain, grain);
     }
 
