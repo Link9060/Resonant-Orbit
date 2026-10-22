@@ -767,14 +767,27 @@ export function OrbitWorld() {
     let lastPaint = 0;
     let sampleStarted = performance.now();
     let sampleFrames = 0;
+    // Canvas paints are resolved in JavaScript, not inferred from inherited CSS.
+    // An empty CSS custom property previously let white dots blend into paper UI.
+    const particlePalette: Record<string, { light: string; dark: string }> = {
+      bloom: { light: '#683354', dark: '#e9b7d7' },
+      haven: { light: '#284c37', dark: '#b6d2bd' },
+      atelier: { light: '#252525', dark: '#eee5d5' },
+      pulse: { light: '#483781', dark: '#b7b4ff' },
+    };
     let lastPigmentKey = '';
     let particlePigment = '';
     const currentParticleColor = () => {
-      const identity = shell.closest<HTMLElement>('[data-orbit-adapt]')?.dataset.orbitAdapt || 'core';
-      const key = document.documentElement.dataset.arrowTheme + ':' + identity;
+      const identity = shell.closest<HTMLElement>('[data-orbit-adapt]')?.dataset.orbitAdapt || document.documentElement.dataset.arrowAdapt || 'core';
+      const mode = document.documentElement.dataset.arrowTheme === 'light' ? 'light' : 'dark';
+      const key = mode + ':' + identity;
       if (key !== lastPigmentKey) {
         lastPigmentKey = key;
-        particlePigment = identity === 'core' ? '' : getComputedStyle(shell).getPropertyValue('--orbit-dot-ink').trim();
+        particlePigment = particlePalette[identity]?.[mode] || '';
+        // Make the active paint inspectable in browser developer tools.
+        canvas.dataset.orbitDotColor = particlePigment || (mode === 'light' ? '#0d0d0f' : '#ffffff');
+        canvas.dataset.orbitDotMode = mode;
+        canvas.dataset.orbitDotIdentity = identity;
       }
       return particlePigment;
     };
