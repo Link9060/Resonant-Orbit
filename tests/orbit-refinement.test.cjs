@@ -67,3 +67,38 @@ test('Orbit staff entry follows experience previews and shared workspace actions
   await React.act(async()=>{button('Notes').click();button('To-dos').click();button('Calendar').click();button('Contacts ↗').click();});assert.deepEqual(opened.map(call=>call[0]),['notes','tasks','calendar','/relay/contacts/']);
  }finally{await React.act(async()=>root.unmount());dom.window.close();for(const key of keys){if(previous[key])Object.defineProperty(global,key,previous[key]);else delete global[key];}}
 });
+
+test('light Orbit paints visibly dark identity-colored dots without CSS inversion',()=>{
+ const {createCloudRenderer}=loader({})('src/lib/particle-renderer.ts');
+ const renderer=createCloudRenderer(true,{density:.35});
+ const colors=[];
+ const ctx={canvas:{height:800},getTransform:()=>({d:1}),fillRect(){colors.push(this.fillStyle);}};
+ for(const pigment of ['#894473','#466852','#34332f','#57429b']){
+   colors.length=0;
+   renderer(ctx,400,400,800,0,false,{particleColor:pigment,reduceMotion:true});
+   assert.ok(colors.length>100);
+   assert.ok(colors.every(color=>color===pigment),pigment+' should be visible on the light background');
+ }
+ const css=fs.readFileSync('src/app/adapt.css','utf8');
+ assert.doesNotMatch(css,/filter:invert\(/,'light-mode particle canvas must never be inverted');
+ for(const identity of ['bloom','haven','atelier','pulse']){
+   assert.ok(css.includes('data-arrow-theme="light"] .orbit-app[data-orbit-adapt="'+identity+'"] { --orbit-dot-ink:'),
+     identity+' must define a dark light-mode dot pigment');
+ }
+});
+
+test('incoming black hole uses per-identity colors, including the release particles',()=>{
+ const css=fs.readFileSync('src/app/adapt.css','utf8');
+ const world=fs.readFileSync('src/components/orbit-world.tsx','utf8');
+ for(const identity of ['bloom','haven','atelier','pulse']){
+   assert.ok(css.includes('.orbit-app[data-orbit-adapt="'+identity+'"] {\n  --orbit-bh-primary:'),
+     identity+' needs a distinctive dark black-hole palette');
+   assert.ok(css.includes('data-arrow-theme="light"] .orbit-app[data-orbit-adapt="'+identity+'"] {\n  --orbit-bh-primary:'),
+     identity+' needs an individual light black-hole palette');
+ }
+ for(const part of ['incoming-bh-halo','incoming-bh-disk-main','incoming-bh-photon-ring','incoming-bh-core']){
+   assert.ok(css.includes('.orbit-app[data-orbit-adapt] .'+part),part+' must use the themed palette');
+ }
+ assert.match(world,/orbit-bh-particle-rgb/);
+ assert.match(world,/isLight \? 'source-over' : 'lighter'/);
+});
