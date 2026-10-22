@@ -23,6 +23,8 @@ export type CloudMotion = {
   reduceMotion?: boolean;
   collapse?: number;
   entertainment?: boolean;
+  /** A theme-aware particle pigment, independent of CSS canvas filters. */
+  particleColor?: string;
 };
 
 type SpherePoint = {
@@ -188,7 +190,7 @@ export function createCloudRenderer(compact = false, options: ParticleOptions = 
     const followY = my * hover * radius * 0.02;
     const interactionRadius = radius * (0.43 + loadingMix * 0.14);
 
-    ctx.fillStyle = dark ? '#fff' : '#0d0d0f';
+    ctx.fillStyle = motion.particleColor || (dark ? '#fff' : '#0d0d0f');
 
     for (const point of points) {
       const structural = point.layer === 1 || point.layer === 2 || point.layer === 3;
