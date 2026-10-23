@@ -612,3 +612,45 @@ test('Adapt appearance flows from theme to preview/finalization to color and Ate
   expect(panelBg).toMatch(/^rgb\(/);
   await expect(page.locator('.arrow-os-custom-color input')).toBeAttached();
 });
+
+test('light mode renders a black event horizon across every Adapt identity', async ({ page }) => {
+  await openOrbit(page);
+
+  // Exercise the actual CSS without starting a route-changing transition.
+  await page.evaluate(() => {
+    const departure = document.createElement('div');
+    departure.className = 'arrow-os-handoff arrow-os-blackhole-departure';
+    departure.setAttribute('aria-hidden', 'true');
+    departure.innerHTML = [
+      '<span class="arrow-os-blackhole-halo"></span>',
+      '<span class="arrow-os-blackhole-disk disk-main"></span>',
+      '<span class="arrow-os-blackhole-photon-ring"></span>',
+      '<span class="arrow-os-blackhole-core"></span>',
+    ].join('');
+    document.body.append(departure);
+
+    const incoming = document.createElement('div');
+    incoming.className = 'incoming-flight-layer';
+    incoming.setAttribute('aria-hidden', 'true');
+    incoming.innerHTML = '<span class="incoming-bh-core"></span>';
+    document.querySelector('.world-shell')?.append(incoming);
+    document.documentElement.dataset.arrowTheme = 'light';
+  });
+
+  const outgoingCore = page.locator('.arrow-os-blackhole-departure .arrow-os-blackhole-core');
+  const incomingCore = page.locator('.incoming-flight-layer .incoming-bh-core');
+
+  for (const identity of ['core', 'bloom', 'haven', 'atelier', 'pulse']) {
+    await page.locator('html').evaluate((html, name) => {
+      html.setAttribute('data-arrow-identity', name);
+    }, identity);
+    const outgoing = await outgoingCore.evaluate(element => getComputedStyle(element).backgroundColor);
+    const incoming = await incomingCore.evaluate(element => getComputedStyle(element).backgroundColor);
+    expect(outgoing, `outgoing event horizon for ${identity}`).toBe('rgb(1, 1, 2)');
+    expect(incoming, `incoming event horizon for ${identity}`).toBe('rgb(0, 0, 0)');
+  }
+
+  const disk = await page.locator('.arrow-os-blackhole-departure .disk-main')
+    .evaluate(element => getComputedStyle(element).backgroundImage);
+  expect(disk).toContain('rgb(23, 27, 35)');
+});
