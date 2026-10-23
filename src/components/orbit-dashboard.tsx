@@ -27,7 +27,7 @@ const META: Record<DashboardWidgetId, { title: string; subtitle: string }> = {
   nowplaying: { title: 'Now Playing', subtitle: 'Music integration pending' },
   pinnedpeople: { title: 'Pinned People', subtitle: 'Connection integration pending' },
   quicklinks: { title: 'Quick Actions', subtitle: 'Open your ARROW modules' },
-  dayprogress: { title: 'Day Progress', subtitle: 'Completed tasks today' },
+  dayprogress: { title: 'Day remaining', subtitle: 'Time left in your active day' },
   schoolschedule: { title: 'School Schedule', subtitle: 'Shared calendar items' },
   assignments: { title: 'Assignments', subtitle: 'Upcoming dated tasks' },
   momentum: { title: 'Momentum', subtitle: 'Task progress' },
@@ -62,6 +62,29 @@ function ShortLink({ id, label }: { id: string; label: string }) {
 function Meter({ number, total }: { number: number; total: number }) {
   const percentage = total ? Math.round(100 * number / total) : 0;
   return <div className="adapt-meter"><div className="adapt-meter-top"><strong>{percentage}%</strong><span>{number}/{total} completed</span></div><div className="adapt-meter-track"><i style={{ width: percentage + '%' }} /></div></div>;
+}
+
+type DayWindow = { start: string; end: string };
+const DEFAULT_DAY_WINDOW: DayWindow = { start:'08:00', end:'22:00' };
+function validDayWindow(value: unknown): DayWindow {
+  const candidate = value as Partial<DayWindow> | null;
+  const valid = (time: unknown) => typeof time === 'string' && /^([01]\\d|2[0-3]):[0-5]\\d$/.test(time);
+  if (!valid(candidate?.start) || !valid(candidate?.end)) return DEFAULT_DAY_WINDOW;
+  const start = candidate!.start!;
+  const end = candidate!.end!;
+  return start < end ? { start, end } : DEFAULT_DAY_WINDOW;
+}
+function activeDay(now: Date, window: DayWindow) {
+  const minutes = now.getHours()*60 + now.getMinutes();
+  const toMinutes = (value: string) => Number(value.slice(0,2))*60 + Number(value.slice(3));
+  const start = toMinutes(window.start), end = toMinutes(window.end);
+  const remaining = Math.max(0, end - Math.max(start, minutes));
+  const percent = minutes <= start ? 100 : minutes >= end ? 0 : Math.round(100 * remaining/(end-start));
+  return { remaining, percent, sleeping: minutes < start || minutes >= end, beforeStart:minutes < start };
+}
+function timeLabel(minutes: number) {
+  const hours = Math.floor(minutes / 60), mins = minutes % 60;
+  return hours ? `${hours}h ${mins ? mins+'m' : ''}`.trim() : `${mins}m`;
 }
 
 function useWeather() {
@@ -121,9 +144,21 @@ export function OrbitDashboard() {
   const [prompt, setPrompt] = useState('');
   const [focusSeconds, setFocusSeconds] = useState(25 * 60);
   const [focusRunning, setFocusRunning] = useState(false);
+  const [dayWindow, setDayWindow] = useState<DayWindow>(DEFAULT_DAY_WINDOW);
+  const [daySettingsOpen, setDaySettingsOpen] = useState(false);
+  const [dayWindowError, setDayWindowError] = useState('');
+  const [clockNow, setClockNow] = useState(() => new Date());
   const version = useRef(0);
   const saveTimer = useRef<number | null>(null);
   const weather = useWeather();
+  useEffect(() => {
+    const timer = window.setInterval(() => setClockNow(new Date()), 30000);
+    return () => window.clearInterval(timer);
+  }, []);
+  useEffect(() => {
+    try { setDayWindow(validDayWindow(JSON.parse(localStorage.getItem('arrow-orbit-day-window-v1:'+owner) || 'null'))); }
+    catch { setDayWindow(DEFAULT_DAY_WINDOW); }
+  }, [owner]);
 
   useEffect(() => {
     let mounted = true;
@@ -244,6 +279,7 @@ export function OrbitDashboard() {
   const unread = data.notifications.filter((item) => !item.read_at);
   const next = data.events.find((event) => event.event_date >= today);
   const summary = { tasks: todaysTasks.length, done, next:next?.title || 'Nothing scheduled', unread:unread.length };
+  const timeRemaining = activeDay(clockNow, dayWindow);
 
   function taskList(items: Task[], maxItems = 6) {
     return items.length ? <ul className="adapt-data-list">{items.slice(0, maxItems).map((task) => <li key={task.id}>
@@ -266,7 +302,15 @@ export function OrbitDashboard() {
       case 'weather':
       case 'sun': return <>{weather.weather ? id==='sun'?<div className="adapt-metrics"><Metric value={clock(weather.weather.sunrise.split('T')[1])} label="Sunrise"/><Metric value={clock(weather.weather.sunset.split('T')[1])} label="Sunset"/></div>:<div className="adapt-weather"><span>{Math.round(weather.weather.temp)}{weather.weather.unit}</span><p>{weather.weather.location} · H {Math.round(weather.weather.hi)}° · L {Math.round(weather.weather.lo)}° · Rain {weather.weather.precip}%</p></div>:<p className="adapt-small-muted">Choose a ZIP to show local conditions.</p>}<form className="adapt-input-form" onSubmit={e=>{e.preventDefault();void weather.load(weather.draft);}}><input inputMode="numeric" aria-label="Weather ZIP code" maxLength={5} value={weather.draft} onChange={e=>weather.setDraft(e.target.value.replace(/\D/g,''))} placeholder="ZIP code"/><button disabled={weather.loading}>{weather.loading?'Loading':'Apply'}</button></form>{weather.error&&<p role="alert" className="adapt-small-muted">{weather.error}</p>}</>;
       case 'quicklinks': return <div className="adapt-quicklinks">{[['waypoint','Waypoint'],['chats','Relay'],['askravin','RAVIN'],['calendar','Calendar']].map(([target,label])=><ShortLink key={target} id={target} label={label}/>)}</div>;
-      case 'dayprogress': case 'momentum': return <Meter number={done} total={todaysTasks.length}/>;
+      case 'dayprogress': return <div className="adapt-daytime">
+        <div className="adapt-meter"><div className="adapt-meter-top">
+          <strong>{timeRemaining.sleeping ? 'Rest time' : timeRemaining.percent+'% left'}</strong>
+          <span>{timeRemaining.sleeping ? (timeRemaining.beforeStart ? 'Your day starts at '+clock(dayWindow.start) : 'Time to wind down') : timeLabel(timeRemaining.remaining)+' remaining'}</span>
+        </div><div className="adapt-meter-track"><i style={{ width: timeRemaining.percent + '%' }} /></div></div>
+        {!compact && <small className="adapt-daytime-hours">{clock(dayWindow.start)} – {clock(dayWindow.end)}</small>}
+        <button type="button" className="adapt-daytime-settings" aria-label="Adjust active-day hours" onClick={()=>{setDayWindowError('');setDaySettingsOpen(true);}}>Adjust hours</button>
+      </div>;
+      case 'momentum': return <Meter number={done} total={todaysTasks.length}/>;
       case 'assignments': return <>{taskList(future,count)}{rows>=2 && <ShortLink id="tasks" label="View all tasks"/>}</>;
       case 'countdowns': return <>{next ? <><strong>{next.title}</strong><p>{next.event_date} · {clock(next.start_time)}</p></>:<p className="adapt-small-muted">No upcoming scheduled events.</p>}<ShortLink id="calendar" label="Open calendar"/></>;
       case 'ravinbrief': return <><div className="adapt-metrics"><Metric value={String(summary.tasks-summary.done)} label="Tasks left"/><Metric value={String(summary.unread)} label="Unread"/><Metric value={String(data.events.length)} label="Events"/></div><ShortLink id="ravinbrief" label="Open RAVIN"/></>;
@@ -276,35 +320,24 @@ export function OrbitDashboard() {
   }
   return <div className="adapt-dashboard-inner">
     <header className="adapt-dashboard-heading">
-      <div><span className="adapt-eyebrow">ARROW · YOUR HOME SPACE</span><h1>Dashboard</h1><p>A home screen made your way.</p></div>
+      <div><span className="adapt-eyebrow">ARROW / OVERVIEW</span><h1>Dashboard</h1></div>
       <button type="button" className="adapt-edit-button" disabled={!owner || !ready} aria-pressed={editing} onClick={()=>setEditing(value=>!value)}>{editing?'Done':'Customize'}</button>
     </header>
-    <section className="adapt-identity-intro" aria-label="ARROW home identity">
-      <div className="adapt-intro-bloom">
-        <span className="adapt-intro-label">BLOOM / YOUR SPACE</span>
-        <strong>A little room for everything.</strong>
-        <p>Gather your thoughts, plans, and favorite tools in your own colorful corner of ARROW.</p>
-        <span className="adapt-intro-symbol" aria-hidden="true">✿</span>
-      </div>
-      <div className="adapt-intro-haven">
-        <span className="adapt-intro-label">A PLACE TO RETURN TO</span>
-        <strong>Make yourself at home.</strong>
-        <p>Your notes, the things ahead, and what matters today. All in one quiet place.</p>
-        <span className="adapt-intro-symbol" aria-hidden="true">❧</span>
-      </div>
-      <div className="adapt-intro-atelier">
-        <span className="adapt-intro-label">ARROW / THE PERSONAL EDITION</span>
-        <div className="adapt-atelier-hero-line"><strong>Everything, arranged.</strong><span>01 / HOME</span></div>
-        <p>An intentional view of the things shaping your day.</p>
-      </div>
-      <div className="adapt-intro-pulse">
-        <span className="adapt-intro-label">ARROW / LIVE CONTROL</span>
-        <strong>YOUR WORLD.<br/>YOUR RULES.</strong>
-        <p>One workspace. Every mission.</p>
-        <span className="adapt-intro-symbol" aria-hidden="true">↗</span>
-      </div>
-    </section>
     <p role="status" className="adapt-sync-status">{syncMessage}</p>
+    {daySettingsOpen && <div className="adapt-daytime-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setDaySettingsOpen(false);}}>
+      <form className="adapt-daytime-dialog" role="dialog" aria-modal="true" aria-label="Set active-day hours" onSubmit={event=>{
+        event.preventDefault();
+        if(dayWindow.start>=dayWindow.end){setDayWindowError('End time must be after start time.');return;}
+        try { localStorage.setItem('arrow-orbit-day-window-v1:'+owner,JSON.stringify(dayWindow)); } catch {}
+        setDayWindowError('');setDaySettingsOpen(false);
+      }}>
+        <h2>Your active day</h2><p>Choose when your day starts and when you wind down. Outside these hours the widget shows rest time.</p>
+        <label>Start <input type="time" aria-label="Active day start" required value={dayWindow.start} onChange={e=>setDayWindow(v=>({...v,start:e.target.value}))}/></label>
+        <label>End <input type="time" aria-label="Active day end" required value={dayWindow.end} onChange={e=>setDayWindow(v=>({...v,end:e.target.value}))}/></label>
+        {dayWindowError&&<p role="alert">{dayWindowError}</p>}
+        <div className="adapt-widget-actions"><button type="button" onClick={()=>{setDaySettingsOpen(false);setDayWindowError('');}}>Cancel</button><button type="submit">Save hours</button></div>
+      </form>
+    </div>}
     {data.errors.length>0 && <p role="status" className="adapt-data-errors">{data.errors.join(' ')}</p>}
     <OrbitWidgetStudio
       widgets={widgets} meta={META} editing={editing} onEdit={setEditing}
