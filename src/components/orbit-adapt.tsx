@@ -2,7 +2,7 @@
 
 import { ArrowMarkIcon } from '@/components/orbit-icons';
 import { OrbitDashboard } from '@/components/orbit-dashboard';
-import { useEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 
 type Identity = 'core' | 'bloom' | 'haven' | 'atelier' | 'pulse';
 type View = 'orbit' | 'widgets';
@@ -33,6 +33,9 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
   const [selectedView, setSelectedView] = useState<View>('orbit');
   const [transition, setTransition] = useState<'idle'|'switching-to-dashboard'|'dashboard-enter'|'dashboard-exit'|'switching-to-orbit'>('idle');
   const timers = useRef<number[]>([]);
+  const stageRef = useRef<HTMLElement>(null);
+  const dashboardButtonRef = useRef<HTMLButtonElement>(null);
+  const [origin, setOrigin] = useState({ x:'calc(100% - 173px)', y:'137px' });
   useEffect(() => {
     const sync = () => {
       const next=identity();
@@ -58,6 +61,12 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
   },[]);
   function choose(next: View) {
     if (transition !== 'idle' || view === next) return;
+    const button = dashboardButtonRef.current?.getBoundingClientRect();
+    const stage = stageRef.current?.getBoundingClientRect();
+    if (button && stage) setOrigin({
+      x:(button.left + button.width/2 - stage.left) + 'px',
+      y:(button.top + button.height/2 - stage.top) + 'px',
+    });
     try { localStorage.setItem(viewKey(owner),next); } catch {}
     const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
       document.documentElement.dataset.arrowMotion === 'reduce';
@@ -86,7 +95,7 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
     }
   }
   return (
-    <main className="orbit-app" data-orbit-adapt={theme} data-orbit-view={view} data-orbit-selection={selectedView === 'widgets' ? 'dashboard' : 'orbit'} data-orbit-transition={transition}>
+    <main className="orbit-app" data-orbit-adapt={theme} data-orbit-view={view} data-orbit-selection={selectedView === 'widgets' ? 'dashboard' : 'orbit'} data-orbit-transition={transition} style={{ '--orbit-dashboard-origin-x':origin.x, '--orbit-dashboard-origin-y':origin.y } as CSSProperties}>
       <header className="orbit-header">
         <div className="suite-lockup" aria-label="ARROW Orbit">
           <span className="arrow-mark" aria-hidden="true"><ArrowMarkIcon size={18}/></span>
@@ -100,12 +109,12 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
           </div>
           <div className="adapt-view-switch" role="group" aria-label="Orbit display">
             <button type="button" aria-pressed={selectedView==='orbit'} aria-disabled={transition!=='idle'} onClick={()=>choose('orbit')}>Orbit</button>
-            <button type="button" aria-pressed={selectedView==='widgets'} aria-disabled={transition!=='idle'} onClick={()=>choose('widgets')}>Dashboard</button>
+            <button ref={dashboardButtonRef} type="button" aria-pressed={selectedView==='widgets'} aria-disabled={transition!=='idle'} onClick={()=>choose('widgets')}>Dashboard</button>
           </div>
           <div data-arrow-os-shell data-module="orbit" suppressHydrationWarning/>
         </div>
       </header>
-      <section className="orbit-stage" aria-label="Orbit home">
+      <section ref={stageRef} className="orbit-stage" aria-label="Orbit home">
         <div className="adapt-world-layer" aria-hidden={view!=='orbit'} inert={view!=='orbit'}>{children}</div>
         {view==='widgets'&&<section className="adapt-dashboard" aria-label="Orbit dashboard"><OrbitDashboard/></section>}
       </section>
