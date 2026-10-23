@@ -2,7 +2,7 @@ name: Orbit validation
 
 on:
   push:
-    branches: [main]
+    branches: [main, beta-foundation-polish-20261023]
   pull_request:
     branches: [main]
 
