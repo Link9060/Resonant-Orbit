@@ -3872,3 +3872,17 @@ html[data-arrow-theme="light"][data-arrow-identity="atelier"] .orbit-navigator {
 /* The immersive canvas intentionally stays dark: keep its original contrast when light dashboard is selected. */
 html[data-arrow-theme="light"] .world-shell { color:#f7f7f5; --text:#f7f7f5; --muted:rgba(247,247,245,.58); }
 @media(prefers-reduced-motion:reduce){.arrow-os-identity-preview,.adapt-widget{transition:none!important;}}
+
+/* A light ARROW appearance must never invert the black-hole return sequence.
+   The event horizon stays black; the existing collapse/reformation timing is retained. */
+html[data-arrow-theme="light"] .incoming-flight-layer {
+  color-scheme: dark;
+  mix-blend-mode: normal;
+  filter: none;
+}
+html[data-arrow-theme="light"] .incoming-flight-layer .incoming-bh-core {
+  background: #000;
+  box-shadow: 0 0 0 2px rgba(255,255,255,.3),
+    0 0 22px 8px rgba(255,255,255,.22),
+    0 0 90px 18px rgba(255,255,255,.08);
+}
