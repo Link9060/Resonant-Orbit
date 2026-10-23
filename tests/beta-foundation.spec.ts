@@ -51,6 +51,8 @@ test('Atelier dashboard background follows its custom ARROW palette', async ({ p
   await page.getByRole('group',{name:'Orbit display'})
     .getByRole('button',{name:'Dashboard',exact:true}).click();
   await expect(page.locator('.adapt-dashboard')).toBeVisible();
-  const value = await page.locator('.adapt-dashboard').evaluate(el=>getComputedStyle(el).getPropertyValue('--adapt-bg').trim());
-  expect(value).toContain('#7a1734');
+  const burgundy = await page.locator('.adapt-dashboard').evaluate(el=>getComputedStyle(el).backgroundColor);
+  await page.evaluate(()=>document.documentElement.style.setProperty('--arrow-adapt-primary','#167a35'));
+  const emerald = await page.locator('.adapt-dashboard').evaluate(el=>getComputedStyle(el).backgroundColor);
+  expect(burgundy).not.toEqual(emerald);
 });
