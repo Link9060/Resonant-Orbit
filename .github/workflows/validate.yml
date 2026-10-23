@@ -49,5 +49,10 @@ jobs:
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium webkit
 
-      - name: Interaction tests
+      - name: Current standalone interaction tests
+        if: github.ref == 'refs/heads/main'
         run: npm run test:e2e
+
+      - name: Older beta foundation interaction tests
+        if: github.ref != 'refs/heads/main'
+        run: npx playwright test tests/beta-foundation.spec.ts
