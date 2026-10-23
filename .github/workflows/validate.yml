@@ -29,8 +29,16 @@ jobs:
           grep -q 'data-arrow-os-shell' src/components/orbit-adapt.tsx
           grep -q 'arrow-shell.js' src/app/layout.tsx
 
-      - name: Shared ARROW regression tests
+      - name: Standalone shell regression tests
+        if: github.ref == 'refs/heads/main'
         run: npm run test:shell
+
+      - name: Beta Orbit layout, grid and identity tests
+        if: github.ref != 'refs/heads/main'
+        run: node --test tests/orbit-adapt.test.cjs tests/orbit-widget-grid.test.cjs tests/orbit-refinement.test.cjs tests/adapt-native.test.cjs tests/module-routing.test.cjs tests/entertainment.test.cjs
+
+      # The integrated beta runs the shared shell suite with Relay's actual
+      # arrow-shell.js injected via ARROW_SHELL_SOURCE during packaging.
 
       - name: Typecheck
         run: npm run typecheck
