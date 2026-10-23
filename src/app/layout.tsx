@@ -23,7 +23,7 @@ export default function RootLayout({ children }: Readonly<{ children: React.Reac
   return (
     <html lang="en">
       <head>
-        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20260927-arrow-shell-layout-v1`} />
+        <link rel="stylesheet" href={`${arrowShellBase}/arrow-shell.css?v=20261023-light-blackhole-v2`} />
       </head>
       <body>
         {children}
