@@ -1476,3 +1476,244 @@
 :root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="pulse"] .world-canvas {
   filter:brightness(0) saturate(100%) invert(25%) sepia(27%) saturate(1610%) hue-rotate(225deg) brightness(92%) contrast(99%)!important;
 }
+
+/* October beta foundation: the dashboard is the only scroll surface.
+   The widget gallery/editor retains intentional scrolling when opened. */
+.orbit-app .adapt-dashboard {
+  overflow-x:hidden;
+  overflow-y:auto;
+  scrollbar-gutter:stable;
+  overscroll-behavior-y:auto;
+}
+.orbit-app .orbit-grid-scroller:not(.is-editing) {
+  overflow:visible;
+}
+.orbit-app .orbit-positioned-widget,
+.orbit-app .adapt-native-widget {
+  min-width:0;
+  min-height:0;
+  isolation:isolate;
+}
+.orbit-app .adapt-widget-content,
+.orbit-app .orbit-widget-board .orbit-positioned-widget .adapt-widget-content,
+.orbit-app .adapt-native-widget .adapt-widget-content {
+  min-width:0;
+  min-height:0;
+  max-height:100%;
+  overflow:hidden!important;
+  overscroll-behavior:auto;
+  overflow-wrap:anywhere;
+  gap:clamp(4px,0.9cqw,10px);
+}
+.orbit-app .adapt-widget-content :is(ul,ol,p,textarea) {max-width:100%;min-width:0;}
+.orbit-app .adapt-widget-content ul {overflow:hidden;}
+.orbit-app .adapt-widget-content li {min-width:0;overflow-wrap:anywhere;}
+.orbit-app .adapt-widget-content :is(input,textarea,button) {min-width:0;}
+.orbit-app .adapt-widget-content textarea {resize:none;min-height:32px;}
+.orbit-app .adapt-widget-content .adapt-feature-number {line-height:1.12;}
+.orbit-app .orbit-positioned-widget[data-widget-layout="compact"] .adapt-widget-content {
+  gap:4px;padding-top:5px;justify-content:center;
+}
+.orbit-app .orbit-positioned-widget[data-widget-layout="compact"] .adapt-widget-content :is(.adapt-data-list,.adapt-small-muted,.adapt-note-form) {
+  margin-block:0;
+}
+.orbit-app .orbit-positioned-widget[data-widget-layout="compact"] .adapt-widget-content .adapt-dashboard-link {
+  margin-top:4px;
+  line-height:1.2;
+}
+.orbit-app .adapt-dashboard .orbit-positioned-widget {
+  transition:box-shadow 180ms ease,border-color 180ms ease,transform 180ms ease;
+}
+@media (hover:hover) {
+  .orbit-app .orbit-widget-board:not(.is-editing) .orbit-positioned-widget:hover {
+    transform:translateY(-2px);
+    box-shadow:0 14px 32px rgba(0,0,0,.10);
+  }
+}
+@container (max-width:250px) {
+  .orbit-app .adapt-widget-content .adapt-data-list li:nth-child(n + 3) {display:none;}
+  .orbit-app .adapt-widget-content .adapt-metrics {gap:5px;}
+  .orbit-app .adapt-widget-content .adapt-weather p {font-size:10px;line-height:1.2;}
+}
+@container (max-height:210px) {
+  .orbit-app .adapt-widget-content .adapt-data-list li:nth-child(n + 3) {display:none;}
+  .orbit-app .adapt-widget-content .adapt-small-muted {font-size:10px;line-height:1.3;}
+}
+@media(max-width:650px) {
+  .orbit-app .adapt-dashboard {scrollbar-gutter:auto;}
+  .orbit-app .adapt-dashboard-inner {width:100%;max-width:none;}
+}
+/* Palettes tint the material itself, not just icons and buttons. Core stays unchanged.
+   Neutral bases avoid clashes such as burgundy placed on yellow-brown Atelier paper. */
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard {
+  --adapt-bg:color-mix(in srgb,var(--arrow-adapt-primary,#a95998) 10%,#f9fafc);
+  --adapt-surface:color-mix(in srgb,var(--arrow-adapt-primary,#a95998) 4%,#fff);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#a95998) 22%,#dfe3e9);
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="haven"] .adapt-dashboard {
+  --adapt-bg:color-mix(in srgb,var(--arrow-adapt-primary,#476b58) 10%,#f8faf9);
+  --adapt-surface:color-mix(in srgb,var(--arrow-adapt-primary,#476b58) 4%,#fff);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#476b58) 22%,#dce1dd);
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="atelier"] .adapt-dashboard {
+  --adapt-bg:color-mix(in srgb,var(--arrow-adapt-primary,#292420) 9%,#f9f9f8);
+  --adapt-surface:color-mix(in srgb,var(--arrow-adapt-primary,#292420) 3%,#fff);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#292420) 23%,#e2e3e5);
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt="pulse"] .adapt-dashboard {
+  --adapt-bg:color-mix(in srgb,var(--arrow-adapt-primary,#854dff) 11%,#f7f8fc);
+  --adapt-surface:color-mix(in srgb,var(--arrow-adapt-primary,#854dff) 4%,#fff);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#854dff) 24%,#dce0ea);
+}
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard {
+  --adapt-bg:color-mix(in srgb,var(--arrow-adapt-primary,#a95998) 10%,#151519);
+  --adapt-surface:color-mix(in srgb,var(--arrow-adapt-primary,#a95998) 11%,#222329);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#a95998) 25%,#3b3b43);
+}
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt="haven"] .adapt-dashboard {
+  --adapt-bg:color-mix(in srgb,var(--arrow-adapt-primary,#476b58) 10%,#151816);
+  --adapt-surface:color-mix(in srgb,var(--arrow-adapt-primary,#476b58) 10%,#252a27);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#476b58) 25%,#3c4540);
+}
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt="atelier"] .adapt-dashboard {
+  --adapt-bg:color-mix(in srgb,var(--arrow-adapt-primary,#292420) 9%,#171819);
+  --adapt-surface:color-mix(in srgb,var(--arrow-adapt-primary,#292420) 9%,#252628);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#292420) 22%,#404247);
+}
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt="pulse"] .adapt-dashboard {
+  --adapt-bg:color-mix(in srgb,var(--arrow-adapt-primary,#854dff) 12%,#11131b);
+  --adapt-surface:color-mix(in srgb,var(--arrow-adapt-primary,#854dff) 11%,#232733);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#854dff) 24%,#353e4c);
+}
+:root .orbit-app[data-orbit-adapt]:not([data-orbit-adapt="core"]) .adapt-dashboard {
+  background:
+    radial-gradient(circle at 95% 0%,color-mix(in srgb,var(--arrow-adapt-primary,#889fe5) 8%,transparent),transparent 45%),
+    var(--adapt-bg);
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard-inner {max-width:1150px;}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard-heading {
+  margin-bottom:23px;padding:0;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard-heading h1 {
+  font-size:clamp(30px,3.7vw,43px);font-weight:740;letter-spacing:-.045em;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-native-widget.native-bloom {
+  border-radius:18px!important;
+  box-shadow:none!important;
+  background:var(--adapt-surface)!important;
+  padding:clamp(11px,1.2vw,17px)!important;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-native-widget.native-bloom .native-content-bloom {
+  padding:clamp(4px,.6vw,10px);
+  background:transparent!important;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-native-widget.native-bloom .native-bloom-spark {
+  opacity:.35;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .native-bloom-icon {
+  border-radius:12px;
+}
+.orbit-app .adapt-dashboard-heading {margin-bottom:22px;}
+.orbit-app .adapt-dashboard-heading .adapt-eyebrow {font-size:10px;letter-spacing:.13em;}
+/* Time remaining (not task momentum) with active-hours settings. */
+.orbit-app .adapt-daytime {display:grid;gap:8px;min-width:0;}
+.orbit-app .adapt-daytime .adapt-meter-top {
+  display:flex;align-items:baseline;justify-content:space-between;
+  flex-wrap:wrap;gap:4px;
+}
+.orbit-app .adapt-daytime .adapt-meter-top strong {font-size:clamp(15px,2.2cqw,28px);}
+.orbit-app .adapt-daytime-hours {color:var(--adapt-muted);}
+.orbit-app .adapt-daytime-settings {
+  justify-self:start;padding:2px 0;border:0;background:transparent;
+  color:var(--adapt-ink);font-size:11px;text-decoration:underline;
+  text-underline-offset:3px;
+}
+.orbit-app .adapt-daytime-backdrop {
+  position:fixed;inset:0;z-index:90;display:grid;place-items:center;
+  padding:18px;background:rgba(0,0,0,.58);
+}
+.orbit-app .adapt-daytime-dialog {
+  display:grid;gap:14px;width:min(400px,100%);
+  max-height:90dvh;overflow-y:auto;
+  background:var(--adapt-surface);border:1px solid var(--adapt-border);
+  color:var(--adapt-ink);border-radius:var(--adapt-radius,12px);
+  padding:clamp(18px,3vw,26px);box-shadow:0 22px 65px #0006;
+}
+.orbit-app .adapt-daytime-dialog h2 {font-size:22px;margin:0;}
+.orbit-app .adapt-daytime-dialog p {margin:0;color:var(--adapt-muted);line-height:1.5;}
+.orbit-app .adapt-daytime-dialog label {display:grid;gap:6px;font-weight:650;}
+.orbit-app .adapt-daytime-dialog input {padding:8px;border:1px solid var(--adapt-border);border-radius:8px;background:var(--adapt-surface);color:var(--adapt-ink);}
+/* Navigation: switch highlight slides first; Dashboard grows out of its button.
+   Return trip retracts Dashboard before the highlight returns to Orbit. */
+.orbit-app .adapt-view-switch {
+  position:relative;display:grid;grid-template-columns:1fr 1fr;gap:0;
+  min-width:172px;isolation:isolate;
+  --switch-highlight:#f3f4f6;--switch-ink:#111318;
+}
+.orbit-app .adapt-view-switch::before {
+  content:"";position:absolute;z-index:0;left:3px;top:3px;
+  width:calc(50% - 3px);height:calc(100% - 6px);
+  background:var(--switch-highlight);
+  border-radius:inherit;
+  box-shadow:0 3px 12px #0002;
+  transform:translateX(0);
+  transition:transform 230ms cubic-bezier(.2,.8,.15,1);
+}
+.orbit-app[data-orbit-selection="dashboard"] .adapt-view-switch::before {transform:translateX(100%);}
+.orbit-app .adapt-view-switch button,
+:root[data-arrow-adapt] .orbit-app .adapt-view-switch button[aria-pressed="true"] {
+  position:relative;z-index:1;border:0;border-radius:inherit;
+  background:transparent!important;box-shadow:none!important;
+  white-space:nowrap;transition:color 170ms ease;
+}
+.orbit-app .adapt-view-switch button[aria-pressed="true"] {color:var(--switch-ink)!important;}
+:root[data-arrow-theme="light"] .orbit-app .adapt-view-switch {
+  --switch-highlight:#1d2737;--switch-ink:#fff;
+}
+:root[data-arrow-theme="dark"] .orbit-app .adapt-view-switch {
+  --switch-highlight:#f3f4f6;--switch-ink:#121722;
+}
+:root[data-arrow-adapt="bloom"] .orbit-app .adapt-view-switch {
+  --switch-highlight:var(--arrow-adapt-primary,#a95998);
+  --switch-ink:#fff;
+}
+:root[data-arrow-adapt="pulse"] .orbit-app .adapt-view-switch {
+  --switch-highlight:var(--arrow-adapt-primary,#854dff);
+  --switch-ink:#fff;
+}
+:root[data-arrow-adapt="atelier"] .orbit-app .adapt-view-switch::before {border-radius:0;}
+.orbit-app[data-orbit-transition="dashboard-enter"] .adapt-dashboard {
+  animation:orbit-dashboard-expand 480ms cubic-bezier(.18,.78,.2,1) both;
+}
+.orbit-app[data-orbit-transition="dashboard-exit"] .adapt-dashboard {
+  animation:orbit-dashboard-collapse 420ms cubic-bezier(.45,.08,.5,1) both;
+  pointer-events:none;
+}
+@keyframes orbit-dashboard-expand {
+  from {opacity:.15;clip-path:circle(0px at calc(100% - 173px) 137px);transform:scale(.98);}
+  to {opacity:1;clip-path:circle(160vmax at calc(100% - 173px) 137px);transform:scale(1);}
+}
+@keyframes orbit-dashboard-collapse {
+  from {opacity:1;clip-path:circle(160vmax at calc(100% - 173px) 137px);transform:scale(1);}
+  to {opacity:.15;clip-path:circle(0px at calc(100% - 173px) 137px);transform:scale(.98);}
+}
+@media (max-width:650px) {
+  @keyframes orbit-dashboard-expand {
+    from {opacity:.15;clip-path:circle(0px at calc(100% - 140px) 62px);}
+    to {opacity:1;clip-path:circle(160vmax at calc(100% - 140px) 62px);}
+  }
+  @keyframes orbit-dashboard-collapse {
+    from {opacity:1;clip-path:circle(160vmax at calc(100% - 140px) 62px);}
+    to {opacity:.15;clip-path:circle(0px at calc(100% - 140px) 62px);}
+  }
+}
+:root[data-arrow-motion="reduce"] .orbit-app .adapt-view-switch::before {
+  transition:none!important;
+}
+:root[data-arrow-motion="reduce"] .orbit-app .adapt-dashboard {
+  animation:none!important;
+}
+@media (prefers-reduced-motion:reduce) {
+  :root:not([data-arrow-motion="full"]) .orbit-app .adapt-view-switch::before {transition:none!important;}
+  :root:not([data-arrow-motion="full"]) .orbit-app .adapt-dashboard {animation:none!important;}
+}
