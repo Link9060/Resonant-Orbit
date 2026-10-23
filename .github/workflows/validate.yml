@@ -26,7 +26,7 @@ jobs:
       - name: Validate shared ARROW shell
         run: |
           node --check public/arrow-shell.js
-          grep -q 'data-arrow-os-shell' src/app/page.tsx
+          grep -q 'data-arrow-os-shell' src/components/orbit-adapt.tsx
           grep -q 'arrow-shell.js' src/app/layout.tsx
 
       - name: Shared ARROW regression tests
