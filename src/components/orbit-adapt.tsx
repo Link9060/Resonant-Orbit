@@ -2,7 +2,7 @@
 
 import { ArrowMarkIcon } from '@/components/orbit-icons';
 import { OrbitDashboard } from '@/components/orbit-dashboard';
-import { useEffect, useState, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type ReactNode } from 'react';
 
 type Identity = 'core' | 'bloom' | 'haven' | 'atelier' | 'pulse';
 type View = 'orbit' | 'widgets';
@@ -30,6 +30,9 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
   const [theme, setTheme] = useState<Identity>('core');
   const [view, setView] = useState<View>('orbit');
   const [owner, setOwner] = useState('guest');
+  const [selectedView, setSelectedView] = useState<View>('orbit');
+  const [transition, setTransition] = useState<'idle'|'switching-to-dashboard'|'dashboard-enter'|'dashboard-exit'|'switching-to-orbit'>('idle');
+  const timers = useRef<number[]>([]);
   useEffect(() => {
     const sync = () => {
       const next=identity();
@@ -37,7 +40,10 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
       document.documentElement.dataset.arrowAdapt=next;
       const user=ownerId();
       setOwner(user);
-      setView(savedView(user));
+      const remembered = savedView(user);
+      setView(remembered);
+      setSelectedView(remembered);
+      setTransition('idle');
     };
     const themeOnly = (event: Event) => {
       const announced = (event as CustomEvent<{identity?: Identity}>).detail?.identity;
@@ -48,14 +54,39 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
     sync();
     window.addEventListener('storage',sync);
     window.addEventListener('arrow:adaptchange',themeOnly);
-    return () => { window.removeEventListener('storage',sync); window.removeEventListener('arrow:adaptchange',themeOnly); };
+    return () => { window.removeEventListener('storage',sync); window.removeEventListener('arrow:adaptchange',themeOnly); timers.current.forEach(window.clearTimeout); };
   },[]);
   function choose(next: View) {
-    setView(next);
+    if (transition !== 'idle' || view === next) return;
     try { localStorage.setItem(viewKey(owner),next); } catch {}
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches ||
+      document.documentElement.dataset.arrowMotion === 'reduce';
+    if (reduced) { setView(next); setSelectedView(next); return; }
+    const schedule = (ms: number, fn: () => void) => {
+      timers.current.push(window.setTimeout(fn, ms));
+    };
+    if (next === 'widgets') {
+      // The selector travels first; the dashboard opens from its final location.
+      setSelectedView('widgets');
+      setTransition('switching-to-dashboard');
+      schedule(235, () => {
+        setView('widgets');
+        setTransition('dashboard-enter');
+        schedule(490, () => setTransition('idle'));
+      });
+    } else {
+      // Reverse the choreography: fold the dashboard away, then slide to Orbit.
+      setTransition('dashboard-exit');
+      schedule(420, () => {
+        setView('orbit');
+        setSelectedView('orbit');
+        setTransition('switching-to-orbit');
+        schedule(235, () => setTransition('idle'));
+      });
+    }
   }
   return (
-    <main className="orbit-app" data-orbit-adapt={theme} data-orbit-view={view}>
+    <main className="orbit-app" data-orbit-adapt={theme} data-orbit-view={view} data-orbit-selection={selectedView === 'widgets' ? 'dashboard' : 'orbit'} data-orbit-transition={transition}>
       <header className="orbit-header">
         <div className="suite-lockup" aria-label="ARROW Orbit">
           <span className="arrow-mark" aria-hidden="true"><ArrowMarkIcon size={18}/></span>
@@ -68,15 +99,15 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
             <span>{destinationCount} centers</span><span>{liveRouteCount} available</span>
           </div>
           <div className="adapt-view-switch" role="group" aria-label="Orbit display">
-            <button type="button" aria-pressed={view==='orbit'} onClick={()=>choose('orbit')}>Orbit</button>
-            <button type="button" aria-pressed={view==='widgets'} onClick={()=>choose('widgets')}>Widgets</button>
+            <button type="button" aria-pressed={selectedView==='orbit'} aria-disabled={transition!=='idle'} onClick={()=>choose('orbit')}>Orbit</button>
+            <button type="button" aria-pressed={selectedView==='widgets'} aria-disabled={transition!=='idle'} onClick={()=>choose('widgets')}>Dashboard</button>
           </div>
           <div data-arrow-os-shell data-module="orbit" suppressHydrationWarning/>
         </div>
       </header>
       <section className="orbit-stage" aria-label="Orbit home">
         <div className="adapt-world-layer" aria-hidden={view!=='orbit'} inert={view!=='orbit'}>{children}</div>
-        {view==='widgets'&&<section className="adapt-dashboard" aria-label="Orbit widget dashboard"><OrbitDashboard/></section>}
+        {view==='widgets'&&<section className="adapt-dashboard" aria-label="Orbit dashboard"><OrbitDashboard/></section>}
       </section>
     </main>
   );
