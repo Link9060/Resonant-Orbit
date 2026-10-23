@@ -1690,21 +1690,21 @@
   pointer-events:none;
 }
 @keyframes orbit-dashboard-expand {
-  from {opacity:.15;clip-path:circle(0px at calc(100% - 173px) 137px);transform:scale(.98);}
-  to {opacity:1;clip-path:circle(160vmax at calc(100% - 173px) 137px);transform:scale(1);}
+  from {opacity:.15;clip-path:circle(0px at var(--orbit-dashboard-origin-x,calc(100% - 173px)) var(--orbit-dashboard-origin-y,137px));transform:scale(.98);}
+  to {opacity:1;clip-path:circle(160vmax at var(--orbit-dashboard-origin-x,calc(100% - 173px)) var(--orbit-dashboard-origin-y,137px));transform:scale(1);}
 }
 @keyframes orbit-dashboard-collapse {
-  from {opacity:1;clip-path:circle(160vmax at calc(100% - 173px) 137px);transform:scale(1);}
-  to {opacity:.15;clip-path:circle(0px at calc(100% - 173px) 137px);transform:scale(.98);}
+  from {opacity:1;clip-path:circle(160vmax at var(--orbit-dashboard-origin-x,calc(100% - 173px)) var(--orbit-dashboard-origin-y,137px));transform:scale(1);}
+  to {opacity:.15;clip-path:circle(0px at var(--orbit-dashboard-origin-x,calc(100% - 173px)) var(--orbit-dashboard-origin-y,137px));transform:scale(.98);}
 }
 @media (max-width:650px) {
   @keyframes orbit-dashboard-expand {
-    from {opacity:.15;clip-path:circle(0px at calc(100% - 140px) 62px);}
-    to {opacity:1;clip-path:circle(160vmax at calc(100% - 140px) 62px);}
+    from {opacity:.15;clip-path:circle(0px at var(--orbit-dashboard-origin-x,calc(100% - 140px)) var(--orbit-dashboard-origin-y,62px));}
+    to {opacity:1;clip-path:circle(160vmax at var(--orbit-dashboard-origin-x,calc(100% - 140px)) var(--orbit-dashboard-origin-y,62px));}
   }
   @keyframes orbit-dashboard-collapse {
-    from {opacity:1;clip-path:circle(160vmax at calc(100% - 140px) 62px);}
-    to {opacity:.15;clip-path:circle(0px at calc(100% - 140px) 62px);}
+    from {opacity:1;clip-path:circle(160vmax at var(--orbit-dashboard-origin-x,calc(100% - 140px)) var(--orbit-dashboard-origin-y,62px));}
+    to {opacity:.15;clip-path:circle(0px at var(--orbit-dashboard-origin-x,calc(100% - 140px)) var(--orbit-dashboard-origin-y,62px));}
   }
 }
 :root[data-arrow-motion="reduce"] .orbit-app .adapt-view-switch::before {
