@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 
 type Place = { name: string; latitude: number; longitude: number };
 type Forecast = {
@@ -44,6 +44,7 @@ export function WeatherWidget() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [expanded, setExpanded] = useState(false);
+  const detailRef = useRef<HTMLElement>(null);
 
   async function load(next: Place) {
     setLoading(true);
@@ -84,11 +85,32 @@ export function WeatherWidget() {
 
   useEffect(() => {
     if (!expanded) return;
-    const close = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setExpanded(false);
+    const previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const focusable = () => Array.from(detailRef.current?.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])') ?? []);
+    requestAnimationFrame(() => focusable()[0]?.focus());
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        event.preventDefault();
+        setExpanded(false);
+      } else if (event.key === 'Tab') {
+        const items = focusable();
+        if (!items.length) return;
+        const first = items[0];
+        const last = items[items.length - 1];
+        if (event.shiftKey && (document.activeElement === first || !detailRef.current?.contains(document.activeElement))) {
+          event.preventDefault();
+          last.focus();
+        } else if (!event.shiftKey && (document.activeElement === last || !detailRef.current?.contains(document.activeElement))) {
+          event.preventDefault();
+          first.focus();
+        }
+      }
     };
-    window.addEventListener('keydown', close);
-    return () => window.removeEventListener('keydown', close);
+    window.addEventListener('keydown', onKeyDown);
+    return () => {
+      window.removeEventListener('keydown', onKeyDown);
+      previousFocus?.focus({ preventScroll:true });
+    };
   }, [expanded]);
 
   async function searchPlace(event: FormEvent<HTMLFormElement>) {
@@ -147,7 +169,7 @@ export function WeatherWidget() {
 
     {expanded && current && place && daily && (
       <div className="adapt-weather-overlay" onMouseDown={event => { if (event.target === event.currentTarget) setExpanded(false); }}>
-        <section className="adapt-weather-detail" role="dialog" aria-modal="true" aria-labelledby="adapt-weather-heading">
+        <section ref={detailRef} className="adapt-weather-detail" role="dialog" aria-modal="true" aria-labelledby="adapt-weather-heading" tabIndex={-1}>
           <header className="adapt-weather-detail-header">
             <div><small>WEATHER / {place.name.toUpperCase()}</small><h2 id="adapt-weather-heading">{temp(current.temperature_2m)} <span>{condition(current.weather_code)}</span></h2><p>High {temp(daily.temperature_2m_max?.[0])} · Low {temp(daily.temperature_2m_min?.[0])}</p></div>
             <button type="button" onClick={() => setExpanded(false)} aria-label="Close weather details">✕</button>
