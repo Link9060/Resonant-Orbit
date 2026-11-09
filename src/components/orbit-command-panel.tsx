@@ -244,15 +244,13 @@ export function OrbitCommandPanel({
     setCommand('');
   };
 
-  const recentRows = allowedModules.slice(0, 3);
-
   return (
     <aside className="orbit-command-panel" aria-label="ARROW command panel">
       <div className="command-panel-head">
         <div>
           <p>{view === 'home' ? 'COMMAND' : 'ORBIT CONTROL'}</p>
           <h2>
-            {view === 'home' && (displayName.trim() || 'You')}
+            {view === 'home' && 'Orbit controls'}
             {view === 'profile' && 'Your profile'}
             {view === 'system' && 'System'}
             {view === 'connections' && 'Connections'}
@@ -318,10 +316,6 @@ export function OrbitCommandPanel({
                 <SearchIcon size={14} />
                 <span>Navigate</span>
               </button>
-              <button type="button" onClick={() => setView('connections')}>
-                <span className="command-link-glyph" aria-hidden="true">⌁</span>
-                <span>Connect</span>
-              </button>
               <button type="button" onClick={() => openSystemPanel('focus')}>
                 <TargetIcon size={14} />
                 <span>Focus</span>
@@ -353,18 +347,6 @@ export function OrbitCommandPanel({
                 </button>
               ))}
             </div>
-          </div>
-
-          <div className="command-section command-recent">
-            <div className="command-section-title">
-              <span>RECENT SIGNALS</span>
-            </div>
-            {recentRows.map(row => (
-              <button type="button" key={row.id} onClick={() => onFocusDestination(row.id)}>
-                <span>{row.name}</span>
-                <small>{statuses[row.id]}</small>
-              </button>
-            ))}
           </div>
 
           <button type="button" className="command-settings-link" onClick={() => setView('settings')}>
@@ -478,6 +460,10 @@ export function OrbitCommandPanel({
         <div className="command-subview">
           <button type="button" className="command-settings-row" onClick={() => openSystemPanel('appearance')}>
             <span><strong>Appearance</strong><small>theme, motion, accent, experience</small></span>
+            <ArrowUpRightIcon size={13} />
+          </button>
+          <button type="button" className="command-settings-row" onClick={() => setView('connections')}>
+            <span><strong>Connections</strong><small>accounts, apps, and linked services</small></span>
             <ArrowUpRightIcon size={13} />
           </button>
           <button type="button" className="command-settings-row" onClick={() => openSystemPanel('focus')}>
