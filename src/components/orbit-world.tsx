@@ -594,7 +594,7 @@ export function OrbitWorld() {
       const isTyping = Boolean(target?.closest('input, textarea, select, [contenteditable], [role="textbox"]'));
       // The immersive world stays mounted while Dashboard is visible. Its global
       // shortcuts must not hijack keyboard navigation in that other workspace.
-      if (event.defaultPrevented || shellRef.current?.closest('.adapt-world-container')?.hasAttribute('hidden')) return;
+      if (shellRef.current?.closest('.adapt-world-container')?.hasAttribute('hidden')) return;
 
       if (event.key === 'Escape' && ui.navigatorOpen) {
         event.preventDefault();
