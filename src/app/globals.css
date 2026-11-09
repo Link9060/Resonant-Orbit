@@ -4126,3 +4126,35 @@ html[data-arrow-theme][data-arrow-identity] .adapt-dashboard .adapt-weather-summ
 html[data-arrow-theme][data-arrow-identity] .adapt-dashboard .adapt-weather-location { background:transparent;border-color:transparent; }
 html[data-arrow-theme][data-arrow-identity] .adapt-preset-controls { background:var(--adapt-surface);border-color:var(--adapt-border); }
 html[data-arrow-theme][data-arrow-identity] .adapt-view-switch button[aria-pressed="true"] { background:var(--adapt-text);color:var(--adapt-bg); }
+
+
+/* Continuation: a scrollable dashboard and a quieter Orbit command surface. */
+.adapt-orbit-shell { height:100dvh; min-height:0; }
+.adapt-dashboard {
+  height:100dvh;
+  min-height:0;
+  overflow-y:auto;
+  overflow-x:hidden;
+  overscroll-behavior:contain;
+  scrollbar-gutter:stable;
+}
+.orbit-left-zone { max-height:calc(100dvh - 142px - env(safe-area-inset-top)); }
+.orbit-command-panel { max-height:calc(100dvh - 142px - env(safe-area-inset-top)); }
+.command-quick-grid { grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }
+.command-quick-grid button {
+  min-height:56px;
+  padding:10px;
+  font-size:10px;
+  color:rgba(255,255,255,.74);
+  border-color:rgba(255,255,255,.12);
+}
+.command-quick-grid button:disabled { opacity:.42; }
+.command-section { margin-top:15px; }
+.command-section-title > span { color:rgba(255,255,255,.58); font-size:9px; }
+.command-section-title button { color:rgba(255,255,255,.6); font-size:10px; }
+.command-module-row { min-height:45px; }
+.command-settings-link { margin-top:15px; color:rgba(255,255,255,.7); font-size:11px; }
+@media(max-width:680px) {
+  .adapt-dashboard { padding-top:82px; scrollbar-gutter:auto; }
+  .orbit-left-zone { left:16px; max-width:calc(100vw - 32px); }
+}
