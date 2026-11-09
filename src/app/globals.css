@@ -4109,3 +4109,20 @@ html[data-arrow-identity] .adapt-dashboard .adapt-weather-location {
   .adapt-dashboard-header { margin-bottom:20px; }
 }
 @media(prefers-reduced-motion:reduce){ .adapt-weather-detail { scroll-behavior:auto; } }
+
+
+/* Final selector layer: paired ink/background rules outrank legacy identity hardcodes. */
+html[data-arrow-theme][data-arrow-identity] .adapt-dashboard { background:var(--adapt-bg);color:var(--adapt-text); }
+html[data-arrow-theme][data-arrow-identity] .adapt-widget {
+  color:var(--adapt-text);background:var(--adapt-surface);border-color:var(--adapt-border);
+}
+html[data-arrow-theme][data-arrow-identity] .adapt-destination-grid a {
+  color:var(--adapt-text);background:var(--adapt-raised);border-color:var(--adapt-border);
+}
+html[data-arrow-theme][data-arrow-identity] .adapt-dashboard :is(button,input,select) {
+  color:var(--adapt-text);background:var(--adapt-raised);border-color:var(--adapt-border);
+}
+html[data-arrow-theme][data-arrow-identity] .adapt-dashboard .adapt-weather-summary,
+html[data-arrow-theme][data-arrow-identity] .adapt-dashboard .adapt-weather-location { background:transparent;border-color:transparent; }
+html[data-arrow-theme][data-arrow-identity] .adapt-preset-controls { background:var(--adapt-surface);border-color:var(--adapt-border); }
+html[data-arrow-theme][data-arrow-identity] .adapt-view-switch button[aria-pressed="true"] { background:var(--adapt-text);color:var(--adapt-bg); }
