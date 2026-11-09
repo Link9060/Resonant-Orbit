@@ -87,3 +87,22 @@ test('weather card opens a detailed forecast with accessible keyboard close', as
   await expect(dialog).toHaveCount(0);
   await expect(summary).toBeFocused();
 });
+
+
+test('ARROW appearance popover remains fully within narrow screen bounds', async ({ page }) => {
+  await page.setViewportSize({ width: 340, height: 640 });
+  await openApp(page);
+  await page.waitForFunction(() => Boolean((window as Window & { ArrowOS?: { openPanel?: Function } }).ArrowOS?.openPanel));
+  await page.evaluate(() => {
+    (window as Window & { ArrowOS?: { openPanel?: (name: string, module: string) => void } }).ArrowOS?.openPanel?.('appearance','orbit');
+  });
+  const panel = page.locator('.arrow-os-panel');
+  await expect(panel).toBeVisible();
+  const box = await panel.boundingBox();
+  expect(box).not.toBeNull();
+  if (!box) return;
+  expect(box.x).toBeGreaterThanOrEqual(-1);
+  expect(box.x + box.width).toBeLessThanOrEqual(341);
+  expect(box.y).toBeGreaterThanOrEqual(0);
+  expect(box.y + box.height).toBeLessThanOrEqual(641);
+});
