@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { ARROW_DESTINATIONS } from '@/lib/arrow-map';
+import { WeatherWidget } from './weather-widget';
 
-type WidgetId = 'navigation' | 'tasks' | 'notes' | 'calendar' | 'activity' | 'relay' | 'ravin' | 'waypoint' | 'atlas';
+type WidgetId = 'navigation' | 'tasks' | 'notes' | 'calendar' | 'weather' | 'activity' | 'relay' | 'ravin' | 'waypoint' | 'atlas';
 const STORAGE = 'arrow_orbit_widgets_v1';
 const VIEW = 'arrow_orbit_view_v1';
 const ALL: { id: WidgetId; label: string }[] = [
@@ -11,6 +12,7 @@ const ALL: { id: WidgetId; label: string }[] = [
   { id: 'tasks', label: 'Tasks' },
   { id: 'notes', label: 'Quick notes' },
   { id: 'calendar', label: 'Calendar' },
+  { id: 'weather', label: 'Weather' },
   { id: 'activity', label: 'Activity' },
   { id: 'relay', label: 'Relay' },
   { id: 'ravin', label: 'RAVIN' },
@@ -25,7 +27,7 @@ function readWidgets(): WidgetId[] {
       return [...new Set(items)];
     }
   } catch {}
-  return ['navigation', 'tasks', 'notes', 'calendar', 'activity'];
+  return ['navigation', 'tasks', 'weather', 'calendar'];
 }
 function getList(key: string): Record<string, unknown>[] {
   try {
@@ -39,7 +41,7 @@ function openPanel(panel: string) {
 }
 export function OrbitExperience({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<'world' | 'dashboard'>('world');
-  const [widgets, setWidgets] = useState<WidgetId[]>(ALL.map(item => item.id));
+  const [widgets, setWidgets] = useState<WidgetId[]>(['navigation', 'tasks', 'weather', 'calendar']);
   const [editing, setEditing] = useState(false);
   const [notes, setNotes] = useState('');
   const [tasks, setTasks] = useState<Record<string, unknown>[]>([]);
@@ -63,7 +65,7 @@ export function OrbitExperience({ children }: { children: React.ReactNode }) {
     const relayLayout = parameters.get('relayLayout');
     if (relayLayout && relayLayout.length < 300) {
       const bridge: Record<string,WidgetId> = {
-        overview:'activity', weather:'activity', askravin:'ravin', tasks:'tasks',
+        overview:'activity', weather:'weather', askravin:'ravin', tasks:'tasks',
         calendar:'calendar', chats:'relay', quicklinks:'navigation', today:'activity',
         quicknote:'notes', focus:'activity', schoolschedule:'calendar',
         assignments:'tasks', momentum:'activity', ravinbrief:'ravin',
@@ -114,6 +116,7 @@ export function OrbitExperience({ children }: { children: React.ReactNode }) {
     setPresetName('');
   };
   const widget = (id: WidgetId) => {
+    if (id === 'weather') return <WeatherWidget />;
     if (id === 'relay' || id === 'ravin' || id === 'waypoint' || id === 'atlas') {
       const target = ARROW_DESTINATIONS.find(destination => destination.id === id);
       return <><p>{target?.description}</p><a className="adapt-module-link" href={target?.href || '#'}>Open {target?.name} ↗</a></>;
