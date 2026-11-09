@@ -590,9 +590,11 @@ export function OrbitWorld() {
   useLayoutEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const ui = uiRef.current;
-      const target = event.target as HTMLElement | null;
-      const isTyping =
-        target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const isTyping = Boolean(target?.closest('input, textarea, select, [contenteditable], [role="textbox"]'));
+      // The immersive world stays mounted while Dashboard is visible. Its global
+      // shortcuts must not hijack keyboard navigation in that other workspace.
+      if (event.defaultPrevented || shellRef.current?.closest('.adapt-world-container')?.hasAttribute('hidden')) return;
 
       if (event.key === 'Escape' && ui.navigatorOpen) {
         event.preventDefault();
