@@ -590,9 +590,11 @@ export function OrbitWorld() {
   useLayoutEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const ui = uiRef.current;
-      const target = event.target as HTMLElement | null;
-      const isTyping =
-        target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const isTyping = Boolean(target?.closest('input, textarea, select, [contenteditable], [role="textbox"]'));
+      // The immersive world stays mounted while Dashboard is visible. Its global
+      // shortcuts must not hijack keyboard navigation in that other workspace.
+      if (shellRef.current?.closest('.adapt-world-container')?.hasAttribute('hidden')) return;
 
       if (event.key === 'Escape' && ui.navigatorOpen) {
         event.preventDefault();
@@ -1902,7 +1904,7 @@ export function OrbitWorld() {
           aria-hidden={travelPhase !== 'idle' || Boolean(incomingFrom)}
           inert={travelPhase !== 'idle' || Boolean(incomingFrom) ? true : undefined}
         >
-          <span className="orbit-shortcuts-label">Quick routes</span>
+          <span className="orbit-shortcuts-label">{relayOnlyAccess ? "Relay-only access" : "Quick routes · 1–4"}</span>
           <div className="orbit-shortcuts-list">
             {destinations.map(destination => (
               <button
@@ -1918,7 +1920,7 @@ export function OrbitWorld() {
               >
                 <kbd>{destination.shortcut}</kbd>
                 <DestinationIcon id={destination.id} size={14} />
-                <span>{destination.name}</span>
+                <span>{destination.name}{relayOnlyAccess && destination.id !== "relay" ? " · locked" : ""}</span>
               </button>
             ))}
           </div>

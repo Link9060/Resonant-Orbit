@@ -449,7 +449,10 @@
       panel.style.top = Math.max(64, (rect?.bottom || 58) + 8) + 'px';
       panel.style.width = 'auto';
     } else {
-      const right = Math.max(12, innerWidth - (rect?.right || innerWidth - 20));
+      // Keep the flyout within the viewport even when its trigger is far left.
+      const panelWidth = Math.min(430, Math.max(0, innerWidth - 24));
+      const desiredRight = innerWidth - (rect?.right || innerWidth - 20);
+      const right = Math.min(Math.max(12, desiredRight), Math.max(12, innerWidth - panelWidth - 12));
       panel.style.left = 'auto';
       panel.style.right = right + 'px';
       panel.style.top = Math.max(58, (rect?.bottom || 50) + 8) + 'px';
@@ -457,7 +460,7 @@
     }
     const top = Math.min(parseFloat(panel.style.top), Math.max(12, availableHeight - 160));
     panel.style.top = top + 'px';
-    panel.style.maxHeight = Math.max(80, availableHeight - top - 12) + 'px';
+    panel.style.maxHeight = Math.max(0, availableHeight - top - 12) + 'px';
   }
 
   function openPanel(name, module, anchor) {

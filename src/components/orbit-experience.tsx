@@ -2,8 +2,9 @@
 
 import { useEffect, useState } from 'react';
 import { ARROW_DESTINATIONS } from '@/lib/arrow-map';
+import { WeatherWidget } from './weather-widget';
 
-type WidgetId = 'navigation' | 'tasks' | 'notes' | 'calendar' | 'activity' | 'relay' | 'ravin' | 'waypoint' | 'atlas';
+type WidgetId = 'navigation' | 'tasks' | 'notes' | 'calendar' | 'weather' | 'activity' | 'relay' | 'ravin' | 'waypoint' | 'atlas';
 const STORAGE = 'arrow_orbit_widgets_v1';
 const VIEW = 'arrow_orbit_view_v1';
 const ALL: { id: WidgetId; label: string }[] = [
@@ -11,6 +12,7 @@ const ALL: { id: WidgetId; label: string }[] = [
   { id: 'tasks', label: 'Tasks' },
   { id: 'notes', label: 'Quick notes' },
   { id: 'calendar', label: 'Calendar' },
+  { id: 'weather', label: 'Weather' },
   { id: 'activity', label: 'Activity' },
   { id: 'relay', label: 'Relay' },
   { id: 'ravin', label: 'RAVIN' },
@@ -25,7 +27,7 @@ function readWidgets(): WidgetId[] {
       return [...new Set(items)];
     }
   } catch {}
-  return ['navigation', 'tasks', 'notes', 'calendar', 'activity'];
+  return ['navigation', 'tasks', 'weather', 'calendar'];
 }
 function getList(key: string): Record<string, unknown>[] {
   try {
@@ -39,7 +41,7 @@ function openPanel(panel: string) {
 }
 export function OrbitExperience({ children }: { children: React.ReactNode }) {
   const [view, setView] = useState<'world' | 'dashboard'>('world');
-  const [widgets, setWidgets] = useState<WidgetId[]>(ALL.map(item => item.id));
+  const [widgets, setWidgets] = useState<WidgetId[]>(['navigation', 'tasks', 'weather', 'calendar']);
   const [editing, setEditing] = useState(false);
   const [notes, setNotes] = useState('');
   const [tasks, setTasks] = useState<Record<string, unknown>[]>([]);
@@ -63,7 +65,7 @@ export function OrbitExperience({ children }: { children: React.ReactNode }) {
     const relayLayout = parameters.get('relayLayout');
     if (relayLayout && relayLayout.length < 300) {
       const bridge: Record<string,WidgetId> = {
-        overview:'activity', weather:'activity', askravin:'ravin', tasks:'tasks',
+        overview:'activity', weather:'weather', askravin:'ravin', tasks:'tasks',
         calendar:'calendar', chats:'relay', quicklinks:'navigation', today:'activity',
         quicknote:'notes', focus:'activity', schoolschedule:'calendar',
         assignments:'tasks', momentum:'activity', ravinbrief:'ravin',
@@ -114,6 +116,7 @@ export function OrbitExperience({ children }: { children: React.ReactNode }) {
     setPresetName('');
   };
   const widget = (id: WidgetId) => {
+    if (id === 'weather') return <WeatherWidget />;
     if (id === 'relay' || id === 'ravin' || id === 'waypoint' || id === 'atlas') {
       const target = ARROW_DESTINATIONS.find(destination => destination.id === id);
       return <><p>{target?.description}</p><a className="adapt-module-link" href={target?.href || '#'}>Open {target?.name} ↗</a></>;
@@ -132,7 +135,7 @@ export function OrbitExperience({ children }: { children: React.ReactNode }) {
     <div hidden={view !== 'world'} className="adapt-world-container">{children}</div>
     {view === 'dashboard' && <section className="adapt-dashboard" aria-label="Customizable Orbit dashboard">
       <header className="adapt-dashboard-header"><div><small>ARROW / ORBIT</small><h1>Your workspace</h1><p>All your destinations and essentials in one place.</p></div><button onClick={() => setEditing(!editing)} aria-pressed={editing}>{editing ? 'Done editing' : 'Customize widgets'}</button></header>
-      {editing && <div className="adapt-dashboard-editor"><div className="adapt-preset-controls"><label>Density <select value={layoutSize} onChange={event => { const next = event.target.value === 'compact' ? 'compact' : 'comfortable'; setLayoutSize(next); localStorage.setItem('arrow_orbit_density_v1',next); }}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label><label>Save layout <input value={presetName} maxLength={40} onChange={event => setPresetName(event.target.value)} placeholder="Preset name" /></label><button onClick={savePreset} disabled={!presetName.trim()}>Save preset</button><label>Load preset <select value="" onChange={event => { if (presets[event.target.value]) saveWidgets(presets[event.target.value]); }}><option value="">Choose saved layout</option>{Object.keys(presets).map(name => <option key={name} value={name}>{name}</option>)}</select></label></div></div>}
+      {editing && <div className="adapt-dashboard-editor"><div className="adapt-preset-controls"><label>Density <select value={layoutSize} onChange={event => { const next = event.target.value === 'compact' ? 'compact' : 'comfortable'; setLayoutSize(next); localStorage.setItem('arrow_orbit_density_v1',next); }}><option value="comfortable">Comfortable</option><option value="compact">Compact</option></select></label><label>Save layout <input value={presetName} maxLength={40} onChange={event => setPresetName(event.target.value)} placeholder="Preset name" /></label><button onClick={savePreset} disabled={!presetName.trim()}>Save preset</button><label>Load preset <select value="" onChange={event => { if (presets[event.target.value]) saveWidgets(presets[event.target.value]); }}><option value="">Choose saved layout</option>{Object.keys(presets).map(name => <option key={name} value={name}>{name}</option>)}</select></label><label>Add widget <select aria-label="Add dashboard widget" value="" onChange={event => { const id = event.target.value as WidgetId; if (ALL.some(item => item.id === id) && !widgets.includes(id)) saveWidgets([...widgets,id]); }}><option value="">Choose widget</option>{ALL.filter(item => !widgets.includes(item.id)).map(item => <option value={item.id} key={item.id}>{item.label}</option>)}</select></label></div></div>}
       {editing && <div className="adapt-widget-options" aria-label="Select dashboard widgets">{ALL.map(item => <label key={item.id}><input type="checkbox" checked={widgets.includes(item.id)} onChange={event => saveWidgets(event.target.checked ? [...widgets,item.id] : widgets.filter(id => id !== item.id))}/>{item.label}</label>)}</div>}
       {importNotice && <p role="status" className="adapt-import-notice">Relay widget choices were imported. Your private Relay account data remains in Relay until securely connected.</p>}
       <div className="adapt-widget-grid">{widgets.map(id => <article key={id} className={'adapt-widget adapt-widget-'+id}><header><h2>{ALL.find(item => item.id === id)?.label}</h2>{editing && <div><button aria-label={'Move '+id+' left'} onClick={() => move(id,-1)}>←</button><button aria-label={'Move '+id+' right'} onClick={() => move(id,1)}>→</button></div>}</header>{widget(id)}</article>)}</div>
