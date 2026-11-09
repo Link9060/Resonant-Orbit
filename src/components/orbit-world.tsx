@@ -1902,7 +1902,7 @@ export function OrbitWorld() {
           aria-hidden={travelPhase !== 'idle' || Boolean(incomingFrom)}
           inert={travelPhase !== 'idle' || Boolean(incomingFrom) ? true : undefined}
         >
-          <span className="orbit-shortcuts-label">Quick routes</span>
+          <span className="orbit-shortcuts-label">{relayOnlyAccess ? "Relay-only access" : "Quick routes · 1–4"}</span>
           <div className="orbit-shortcuts-list">
             {destinations.map(destination => (
               <button
@@ -1918,7 +1918,7 @@ export function OrbitWorld() {
               >
                 <kbd>{destination.shortcut}</kbd>
                 <DestinationIcon id={destination.id} size={14} />
-                <span>{destination.name}</span>
+                <span>{destination.name}{relayOnlyAccess && destination.id !== "relay" ? " · locked" : ""}</span>
               </button>
             ))}
           </div>
