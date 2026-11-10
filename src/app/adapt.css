@@ -1806,43 +1806,18 @@
   }
 }
 
-
-/* Weather controls stay available even in a compact saved dashboard widget. */
-.orbit-app .adapt-widget-content:has(.adapt-weather-places) {
-  overflow-y:auto!important; overflow-x:hidden!important;
-  overscroll-behavior:contain; scrollbar-width:thin;
+/* Compact widget actions open dedicated weather dialogs instead of expanding
+   search forms inside a saved 1- or 2-row dashboard card. */
+.orbit-app .adapt-weather-location-trigger {
+  display:inline-flex; width:fit-content; max-width:100%;
+  align-items:center; justify-content:center;
+  min-height:34px; padding:6px 10px; margin-top:6px;
+  border-radius:9px; border:1px solid var(--adapt-border);
+  color:var(--adapt-ink); background:var(--adapt-surface);
+  font-size:11px; font-weight:600; cursor:pointer;
 }
-.adapt-weather-places { width:100%; min-width:0; border-top:1px solid var(--adapt-border); margin-top:7px; padding-top:7px; }
-.adapt-weather-places summary {
-  min-height:34px; display:flex; align-items:center;
-  cursor:pointer; font-size:11px; font-weight:650;
-  color:var(--adapt-ink); line-height:1.4;
-}
-.adapt-weather-places > .adapt-input-form { margin:8px 0; flex-wrap:nowrap; }
-.adapt-weather-places input { font-size:12px; min-width:0; }
-.adapt-weather-places button { min-height:34px; flex-shrink:0; }
-.adapt-weather-geo {
-  width:100%; margin-top:6px; padding:8px;
-  border:1px solid var(--adapt-border); border-radius:9px;
-  background:var(--adapt-surface); color:var(--adapt-ink);
-  font-size:11px; text-align:center; cursor:pointer;
-}
-.adapt-weather-city-results {
-  display:grid; gap:5px; min-width:0;
-  max-height:136px; overflow:auto; padding:5px;
-  background:var(--adapt-surface); border:1px solid var(--adapt-border);
-  border-radius:9px;
-}
-.adapt-weather-city-results button {
-  min-height:35px; width:100%; padding:7px 9px;
-  border-radius:7px; border:1px solid var(--adapt-border);
-  background:var(--adapt-bg); color:var(--adapt-ink);
-  text-align:left; font-size:11px; overflow-wrap:anywhere;
-}
-.adapt-weather-city-results button:hover { border-color:var(--arrow-adapt-primary,var(--adapt-accent)); }
-:root[data-arrow-theme="light"] .adapt-weather-geo {
-  background:#f1f4f8; color:#182536;
-}
-:root[data-arrow-theme="dark"] .adapt-weather-geo {
-  background:#252a34; color:#f4f6fa;
+.orbit-app .adapt-weather-more { width:fit-content; max-width:100%; }
+.orbit-app .adapt-widget-content:has(.adapt-weather) { gap:5px; }
+.orbit-app .adapt-weather-location-trigger:hover {
+  border-color:var(--arrow-adapt-primary,var(--adapt-accent));
 }
