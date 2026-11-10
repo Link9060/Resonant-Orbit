@@ -32,7 +32,7 @@ test('explicit Relay public access restricts keys 1,2,4 while preserving 3', asy
   for (const key of ['1','2','4']) {
     await page.keyboard.press(key);
     await expect(nav.getByRole('button',{name:new RegExp('^'+key+': Focus')})).toBeDisabled();
-    await expect(page.getByRole('heading',{name:'Your ARROW system'})).toBeVisible();
+    await expect(nav.getByRole('button',{name:new RegExp('^'+key+': Focus')})).toHaveAttribute('aria-pressed','false');
   }
   await page.keyboard.press('3');
   await expect(page.getByRole('heading',{name:'Relay',exact:true})).toBeVisible();
