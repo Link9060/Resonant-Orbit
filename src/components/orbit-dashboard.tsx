@@ -8,6 +8,7 @@ import {
 import { packDashboard } from '@/lib/orbit-widget-grid';
 import { OrbitWidgetStudio } from '@/components/orbit-widget-studio';
 import { OrbitWeatherDetails, type WeatherSnapshot } from '@/components/orbit-weather-details';
+import { OrbitWeatherLocationDialog } from '@/components/orbit-weather-location-dialog';
 import {
   accountId, verified, localLayout, localPresets, writeLocalLayout, writeLocalPresets,
   hydrateAccount, persistLayout, persistPresets, fetchDashboard, emptyDashboard,
@@ -243,7 +244,12 @@ export function OrbitDashboard() {
   const saveTimer = useRef<number | null>(null);
   const weather = useWeather();
   const [weatherDetailsOpen,setWeatherDetailsOpen]=useState(false);
+  const [weatherLocationOpen,setWeatherLocationOpen]=useState(false);
   const closeWeatherDetails=useCallback(()=>setWeatherDetailsOpen(false),[]);
+  const closeWeatherLocation=useCallback(()=>setWeatherLocationOpen(false),[]);
+  const showWeatherLocation=useCallback(()=>{
+    setWeatherDetailsOpen(false);setWeatherLocationOpen(true);
+  },[]);
   useEffect(() => {
     const timer = window.setInterval(() => setClockNow(new Date()), 30000);
     return () => window.clearInterval(timer);
@@ -394,40 +400,17 @@ export function OrbitDashboard() {
       case 'focus': return <><div className="adapt-feature-number">{String(Math.floor(focusSeconds/60)).padStart(2,'0')}:{String(focusSeconds%60).padStart(2,'0')}</div><div className="adapt-widget-actions"><button onClick={()=>setFocusRunning(v=>!v)}>{focusRunning?'Pause':'Start'}</button><button onClick={()=>{setFocusRunning(false);setFocusSeconds(25*60);}}>Reset</button></div><p className="adapt-small-muted">Timer runs while this page remains open.</p></>;
       case 'weather':
       case 'sun': return <>
-        {weather.weather ? id==='sun'
-          ? <div className="adapt-metrics">
-              <Metric value={clock(weather.weather.sunrise.split('T')[1])} label="Sunrise"/>
-              <Metric value={clock(weather.weather.sunset.split('T')[1])} label="Sunset"/>
-            </div>
-          : <div className="adapt-weather">
-              <span>{Math.round(weather.weather.temp)}{weather.weather.unit}</span>
-              <p>{weather.weather.location} · H {Math.round(weather.weather.hi)}° · L {Math.round(weather.weather.lo)}° · Rain {weather.weather.precip}%</p>
-              <button type="button" className="adapt-weather-more" onClick={()=>setWeatherDetailsOpen(true)}>View detailed forecast</button>
-            </div>
-          : <p className="adapt-small-muted">Choose a weather location to load conditions.</p>}
-        <details className="adapt-weather-places" open={!weather.weather}>
-          <summary>Change weather location</summary>
-          <form className="adapt-input-form" onSubmit={event=>{event.preventDefault();void weather.load(weather.draft);}}>
-            <input inputMode="numeric" aria-label="Weather ZIP code" maxLength={5} value={weather.draft}
-              onChange={event=>weather.setDraft(event.target.value.replace(/\D/g,''))}
-              placeholder="US ZIP code"/>
-            <button type="submit" disabled={weather.loading}>{weather.loading?'Loading':'Apply ZIP'}</button>
-          </form>
-          {id==='weather'&&<>
-            <form className="adapt-input-form" onSubmit={event=>{event.preventDefault();void weather.searchCity();}}>
-              <input aria-label="Weather city search" maxLength={90} value={weather.cityDraft}
-                onChange={event=>weather.setCityDraft(event.target.value)}
-                placeholder="Search city or region"/>
-              <button type="submit" disabled={weather.loading||weather.cityDraft.trim().length<2}>Search</button>
-            </form>
-            {weather.cityResults.length>0&&<div className="adapt-weather-city-results" role="group" aria-label="Choose a matching city">
-              {weather.cityResults.map(place=><button type="button" key={place.name+String(place.latitude)}
-                onClick={()=>weather.chooseCity(place)} disabled={weather.loading}>{place.name}</button>)}
-            </div>}
-            <button type="button" className="adapt-weather-geo" onClick={weather.useBrowserLocation}
-              disabled={weather.loading}>Use my approximate location (optional)</button>
-          </>}
-        </details>
+        {weather.weather ? id==='sun' ? <div className="adapt-metrics">
+          <Metric value={clock(weather.weather.sunrise.split('T')[1])} label="Sunrise"/>
+          <Metric value={clock(weather.weather.sunset.split('T')[1])} label="Sunset"/>
+        </div> : <div className="adapt-weather">
+          <span>{Math.round(weather.weather.temp)}{weather.weather.unit}</span>
+          <p>{weather.weather.location} · H {Math.round(weather.weather.hi)}° · L {Math.round(weather.weather.lo)}° · Rain {weather.weather.precip}%</p>
+          <button type="button" className="adapt-weather-more" onClick={()=>setWeatherDetailsOpen(true)}>View detailed forecast</button>
+        </div> : <p className="adapt-small-muted">Set a weather location to see a local forecast.</p>}
+        <button type="button" className="adapt-weather-location-trigger" onClick={showWeatherLocation}
+          aria-label="Choose weather location">{weather.weather?'Change location':'Choose location'}</button>
+        {weather.loading&&<p role="status" className="adapt-small-muted">Loading weather…</p>}
         {weather.error&&<p role="alert" className="adapt-small-muted">{weather.error}</p>}
       </>;
       case 'quicklinks': return <div className="adapt-quicklinks">{[['waypoint','Waypoint'],['chats','Relay'],['askravin','RAVIN'],['calendar','Calendar']].map(([target,label])=><ShortLink key={target} id={target} label={label}/>)}</div>;
@@ -453,7 +436,8 @@ export function OrbitDashboard() {
       <button type="button" className="adapt-edit-button" disabled={!owner || !ready} aria-pressed={editing} onClick={()=>setEditing(value=>!value)}>{editing?'Done':'Customize'}</button>
     </header>
     <p role="status" className="adapt-sync-status">{syncMessage}</p>
-    {weatherDetailsOpen&&weather.weather&&<OrbitWeatherDetails forecast={weather.weather} onClose={closeWeatherDetails}/>}
+    {weatherDetailsOpen&&weather.weather&&<OrbitWeatherDetails forecast={weather.weather} onClose={closeWeatherDetails} onChangeLocation={showWeatherLocation}/>}
+    {weatherLocationOpen&&<OrbitWeatherLocationDialog controls={weather} onClose={closeWeatherLocation}/>} 
     {daySettingsOpen && <div className="adapt-daytime-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setDaySettingsOpen(false);}}>
       <form className="adapt-daytime-dialog" role="dialog" aria-modal="true" aria-label="Set active-day hours" onSubmit={event=>{
         event.preventDefault();
