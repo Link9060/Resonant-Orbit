@@ -1821,3 +1821,39 @@
 .orbit-app .adapt-weather-location-trigger:hover {
   border-color:var(--arrow-adapt-primary,var(--adapt-accent));
 }
+
+
+/* Visual QA: prevent the Orbit brand, dashboard switch and ARROW island from
+   forcing a horizontal header overflow on narrow phones (all 5 identities). */
+@media(max-width:520px) {
+  .orbit-app .orbit-header {
+    gap:6px; justify-content:space-between;
+    padding:max(10px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right))
+      10px max(9px,env(safe-area-inset-left)) !important;
+    min-width:0; max-width:100vw;
+  }
+  .orbit-app .suite-lockup {
+    min-width:0; flex:0 1 auto;
+    height:38px; padding:0 8px; gap:5px;
+    white-space:nowrap;
+  }
+  .orbit-app .arrow-mark { width:18px; min-width:18px; }
+  .orbit-app .suite-name,.orbit-app .product-name {
+    font-size:11px!important; letter-spacing:.035em!important;
+    white-space:nowrap;
+  }
+  .orbit-app .orbit-header-right { min-width:0; flex-shrink:0; gap:4px; }
+  .orbit-app .adapt-view-switch {
+    min-width:137px; width:137px; max-width:137px;
+  }
+  .orbit-app .adapt-view-switch button,
+  :root[data-arrow-adapt="atelier"] .orbit-app .adapt-view-switch button {
+    padding:6px 4px!important; font-size:10px!important;
+    letter-spacing:0!important;
+  }
+}
+@media(max-width:365px) {
+  .orbit-app .suite-lockup { padding:0 6px; gap:4px; }
+  .orbit-app .suite-divider,.orbit-app .product-name { display:none; }
+  .orbit-app .adapt-view-switch { width:132px; min-width:132px; max-width:132px; }
+}
