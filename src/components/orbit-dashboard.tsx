@@ -93,6 +93,10 @@ type WeatherPlace = { name:string; latitude:number; longitude:number };
 const WEATHER_PLACE_KEY='orbit-weather-selected-place-v1';
 
 function useWeather() {
+  // Never reuse location data across distinct ARROW accounts on a shared device.
+  const weatherAccount=accountId()||'guest';
+  const placeKey=WEATHER_PLACE_KEY+':'+weatherAccount;
+  const zipKey=KEYS.weather+':'+weatherAccount;
   const [draft,setDraft]=useState('');
   const [cityDraft,setCityDraft]=useState('');
   const [cityResults,setCityResults]=useState<WeatherPlace[]>([]);
@@ -133,6 +137,7 @@ function useWeather() {
         rain:w.daily?.precipitation_probability_max?.[i]??0,
         uv:w.daily?.uv_index_max?.[i]??0,code:w.daily?.weather_code?.[i]??0,
       }));
+      if ((accountId()||'guest')!==weatherAccount) return;
       setWeather({
         temp:w.current?.temperature_2m??0,hi:w.daily?.temperature_2m_max?.[0]??0,
         lo:w.daily?.temperature_2m_min?.[0]??0,
@@ -147,14 +152,14 @@ function useWeather() {
       });
       // Only store city-level coordinates. Browser permission is never asked
       // until the user explicitly clicks "Use my location".
-      try{localStorage.setItem(WEATHER_PLACE_KEY,JSON.stringify({
+      try{localStorage.setItem(placeKey,JSON.stringify({
         name:place.name,
         latitude:Number(place.latitude.toFixed(2)),
         longitude:Number(place.longitude.toFixed(2)),
       }));}catch{}
     }catch{setError('Weather could not load. Check your location or connection.');}
     finally{setLoading(false);}
-  },[]);
+  },[placeKey,weatherAccount]);
   const load=useCallback(async(value:string)=>{
     const next=value.replace(/\D/g,'').slice(0,5);
     if(!/^\d{5}$/.test(next)){setError('Enter a five-digit US ZIP code.');return;}
@@ -165,12 +170,12 @@ function useWeather() {
       const data=await response.json() as {places?:Array<{latitude:string;longitude:string;'place name':string;state:string}>};
       const hit=data.places?.[0];
       if(!hit)throw new Error('No city for ZIP');
-      try{localStorage.setItem(KEYS.weather,next);}catch{}
+      try{localStorage.setItem(zipKey,next);}catch{}
       setDraft(next);
       await fetchPlace({name:hit['place name']+', '+(hit.state||'US'),latitude:Number(hit.latitude),longitude:Number(hit.longitude)});
     }catch{setError('ZIP lookup failed. Check the ZIP and connection.');}
     finally{setLoading(false);}
-  },[fetchPlace]);
+  },[fetchPlace,zipKey]);
   const searchCity=useCallback(async()=>{
     const value=cityDraft.trim();
     if(value.length<2){setError('Enter at least two characters to search.');return;}
@@ -206,9 +211,14 @@ function useWeather() {
   },[fetchPlace]);
   useEffect(()=>{
     try{
-      const zip=localStorage.getItem(KEYS.weather)||'';
+      // Remove old unscoped cache. Locations are now private to the active
+      // account ID on this device, rather than shared among all sign-ins.
+      localStorage.removeItem(WEATHER_PLACE_KEY);
+      localStorage.removeItem(KEYS.weather);
+      setWeather(null);setError('');setCityResults([]);
+      const zip=localStorage.getItem(zipKey)||'';
       setDraft(zip);
-      const stored=localStorage.getItem(WEATHER_PLACE_KEY);
+      const stored=localStorage.getItem(placeKey);
       if(stored){
         const item=JSON.parse(stored) as WeatherPlace;
         if(item && typeof item.name==='string'&&Number.isFinite(item.latitude)&&Number.isFinite(item.longitude)){
@@ -217,7 +227,7 @@ function useWeather() {
       }
       if(/^\d{5}$/.test(zip))void load(zip);
     }catch{}
-  },[fetchPlace,load]);
+  },[fetchPlace,load,placeKey,zipKey]);
   return {draft,setDraft,cityDraft,setCityDraft,cityResults,weather,loading,error,load,searchCity,chooseCity,useBrowserLocation};
 }
 
