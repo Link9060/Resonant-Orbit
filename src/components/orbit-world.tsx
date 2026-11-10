@@ -746,7 +746,9 @@ export function OrbitWorld() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  // Rebind when access changes: the initial render is relay-only, and a stale
+  // closure otherwise permanently disables shortcuts 1, 2 and 4 in full Orbit.
+  }, [accessMode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
