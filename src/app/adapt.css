@@ -1857,3 +1857,45 @@
   .orbit-app .suite-divider,.orbit-app .product-name { display:none; }
   .orbit-app .adapt-view-switch { width:132px; min-width:132px; max-width:132px; }
 }
+
+
+/* Visual QA found dark-on-dark disabled actions in Haven, Bloom and Atelier.
+   Use color-paired action materials that remain legible even for arbitrary
+   custom accent colors, rather than relying on the accent's historical
+   on-color, which was computed before theme tinting and disabled opacity. */
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-edit-button,.adapt-widget-actions button,
+  .adapt-input-form button,.adapt-note-form button
+) {
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#7c93b5) 14%,#eef2f7)!important;
+  background-image:none!important; color:#182331!important;
+  border:1px solid color-mix(in srgb,var(--arrow-adapt-primary,#7c93b5) 32%,#b1bfce)!important;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-edit-button,.adapt-widget-actions button,
+  .adapt-input-form button,.adapt-note-form button
+) {
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#657caa) 13%,#202d3e)!important;
+  background-image:none!important; color:#fefefe!important;
+  border:1px solid color-mix(in srgb,var(--arrow-adapt-primary,#657caa) 25%,#33485d)!important;
+}
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-edit-button,.adapt-widget-actions button,
+  .adapt-input-form button,.adapt-note-form button
+):disabled {
+  opacity:1!important;
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#7c93b5) 7%,#394350)!important;
+  color:#bfcbd9!important;
+  border-color:#556071!important;
+  cursor:not-allowed!important;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-edit-button,.adapt-widget-actions button,
+  .adapt-input-form button,.adapt-note-form button
+):disabled {
+  opacity:1!important;
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#657caa) 8%,#dce4ec)!important;
+  color:#516070!important;
+  border-color:#b4c0cf!important;
+  cursor:not-allowed!important;
+}
