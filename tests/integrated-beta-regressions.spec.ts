@@ -56,3 +56,25 @@ test('quick location picker lets the user move beyond the Tasks default', async 
   await expect(editor.getByText('Selected: Goals')).toBeVisible();
   await expect(editor.getByRole('textbox',{name:'Name'})).toBeVisible();
 });
+
+test('dashboard keystrokes do not secretly navigate the hidden Orbit world', async ({ page }) => {
+  await openBetaOrbit(page);
+  const view=page.getByRole('group',{name:'Orbit display'});
+  await view.getByRole('button',{name:'Dashboard',exact:true}).click();
+  await expect(page.locator('.orbit-app')).toHaveAttribute('data-orbit-view','widgets');
+  await page.keyboard.press('3');
+  await view.getByRole('button',{name:'Orbit',exact:true}).click();
+  await expect(page.locator('.orbit-app')).toHaveAttribute('data-orbit-view','orbit');
+  await expect(page.getByRole('navigation',{name:'ARROW quick routes'}).getByRole('button',{name:'3: Focus Relay'})).toHaveAttribute('aria-pressed','false');
+});
+
+test('world keys do not change destinations while editing custom quick locations', async ({ page }) => {
+  await openBetaOrbit(page);
+  await page.getByRole('button',{name:/Quick locations/}).click();
+  const editor=page.getByRole('region',{name:'Manage Orbit quick locations'});
+  await expect(editor).toBeVisible();
+  await editor.getByRole('textbox',{name:'Name'}).fill('Homework');
+  await page.keyboard.press('3');
+  await expect(editor).toBeVisible();
+  await expect(page.getByRole('navigation',{name:'ARROW quick routes'}).getByRole('button',{name:'3: Focus Relay'})).toHaveAttribute('aria-pressed','false');
+});
