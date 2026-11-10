@@ -88,67 +88,136 @@ function timeLabel(minutes: number) {
   return hours ? `${hours}h ${mins ? mins+'m' : ''}`.trim() : `${mins}m`;
 }
 
+type WeatherPlace = { name:string; latitude:number; longitude:number };
+const WEATHER_PLACE_KEY='orbit-weather-selected-place-v1';
+
 function useWeather() {
-  const [draft, setDraft] = useState('');
-  const [weather, setWeather] = useState<Weather | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  const load = useCallback(async (value: string) => {
-    const next = value.replace(/\D/g, '').slice(0, 5);
-    if (!/^\d{5}$/.test(next)) { setError('Enter a five-digit US ZIP code.'); return; }
-    setLoading(true); setError('');
-    try {
-      const zipResponse = await fetch('https://api.zippopotam.us/us/' + encodeURIComponent(next));
-      if (!zipResponse.ok) throw Error('ZIP lookup failed');
-      const data = await zipResponse.json() as { places?: Array<{ latitude: string; longitude: string; 'place name': string }> };
-      const place = data.places?.[0];
-      if (!place) throw Error('ZIP not found');
-      const params = new URLSearchParams({
-        latitude:place.latitude, longitude:place.longitude,
+  const [draft,setDraft]=useState('');
+  const [cityDraft,setCityDraft]=useState('');
+  const [cityResults,setCityResults]=useState<WeatherPlace[]>([]);
+  const [weather,setWeather]=useState<Weather|null>(null);
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(false);
+  const fetchPlace=useCallback(async(place:WeatherPlace)=>{
+    if(!Number.isFinite(place.latitude)||!Number.isFinite(place.longitude)) {
+      setError('That location is not valid.');return;
+    }
+    setLoading(true);setError('');
+    try{
+      const params=new URLSearchParams({
+        latitude:String(place.latitude),longitude:String(place.longitude),
         current:'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code',
         hourly:'temperature_2m,precipitation_probability,weather_code',
         daily:'temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max,weather_code',
-        timezone:'auto', forecast_days:'7',
-        temperature_unit:'fahrenheit', wind_speed_unit:'mph',
+        timezone:'auto',forecast_days:'7',temperature_unit:'fahrenheit',wind_speed_unit:'mph',
       });
-      const response = await fetch('https://api.open-meteo.com/v1/forecast?' + params);
-      if (!response.ok) throw Error('Weather request failed');
-      const w = await response.json() as {
-        current?: {time?:string;temperature_2m?:number;apparent_temperature?:number;relative_humidity_2m?:number;wind_speed_10m?:number;weather_code?:number};
-        hourly?: {time?:string[];temperature_2m?:number[];precipitation_probability?:number[];weather_code?:number[]};
-        daily?: {time?:string[];temperature_2m_max?:number[];temperature_2m_min?:number[];precipitation_probability_max?:number[];sunrise?:string[];sunset?:string[];uv_index_max?:number[];weather_code?:number[]};
+      const response=await fetch('https://api.open-meteo.com/v1/forecast?'+params);
+      if(!response.ok)throw new Error('Forecast unavailable');
+      const w=await response.json() as {
+        current?:{time?:string;temperature_2m?:number;apparent_temperature?:number;relative_humidity_2m?:number;wind_speed_10m?:number;weather_code?:number};
+        hourly?:{time?:string[];temperature_2m?:number[];precipitation_probability?:number[];weather_code?:number[]};
+        daily?:{time?:string[];temperature_2m_max?:number[];temperature_2m_min?:number[];precipitation_probability_max?:number[];sunrise?:string[];sunset?:string[];uv_index_max?:number[];weather_code?:number[]};
       };
-      const hours=w.hourly?.time || [];
+      const hours=w.hourly?.time||[];
       const currentTime=w.current?.time?.slice(0,13)||'';
-      const first=Math.max(0,hours.findIndex(time=>time>=currentTime));
-      const hourly=hours.slice(first,first+12).map((time,i)=>({
-        time,
-        temp:w.hourly?.temperature_2m?.[first+i] ?? 0,
-        rain:w.hourly?.precipitation_probability?.[first+i] ?? 0,
-        code:w.hourly?.weather_code?.[first+i] ?? 0,
+      const first=hours.findIndex(time=>time>=currentTime);
+      const startHour=Math.max(0,first);
+      const hourly=hours.slice(startHour,startHour+12).map((time,i)=>({
+        time,temp:w.hourly?.temperature_2m?.[startHour+i]??0,
+        rain:w.hourly?.precipitation_probability?.[startHour+i]??0,
+        code:w.hourly?.weather_code?.[startHour+i]??0,
       }));
       const days=(w.daily?.time||[]).slice(0,7).map((date,i)=>({
         date,hi:w.daily?.temperature_2m_max?.[i]??0,lo:w.daily?.temperature_2m_min?.[i]??0,
-        rain:w.daily?.precipitation_probability_max?.[i]??0,uv:w.daily?.uv_index_max?.[i]??0,
-        code:w.daily?.weather_code?.[i]??0,
+        rain:w.daily?.precipitation_probability_max?.[i]??0,
+        uv:w.daily?.uv_index_max?.[i]??0,code:w.daily?.weather_code?.[i]??0,
       }));
       setWeather({
-        temp:w.current?.temperature_2m??0, hi:w.daily?.temperature_2m_max?.[0]??0,
-        lo:w.daily?.temperature_2m_min?.[0]??0,precip:w.daily?.precipitation_probability_max?.[0]??0,
+        temp:w.current?.temperature_2m??0,hi:w.daily?.temperature_2m_max?.[0]??0,
+        lo:w.daily?.temperature_2m_min?.[0]??0,
+        precip:w.daily?.precipitation_probability_max?.[0]??0,
         sunrise:w.daily?.sunrise?.[0]||'',sunset:w.daily?.sunset?.[0]||'',
-        unit:'°F',location:place['place name']||'ZIP '+next,
+        unit:'°F',location:place.name,
         apparent:w.current?.apparent_temperature??w.current?.temperature_2m??0,
-        humidity:w.current?.relative_humidity_2m??0,wind:w.current?.wind_speed_10m??0,
-        uv:w.daily?.uv_index_max?.[0]??0,code:w.current?.weather_code??0,hourly,days,
+        humidity:w.current?.relative_humidity_2m??0,
+        wind:w.current?.wind_speed_10m??0,
+        uv:w.daily?.uv_index_max?.[0]??0,code:w.current?.weather_code??0,
+        hourly,days,
       });
-      try { localStorage.setItem(KEYS.weather, next); } catch {}
-    } catch { setError('Weather could not load. Check your ZIP or connection.'); }
-    finally { setLoading(false); }
-  }, []);
-  useEffect(() => {
-    try { const stored=localStorage.getItem(KEYS.weather)||''; setDraft(stored); if (/^\d{5}$/.test(stored)) void load(stored); } catch {}
-  }, [load]);
-  return { draft, setDraft, weather, loading, error, load };
+      // Only store city-level coordinates. Browser permission is never asked
+      // until the user explicitly clicks "Use my location".
+      try{localStorage.setItem(WEATHER_PLACE_KEY,JSON.stringify({
+        name:place.name,
+        latitude:Number(place.latitude.toFixed(2)),
+        longitude:Number(place.longitude.toFixed(2)),
+      }));}catch{}
+    }catch{setError('Weather could not load. Check your location or connection.');}
+    finally{setLoading(false);}
+  },[]);
+  const load=useCallback(async(value:string)=>{
+    const next=value.replace(/\D/g,'').slice(0,5);
+    if(!/^\d{5}$/.test(next)){setError('Enter a five-digit US ZIP code.');return;}
+    setLoading(true);setError('');setCityResults([]);
+    try{
+      const response=await fetch('https://api.zippopotam.us/us/'+encodeURIComponent(next));
+      if(!response.ok)throw new Error('Invalid ZIP');
+      const data=await response.json() as {places?:Array<{latitude:string;longitude:string;'place name':string;state:string}>};
+      const hit=data.places?.[0];
+      if(!hit)throw new Error('No city for ZIP');
+      try{localStorage.setItem(KEYS.weather,next);}catch{}
+      setDraft(next);
+      await fetchPlace({name:hit['place name']+', '+(hit.state||'US'),latitude:Number(hit.latitude),longitude:Number(hit.longitude)});
+    }catch{setError('ZIP lookup failed. Check the ZIP and connection.');}
+    finally{setLoading(false);}
+  },[fetchPlace]);
+  const searchCity=useCallback(async()=>{
+    const value=cityDraft.trim();
+    if(value.length<2){setError('Enter at least two characters to search.');return;}
+    setLoading(true);setError('');setCityResults([]);
+    try{
+      const query=new URLSearchParams({name:value,count:'5',language:'en',format:'json'});
+      const response=await fetch('https://geocoding-api.open-meteo.com/v1/search?'+query);
+      if(!response.ok)throw new Error('Geocoding unavailable');
+      const data=await response.json() as {results?:Array<{name:string;admin1?:string;country?:string;latitude:number;longitude:number}>};
+      const results=(data.results||[]).filter(p=>Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)).map(p=>({
+        name:[p.name,p.admin1,p.country].filter(Boolean).join(', '),
+        latitude:p.latitude,longitude:p.longitude,
+      }));
+      setCityResults(results);
+      if(!results.length)setError('No matching cities found. Try a more specific name.');
+    }catch{setError('City search is unavailable. Try a ZIP instead.');}
+    finally{setLoading(false);}
+  },[cityDraft]);
+  const chooseCity=useCallback((place:WeatherPlace)=>{
+    setCityResults([]);setCityDraft(place.name);void fetchPlace(place);
+  },[fetchPlace]);
+  const useBrowserLocation=useCallback(()=>{
+    if(!('geolocation' in navigator)){setError('Browser location is unavailable.');return;}
+    setError('');setLoading(true);
+    navigator.geolocation.getCurrentPosition(position=>{
+      void fetchPlace({name:'Near my location',
+        latitude:Number(position.coords.latitude.toFixed(2)),
+        longitude:Number(position.coords.longitude.toFixed(2)),
+      });
+    },()=>{
+      setLoading(false);setError('Location permission was not granted. You can use a city or ZIP instead.');
+    },{enableHighAccuracy:false,timeout:10000,maximumAge:600000});
+  },[fetchPlace]);
+  useEffect(()=>{
+    try{
+      const zip=localStorage.getItem(KEYS.weather)||'';
+      setDraft(zip);
+      const stored=localStorage.getItem(WEATHER_PLACE_KEY);
+      if(stored){
+        const item=JSON.parse(stored) as WeatherPlace;
+        if(item && typeof item.name==='string'&&Number.isFinite(item.latitude)&&Number.isFinite(item.longitude)){
+          void fetchPlace(item);return;
+        }
+      }
+      if(/^\d{5}$/.test(zip))void load(zip);
+    }catch{}
+  },[fetchPlace,load]);
+  return {draft,setDraft,cityDraft,setCityDraft,cityResults,weather,loading,error,load,searchCity,chooseCity,useBrowserLocation};
 }
 
 export function OrbitDashboard() {
