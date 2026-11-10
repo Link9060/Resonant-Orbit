@@ -46,7 +46,7 @@ function dayLabel(time:string) {
 }
 function solar(time:string) {return time ? hourLabel(time) : 'Unavailable';}
 
-export function OrbitWeatherDetails({forecast,onClose}:{forecast:WeatherSnapshot;onClose:()=>void}) {
+export function OrbitWeatherDetails({forecast,onClose,onChangeLocation}:{forecast:WeatherSnapshot;onClose:()=>void;onChangeLocation:()=>void}) {
   const ref=useRef<HTMLElement>(null);
   useEffect(()=>{
     const previouslyFocused=document.activeElement instanceof HTMLElement ? document.activeElement : null;
@@ -75,7 +75,10 @@ export function OrbitWeatherDetails({forecast,onClose}:{forecast:WeatherSnapshot
     <section ref={ref} className="orbit-weather-dialog" role="dialog" aria-modal="true" aria-label={'Detailed weather forecast for '+forecast.location}>
       <header className="orbit-weather-dialog-head">
         <div><p className="orbit-weather-kicker">WEATHER / LOCAL FORECAST</p><h2>{forecast.location}</h2></div>
-        <button className="orbit-weather-close" type="button" onClick={onClose} aria-label="Close detailed forecast">Close ×</button>
+        <div className="orbit-weather-dialog-head-actions">
+          <button type="button" className="orbit-weather-change" onClick={onChangeLocation}>Change location</button>
+          <button className="orbit-weather-close" type="button" onClick={onClose} aria-label="Close detailed forecast">Close ×</button>
+        </div>
       </header>
       <div className="orbit-weather-dialog-body">
         <section className="orbit-weather-now">
