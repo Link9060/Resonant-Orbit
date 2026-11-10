@@ -3859,3 +3859,49 @@ button.command-connection-row:hover,
   background:rgb(255 255 255 / .8)!important;
 }
 :root[data-arrow-motion="reduce"] :is(.orbit-command-panel,.navigator-panel,.orbit-search-panel,.orbit-location-editor) { transition:none!important; animation:none!important; }
+
+
+/* Integrated ARROW beta: the custom-location picker uses actual radio inputs,
+   so platform dropdown overlays cannot get stuck on the first option. */
+.orbit-location-choice-fieldset { min-width:0; margin:0; padding:0; border:0; }
+.orbit-location-choice-fieldset legend {
+  padding:0 0 10px; color:rgb(var(--ui-fg)); font-size:13px; font-weight:600;
+}
+.orbit-location-choice-list {
+  display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px;
+}
+.orbit-location-editor .orbit-location-choice {
+  display:flex; flex-direction:row; align-items:center; gap:10px;
+  min-width:0; min-height:44px; padding:10px 12px;
+  border:1px solid rgb(var(--ui-fg) / .18); border-radius:10px;
+  background:rgb(var(--ui-contrast) / .04); cursor:pointer;
+  font-size:13px; line-height:1.35;
+}
+.orbit-location-choice input[type="radio"] {
+  width:18px; height:18px; min-height:18px; flex-shrink:0; margin:0;
+  accent-color:var(--arrow-accent-color,#7c95c9);
+}
+.orbit-location-choice:has(input:checked) {
+  border-color:var(--arrow-accent-color,#7c95c9);
+  background:color-mix(in srgb,var(--arrow-accent-color,#7c95c9) 10%,transparent);
+}
+.orbit-location-choice span { min-width:0; overflow-wrap:anywhere; }
+.orbit-location-targets { margin-top:12px; }
+.orbit-location-targets summary {
+  padding:10px 12px; border:1px solid rgb(var(--ui-fg) / .16);
+  border-radius:10px; cursor:pointer; font-size:13px;
+}
+.orbit-location-editor .orbit-location-search { display:grid; gap:7px; margin:12px 0; }
+.orbit-location-target-list { max-height:190px; overflow-y:auto; overscroll-behavior:contain; }
+.orbit-location-editor .orbit-location-selection {
+  margin:10px 0 0; font-size:12px; line-height:1.4;
+  color:var(--ui-muted); overflow-wrap:anywhere;
+}
+.orbit-location-editor { width:min(400px,calc(100vw - 24px)); max-height:min(75dvh,650px); }
+:root[data-arrow-theme="light"] .orbit-location-choice:has(input:checked) {
+  background:color-mix(in srgb,var(--arrow-accent-color,#526892) 9%,white);
+}
+@media(max-width:420px) {
+  .orbit-location-editor { left:12px; right:12px; top:72px; width:auto; max-height:calc(100dvh - 116px); padding:16px; }
+  .orbit-location-choice-list { grid-template-columns:minmax(0,1fr); }
+}
