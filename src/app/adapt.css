@@ -1844,7 +1844,7 @@
   }
   .orbit-app .orbit-header-right { min-width:0; flex-shrink:0; gap:4px; }
   .orbit-app .adapt-view-switch {
-    min-width:152px; width:152px; max-width:152px;
+    min-width:166px; width:166px; max-width:166px;
   }
   .orbit-app .adapt-view-switch button,
   :root[data-arrow-adapt="atelier"] .orbit-app .adapt-view-switch button {
@@ -1855,7 +1855,8 @@
 @media(max-width:365px) {
   .orbit-app .suite-lockup { padding:0 6px; gap:4px; }
   .orbit-app .suite-divider,.orbit-app .product-name { display:none; }
-  .orbit-app .adapt-view-switch { width:132px; min-width:132px; max-width:132px; }
+  .orbit-app .adapt-view-switch { width:140px; min-width:140px; max-width:140px; }
+  .orbit-app .adapt-view-switch button { font-size:9px!important; }
 }
 
 
