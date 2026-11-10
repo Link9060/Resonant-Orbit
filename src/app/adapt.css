@@ -1717,3 +1717,91 @@
   :root:not([data-arrow-motion="full"]) .orbit-app .adapt-view-switch::before {transition:none!important;}
   :root:not([data-arrow-motion="full"]) .orbit-app .adapt-dashboard {animation:none!important;}
 }
+
+
+/* Integrated ARROW Beta: identity colors describe the material, not the
+   contrast of text. Keep readable semantic ink across every accent preset. */
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] .adapt-dashboard {
+  --adapt-ink:#1c2633;
+  --adapt-muted:#536171;
+  --adapt-on-accent:var(--arrow-accent-on,#ffffff);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#60748c) 18%,#cad3df);
+  --adapt-radius:12px;
+  color-scheme:light;
+}
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt] .adapt-dashboard {
+  --adapt-ink:#f2f5f8;
+  --adapt-muted:#b5c0cd;
+  --adapt-on-accent:var(--arrow-accent-on,#121722);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#7f91a8) 19%,#444b59);
+  --adapt-radius:12px;
+  color-scheme:dark;
+}
+:root .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-widget-content,.adapt-native-widget,.native-header-copy,
+  .native-content-bloom,.adapt-widget-library,.orbit-widget-gallery
+) {
+  min-width:0; max-width:100%;
+}
+:root .orbit-app[data-orbit-adapt] .adapt-dashboard :is(input,textarea,select) {
+  color:var(--adapt-ink); border-color:var(--adapt-border);
+}
+:root .orbit-app[data-orbit-adapt] .adapt-dashboard :is(.adapt-edit-button,.adapt-widget-actions button,.adapt-input-form button,.adapt-note-form button) {
+  background:var(--arrow-adapt-primary,var(--adapt-accent));
+  background-image:none;
+  color:var(--arrow-accent-on,var(--adapt-on-accent));
+}
+:root .orbit-app[data-orbit-adapt] .adapt-dashboard :is(button,input,textarea,select):focus-visible {
+  outline:2px solid var(--adapt-ink); outline-offset:2px;
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .adapt-dashboard {
+  --adapt-radius:2px;
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .adapt-dashboard-inner {
+  width:100%; max-width:min(1160px,100%);
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .adapt-native-widget.native-atelier {
+  min-width:0;
+  padding:clamp(12px,1.5vw,18px)!important;
+  padding-bottom:27px!important;
+  border-color:var(--adapt-border)!important;
+  border-top-color:var(--adapt-ink)!important;
+  background:var(--adapt-surface)!important;
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .native-atelier-header {
+  grid-template-columns:28px minmax(0,1fr) auto; gap:8px;
+  padding-bottom:9px; min-width:0;
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .native-header-copy strong {
+  min-width:0; overflow-wrap:anywhere;
+  font-size:clamp(14px,1.7vw,22px);
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .adapt-widget-content {
+  padding-top:3px; max-width:100%;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard-inner {
+  max-width:1080px;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard-heading h1 {
+  font-size:clamp(28px,3vw,38px); font-weight:660;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-native-widget.native-bloom {
+  border-radius:17px!important;
+  background:var(--adapt-surface)!important;
+  box-shadow:none!important; border:1px solid var(--adapt-border);
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .native-bloom-ornament,
+:root .orbit-app[data-orbit-adapt="bloom"] .native-bloom-spark {
+  display:none;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .native-content-bloom {
+  background:transparent!important; padding:4px!important;
+}
+@media(max-width:600px) {
+  :root .orbit-app[data-orbit-adapt="atelier"] .native-atelier-header {
+    grid-template-columns:22px minmax(0,1fr) auto;gap:6px;
+  }
+  :root .orbit-app[data-orbit-adapt] .adapt-dashboard {
+    padding-inline:12px;
+  }
+}
