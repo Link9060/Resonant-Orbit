@@ -1,6 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 
 export type WeatherSnapshot = {
   temp:number;
@@ -70,7 +71,7 @@ export function OrbitWeatherDetails({forecast,onClose}:{forecast:WeatherSnapshot
     };
   },[onClose]);
 
-  return <div className="orbit-weather-overlay" onMouseDown={event=>{if(event.target===event.currentTarget)onClose();}}>
+  return createPortal(<div className="orbit-weather-overlay" onMouseDown={event=>{if(event.target===event.currentTarget)onClose();}}>
     <section ref={ref} className="orbit-weather-dialog" role="dialog" aria-modal="true" aria-label={'Detailed weather forecast for '+forecast.location}>
       <header className="orbit-weather-dialog-head">
         <div><p className="orbit-weather-kicker">WEATHER / LOCAL FORECAST</p><h2>{forecast.location}</h2></div>
@@ -116,5 +117,5 @@ export function OrbitWeatherDetails({forecast,onClose}:{forecast:WeatherSnapshot
         <p className="orbit-weather-provider">Forecast data: Open-Meteo. Times refer to the forecast location.</p>
       </div>
     </section>
-  </div>;
+  </div>,document.body);
 }
