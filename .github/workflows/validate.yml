@@ -60,3 +60,19 @@ jobs:
       - name: Integrated ARROW Beta regression tests
         if: github.ref != 'refs/heads/main'
         run: npx playwright test tests/integrated-beta-regressions.spec.ts --project=chromium
+
+      - name: Integrated ARROW weather interaction tests
+        if: github.ref != 'refs/heads/main'
+        run: npx playwright test tests/integrated-beta-weather.spec.ts --project=chromium
+
+      - name: Desktop and mobile Adapt visual QA screenshots
+        if: github.ref != 'refs/heads/main'
+        run: npx playwright test tests/integrated-beta-visual.spec.ts --project=chromium
+
+      - name: Preserve visual QA screenshots
+        if: always() && github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: integrated-arrow-beta-visual-qa
+          path: test-results/arrow-visual-qa/*.png
+          if-no-files-found: ignore
