@@ -44,12 +44,34 @@ test('all ten Adapt identity/theme combinations stay inside desktop and mobile b
         const appearance=await page.evaluate(()=>{
           const root=document.documentElement;
           const surface=document.querySelector('.adapt-dashboard');
-          if(!(surface instanceof HTMLElement))return null;
+          const action=document.querySelector('.adapt-edit-button');
+          if(!(surface instanceof HTMLElement)||!(action instanceof HTMLElement))return null;
           const style=getComputedStyle(surface);
-          return {theme:root.dataset.arrowTheme,ink:style.color,muted:style.getPropertyValue('--adapt-muted').trim()};
+          const actionStyle=getComputedStyle(action);
+          const canvas=document.createElement('canvas');canvas.width=canvas.height=1;
+          const context=canvas.getContext('2d',{willReadFrequently:true});
+          if(!context)return null;
+          const rgb=(css:string)=>{
+            if(!CSS.supports('color',css))throw new Error('Unsupported color '+css);
+            context.clearRect(0,0,1,1);context.fillStyle=css;
+            context.fillRect(0,0,1,1);
+            return [...context.getImageData(0,0,1,1).data].slice(0,3);
+          };
+          const luminosity=(color:number[])=>{
+            const c=color.map(component=>{
+              const value=component/255;
+              return value<=.04045?value/12.92:Math.pow((value+.055)/1.055,2.4);
+            });
+            return .2126*c[0]+.7152*c[1]+.0722*c[2];
+          };
+          const front=luminosity(rgb(actionStyle.color)),back=luminosity(rgb(actionStyle.backgroundColor));
+          const contrast=(Math.max(front,back)+.05)/(Math.min(front,back)+.05);
+          return {theme:root.dataset.arrowTheme,ink:style.color,
+            muted:style.getPropertyValue('--adapt-muted').trim(),actionContrast:contrast};
         });
         expect(appearance?.theme,identity+' '+mode).toBe(mode);
         expect(appearance?.ink).toBeTruthy();
+        expect(appearance?.actionContrast,identity+' '+mode+' '+width+'px customize action').toBeGreaterThanOrEqual(4.5);
         await page.screenshot({path:'test-results/arrow-visual-qa/'+identity+'-'+mode+'-'+width+'.png',animations:'disabled'});
       }
     }
