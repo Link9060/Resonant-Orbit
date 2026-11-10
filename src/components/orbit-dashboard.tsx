@@ -7,6 +7,8 @@ import {
 } from '@/lib/dashboard-layout';
 import { packDashboard } from '@/lib/orbit-widget-grid';
 import { OrbitWidgetStudio } from '@/components/orbit-widget-studio';
+import { OrbitWeatherDetails, type WeatherSnapshot } from '@/components/orbit-weather-details';
+import { OrbitWeatherLocationDialog } from '@/components/orbit-weather-location-dialog';
 import {
   accountId, verified, localLayout, localPresets, writeLocalLayout, writeLocalPresets,
   hydrateAccount, persistLayout, persistPresets, fetchDashboard, emptyDashboard,
@@ -40,7 +42,7 @@ const META: Record<DashboardWidgetId, { title: string; subtitle: string }> = {
 const KEYS = { legacy: 'relay-dashboard-layout-v1', legacyOwner: 'relay-dashboard-custom-presets-owner-v1', weather: 'relay-dashboard-weather-zip-v1' };
 const DEFAULT = DEFAULT_DASHBOARD_LAYOUT.map((item) => ({ ...item }));
 
-type Weather = { temp: number; hi: number; lo: number; precip: number; sunrise: string; sunset: string; unit: string; location: string };
+type Weather = WeatherSnapshot;
 function localDay(): string {
   const d = new Date();
   return [d.getFullYear(), String(d.getMonth() + 1).padStart(2,'0'), String(d.getDate()).padStart(2,'0')].join('-');
@@ -87,46 +89,146 @@ function timeLabel(minutes: number) {
   return hours ? `${hours}h ${mins ? mins+'m' : ''}`.trim() : `${mins}m`;
 }
 
+type WeatherPlace = { name:string; latitude:number; longitude:number };
+const WEATHER_PLACE_KEY='orbit-weather-selected-place-v1';
+
 function useWeather() {
-  const [zip, setZip] = useState('');
-  const [draft, setDraft] = useState('');
-  const [weather, setWeather] = useState<Weather | null>(null);
-  const [error, setError] = useState('');
-  const [loading, setLoading] = useState(false);
-  useEffect(() => {
-    try { const stored = localStorage.getItem(KEYS.weather) || ''; setZip(stored); setDraft(stored); } catch {}
-  }, []);
-  const load = useCallback(async (value: string) => {
-    const next = value.replace(/\D/g, '').slice(0, 5);
-    if (!/^\d{5}$/.test(next)) { setError('Enter a five-digit US ZIP code.'); return; }
-    setLoading(true); setError('');
-    try {
-      const zipResponse = await fetch('https://api.zippopotam.us/us/' + encodeURIComponent(next));
-      if (!zipResponse.ok) throw Error('ZIP lookup failed');
-      const data = await zipResponse.json() as { places?: Array<{ latitude: string; longitude: string; 'place name': string }> };
-      const place = data.places?.[0];
-      if (!place) throw Error('ZIP not found');
-      const params = new URLSearchParams({
-        latitude:place.latitude, longitude:place.longitude,
-        current:'temperature_2m',
-        daily:'temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset',
-        timezone:'auto', forecast_days:'1',
-        temperature_unit:'fahrenheit',
+  // Never reuse location data across distinct ARROW accounts on a shared device.
+  const weatherAccount=accountId()||'guest';
+  const placeKey=WEATHER_PLACE_KEY+':'+weatherAccount;
+  const zipKey=KEYS.weather+':'+weatherAccount;
+  const [draft,setDraft]=useState('');
+  const [cityDraft,setCityDraft]=useState('');
+  const [cityResults,setCityResults]=useState<WeatherPlace[]>([]);
+  const [weather,setWeather]=useState<Weather|null>(null);
+  const [error,setError]=useState('');
+  const [loading,setLoading]=useState(false);
+  const fetchPlace=useCallback(async(place:WeatherPlace)=>{
+    if(!Number.isFinite(place.latitude)||!Number.isFinite(place.longitude)) {
+      setError('That location is not valid.');return;
+    }
+    setLoading(true);setError('');
+    try{
+      const params=new URLSearchParams({
+        latitude:String(place.latitude),longitude:String(place.longitude),
+        current:'temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code',
+        hourly:'temperature_2m,precipitation_probability,weather_code',
+        daily:'temperature_2m_max,temperature_2m_min,precipitation_probability_max,sunrise,sunset,uv_index_max,weather_code',
+        timezone:'auto',forecast_days:'7',temperature_unit:'fahrenheit',wind_speed_unit:'mph',
       });
-      const response = await fetch('https://api.open-meteo.com/v1/forecast?' + params);
-      if (!response.ok) throw Error('Weather request failed');
-      const w = await response.json() as { current?: { temperature_2m?: number }; daily?: { temperature_2m_max?: number[]; temperature_2m_min?: number[]; precipitation_probability_max?: number[]; sunrise?: string[]; sunset?: string[] } };
-      setWeather({ temp: w.current?.temperature_2m ?? 0, hi:w.daily?.temperature_2m_max?.[0] ?? 0,
-        lo:w.daily?.temperature_2m_min?.[0] ?? 0, precip:w.daily?.precipitation_probability_max?.[0] ?? 0,
-        sunrise:w.daily?.sunrise?.[0] || '', sunset:w.daily?.sunset?.[0] || '',
-        unit:'°F', location:place['place name'] || 'ZIP ' + next });
-      setZip(next);
-      try { localStorage.setItem(KEYS.weather, next); } catch {}
-    } catch { setError('Weather could not load. Check your ZIP or connection.'); }
-    finally { setLoading(false); }
-  }, []);
-  useEffect(() => { if (/^\d{5}$/.test(zip)) void load(zip); }, [zip, load]);
-  return { draft, setDraft, weather, loading, error, load };
+      const response=await fetch('https://api.open-meteo.com/v1/forecast?'+params);
+      if(!response.ok)throw new Error('Forecast unavailable');
+      const w=await response.json() as {
+        current?:{time?:string;temperature_2m?:number;apparent_temperature?:number;relative_humidity_2m?:number;wind_speed_10m?:number;weather_code?:number};
+        hourly?:{time?:string[];temperature_2m?:number[];precipitation_probability?:number[];weather_code?:number[]};
+        daily?:{time?:string[];temperature_2m_max?:number[];temperature_2m_min?:number[];precipitation_probability_max?:number[];sunrise?:string[];sunset?:string[];uv_index_max?:number[];weather_code?:number[]};
+      };
+      const hours=w.hourly?.time||[];
+      const currentTime=w.current?.time?.slice(0,13)||'';
+      const first=hours.findIndex(time=>time>=currentTime);
+      const startHour=Math.max(0,first);
+      const hourly=hours.slice(startHour,startHour+12).map((time,i)=>({
+        time,temp:w.hourly?.temperature_2m?.[startHour+i]??0,
+        rain:w.hourly?.precipitation_probability?.[startHour+i]??0,
+        code:w.hourly?.weather_code?.[startHour+i]??0,
+      }));
+      const days=(w.daily?.time||[]).slice(0,7).map((date,i)=>({
+        date,hi:w.daily?.temperature_2m_max?.[i]??0,lo:w.daily?.temperature_2m_min?.[i]??0,
+        rain:w.daily?.precipitation_probability_max?.[i]??0,
+        uv:w.daily?.uv_index_max?.[i]??0,code:w.daily?.weather_code?.[i]??0,
+      }));
+      if ((accountId()||'guest')!==weatherAccount) return;
+      setWeather({
+        temp:w.current?.temperature_2m??0,hi:w.daily?.temperature_2m_max?.[0]??0,
+        lo:w.daily?.temperature_2m_min?.[0]??0,
+        precip:w.daily?.precipitation_probability_max?.[0]??0,
+        sunrise:w.daily?.sunrise?.[0]||'',sunset:w.daily?.sunset?.[0]||'',
+        unit:'°F',location:place.name,
+        apparent:w.current?.apparent_temperature??w.current?.temperature_2m??0,
+        humidity:w.current?.relative_humidity_2m??0,
+        wind:w.current?.wind_speed_10m??0,
+        uv:w.daily?.uv_index_max?.[0]??0,code:w.current?.weather_code??0,
+        hourly,days,
+      });
+      // Only store city-level coordinates. Browser permission is never asked
+      // until the user explicitly clicks "Use my location".
+      try{localStorage.setItem(placeKey,JSON.stringify({
+        name:place.name,
+        latitude:Number(place.latitude.toFixed(2)),
+        longitude:Number(place.longitude.toFixed(2)),
+      }));}catch{}
+    }catch{setError('Weather could not load. Check your location or connection.');}
+    finally{setLoading(false);}
+  },[placeKey,weatherAccount]);
+  const load=useCallback(async(value:string)=>{
+    const next=value.replace(/\D/g,'').slice(0,5);
+    if(!/^\d{5}$/.test(next)){setError('Enter a five-digit US ZIP code.');return;}
+    setLoading(true);setError('');setCityResults([]);
+    try{
+      const response=await fetch('https://api.zippopotam.us/us/'+encodeURIComponent(next));
+      if(!response.ok)throw new Error('Invalid ZIP');
+      const data=await response.json() as {places?:Array<{latitude:string;longitude:string;'place name':string;state:string}>};
+      const hit=data.places?.[0];
+      if(!hit)throw new Error('No city for ZIP');
+      try{localStorage.setItem(zipKey,next);}catch{}
+      setDraft(next);
+      await fetchPlace({name:hit['place name']+', '+(hit.state||'US'),latitude:Number(hit.latitude),longitude:Number(hit.longitude)});
+    }catch{setError('ZIP lookup failed. Check the ZIP and connection.');}
+    finally{setLoading(false);}
+  },[fetchPlace,zipKey]);
+  const searchCity=useCallback(async()=>{
+    const value=cityDraft.trim();
+    if(value.length<2){setError('Enter at least two characters to search.');return;}
+    setLoading(true);setError('');setCityResults([]);
+    try{
+      const query=new URLSearchParams({name:value,count:'5',language:'en',format:'json'});
+      const response=await fetch('https://geocoding-api.open-meteo.com/v1/search?'+query);
+      if(!response.ok)throw new Error('Geocoding unavailable');
+      const data=await response.json() as {results?:Array<{name:string;admin1?:string;country?:string;latitude:number;longitude:number}>};
+      const results=(data.results||[]).filter(p=>Number.isFinite(p.latitude)&&Number.isFinite(p.longitude)).map(p=>({
+        name:[p.name,p.admin1,p.country].filter(Boolean).join(', '),
+        latitude:p.latitude,longitude:p.longitude,
+      }));
+      setCityResults(results);
+      if(!results.length)setError('No matching cities found. Try a more specific name.');
+    }catch{setError('City search is unavailable. Try a ZIP instead.');}
+    finally{setLoading(false);}
+  },[cityDraft]);
+  const chooseCity=useCallback((place:WeatherPlace)=>{
+    setCityResults([]);setCityDraft(place.name);void fetchPlace(place);
+  },[fetchPlace]);
+  const useBrowserLocation=useCallback(()=>{
+    if(!('geolocation' in navigator)){setError('Browser location is unavailable.');return;}
+    setError('');setLoading(true);
+    navigator.geolocation.getCurrentPosition(position=>{
+      void fetchPlace({name:'Near my location',
+        latitude:Number(position.coords.latitude.toFixed(2)),
+        longitude:Number(position.coords.longitude.toFixed(2)),
+      });
+    },()=>{
+      setLoading(false);setError('Location permission was not granted. You can use a city or ZIP instead.');
+    },{enableHighAccuracy:false,timeout:10000,maximumAge:600000});
+  },[fetchPlace]);
+  useEffect(()=>{
+    try{
+      // Remove old unscoped cache. Locations are now private to the active
+      // account ID on this device, rather than shared among all sign-ins.
+      localStorage.removeItem(WEATHER_PLACE_KEY);
+      localStorage.removeItem(KEYS.weather);
+      setWeather(null);setError('');setCityResults([]);
+      const zip=localStorage.getItem(zipKey)||'';
+      setDraft(zip);
+      const stored=localStorage.getItem(placeKey);
+      if(stored){
+        const item=JSON.parse(stored) as WeatherPlace;
+        if(item && typeof item.name==='string'&&Number.isFinite(item.latitude)&&Number.isFinite(item.longitude)){
+          void fetchPlace(item);return;
+        }
+      }
+      if(/^\d{5}$/.test(zip))void load(zip);
+    }catch{}
+  },[fetchPlace,load,placeKey,zipKey]);
+  return {draft,setDraft,cityDraft,setCityDraft,cityResults,weather,loading,error,load,searchCity,chooseCity,useBrowserLocation};
 }
 
 export function OrbitDashboard() {
@@ -151,6 +253,13 @@ export function OrbitDashboard() {
   const version = useRef(0);
   const saveTimer = useRef<number | null>(null);
   const weather = useWeather();
+  const [weatherDetailsOpen,setWeatherDetailsOpen]=useState(false);
+  const [weatherLocationOpen,setWeatherLocationOpen]=useState(false);
+  const closeWeatherDetails=useCallback(()=>setWeatherDetailsOpen(false),[]);
+  const closeWeatherLocation=useCallback(()=>setWeatherLocationOpen(false),[]);
+  const showWeatherLocation=useCallback(()=>{
+    setWeatherDetailsOpen(false);setWeatherLocationOpen(true);
+  },[]);
   useEffect(() => {
     const timer = window.setInterval(() => setClockNow(new Date()), 30000);
     return () => window.clearInterval(timer);
@@ -300,7 +409,20 @@ export function OrbitDashboard() {
       case 'quicknote': return compact ? <ShortLink id="quicknote" label="Capture a note"/> : <form className="adapt-note-form" onSubmit={(e)=>{e.preventDefault();const note=noteDraft.trim();if(!note)return;void action(async()=>{await createNote(owner!,note);setNoteDraft('');});}}><textarea aria-label="Quick note" value={noteDraft} onChange={e=>setNoteDraft(e.target.value)} maxLength={5000} placeholder="Capture an idea…"/><button disabled={!noteDraft.trim() || busy}>Save to Relay Notes</button></form>;
       case 'focus': return <><div className="adapt-feature-number">{String(Math.floor(focusSeconds/60)).padStart(2,'0')}:{String(focusSeconds%60).padStart(2,'0')}</div><div className="adapt-widget-actions"><button onClick={()=>setFocusRunning(v=>!v)}>{focusRunning?'Pause':'Start'}</button><button onClick={()=>{setFocusRunning(false);setFocusSeconds(25*60);}}>Reset</button></div><p className="adapt-small-muted">Timer runs while this page remains open.</p></>;
       case 'weather':
-      case 'sun': return <>{weather.weather ? id==='sun'?<div className="adapt-metrics"><Metric value={clock(weather.weather.sunrise.split('T')[1])} label="Sunrise"/><Metric value={clock(weather.weather.sunset.split('T')[1])} label="Sunset"/></div>:<div className="adapt-weather"><span>{Math.round(weather.weather.temp)}{weather.weather.unit}</span><p>{weather.weather.location} · H {Math.round(weather.weather.hi)}° · L {Math.round(weather.weather.lo)}° · Rain {weather.weather.precip}%</p></div>:<p className="adapt-small-muted">Choose a ZIP to show local conditions.</p>}<form className="adapt-input-form" onSubmit={e=>{e.preventDefault();void weather.load(weather.draft);}}><input inputMode="numeric" aria-label="Weather ZIP code" maxLength={5} value={weather.draft} onChange={e=>weather.setDraft(e.target.value.replace(/\D/g,''))} placeholder="ZIP code"/><button disabled={weather.loading}>{weather.loading?'Loading':'Apply'}</button></form>{weather.error&&<p role="alert" className="adapt-small-muted">{weather.error}</p>}</>;
+      case 'sun': return <>
+        {weather.weather ? id==='sun' ? <div className="adapt-metrics">
+          <Metric value={clock(weather.weather.sunrise.split('T')[1])} label="Sunrise"/>
+          <Metric value={clock(weather.weather.sunset.split('T')[1])} label="Sunset"/>
+        </div> : <div className="adapt-weather">
+          <span>{Math.round(weather.weather.temp)}{weather.weather.unit}</span>
+          <p>{weather.weather.location} · H {Math.round(weather.weather.hi)}° · L {Math.round(weather.weather.lo)}° · Rain {weather.weather.precip}%</p>
+          <button type="button" className="adapt-weather-more" onClick={()=>setWeatherDetailsOpen(true)}>View detailed forecast</button>
+        </div> : <p className="adapt-small-muted">Set a weather location to see a local forecast.</p>}
+        <button type="button" className="adapt-weather-location-trigger" onClick={showWeatherLocation}
+          aria-label="Choose weather location">{weather.weather?'Change location':'Choose location'}</button>
+        {weather.loading&&<p role="status" className="adapt-small-muted">Loading weather…</p>}
+        {weather.error&&<p role="alert" className="adapt-small-muted">{weather.error}</p>}
+      </>;
       case 'quicklinks': return <div className="adapt-quicklinks">{[['waypoint','Waypoint'],['chats','Relay'],['askravin','RAVIN'],['calendar','Calendar']].map(([target,label])=><ShortLink key={target} id={target} label={label}/>)}</div>;
       case 'dayprogress': return <div className="adapt-daytime">
         <div className="adapt-meter"><div className="adapt-meter-top">
@@ -324,6 +446,8 @@ export function OrbitDashboard() {
       <button type="button" className="adapt-edit-button" disabled={!owner || !ready} aria-pressed={editing} onClick={()=>setEditing(value=>!value)}>{editing?'Done':'Customize'}</button>
     </header>
     <p role="status" className="adapt-sync-status">{syncMessage}</p>
+    {weatherDetailsOpen&&weather.weather&&<OrbitWeatherDetails forecast={weather.weather} onClose={closeWeatherDetails} onChangeLocation={showWeatherLocation}/>}
+    {weatherLocationOpen&&<OrbitWeatherLocationDialog controls={weather} onClose={closeWeatherLocation}/>} 
     {daySettingsOpen && <div className="adapt-daytime-backdrop" onMouseDown={event=>{if(event.target===event.currentTarget)setDaySettingsOpen(false);}}>
       <form className="adapt-daytime-dialog" role="dialog" aria-modal="true" aria-label="Set active-day hours" onSubmit={event=>{
         event.preventDefault();
