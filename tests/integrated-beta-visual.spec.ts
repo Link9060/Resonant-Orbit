@@ -32,6 +32,15 @@ test('all ten Adapt identity/theme combinations stay inside desktop and mobile b
         expect(bounds,identity+' '+mode+' '+width).not.toBeNull();
         expect(bounds!.x,identity+' '+mode+' '+width).toBeGreaterThanOrEqual(-5);
         expect(bounds!.x+bounds!.width,identity+' '+mode+' '+width).toBeLessThanOrEqual(width+5);
+        const headerControls=await page.locator('.orbit-header').evaluate(element=>{
+          const brand=element.querySelector('.suite-lockup');
+          const right=element.querySelector('.orbit-header-right');
+          return {brandLeft:brand?.getBoundingClientRect().left ?? 0,
+            rightEdge:right?.getBoundingClientRect().right ?? 0,
+            viewport:window.innerWidth};
+        });
+        expect(headerControls.brandLeft,identity+' '+mode+' '+width+' brand left').toBeGreaterThanOrEqual(-1);
+        expect(headerControls.rightEdge,identity+' '+mode+' '+width+' header right').toBeLessThanOrEqual(width+1);
         const appearance=await page.evaluate(()=>{
           const root=document.documentElement;
           const surface=document.querySelector('.adapt-dashboard');
