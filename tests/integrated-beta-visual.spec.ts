@@ -41,6 +41,17 @@ test('all ten Adapt identity/theme combinations stay inside desktop and mobile b
         });
         expect(headerControls.brandLeft,identity+' '+mode+' '+width+' brand left').toBeGreaterThanOrEqual(-1);
         expect(headerControls.rightEdge,identity+' '+mode+' '+width+' header right').toBeLessThanOrEqual(width+1);
+        const switchLabels=await page.locator('.adapt-view-switch').evaluate(node=>
+          Array.from(node.querySelectorAll('button')).map(button=>{
+            const range=document.createRange();range.selectNodeContents(button);
+            const ink=range.getBoundingClientRect(),box=button.getBoundingClientRect();
+            return {label:button.textContent||'',left:ink.left-box.left,right:box.right-ink.right};
+          })
+        );
+        for(const label of switchLabels){
+          expect(label.left,identity+' '+mode+' '+width+' '+label.label+' label left').toBeGreaterThanOrEqual(1);
+          expect(label.right,identity+' '+mode+' '+width+' '+label.label+' label right').toBeGreaterThanOrEqual(1);
+        }
         const appearance=await page.evaluate(()=>{
           const root=document.documentElement;
           const surface=document.querySelector('.adapt-dashboard');
