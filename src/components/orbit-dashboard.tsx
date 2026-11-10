@@ -393,7 +393,43 @@ export function OrbitDashboard() {
       case 'quicknote': return compact ? <ShortLink id="quicknote" label="Capture a note"/> : <form className="adapt-note-form" onSubmit={(e)=>{e.preventDefault();const note=noteDraft.trim();if(!note)return;void action(async()=>{await createNote(owner!,note);setNoteDraft('');});}}><textarea aria-label="Quick note" value={noteDraft} onChange={e=>setNoteDraft(e.target.value)} maxLength={5000} placeholder="Capture an idea…"/><button disabled={!noteDraft.trim() || busy}>Save to Relay Notes</button></form>;
       case 'focus': return <><div className="adapt-feature-number">{String(Math.floor(focusSeconds/60)).padStart(2,'0')}:{String(focusSeconds%60).padStart(2,'0')}</div><div className="adapt-widget-actions"><button onClick={()=>setFocusRunning(v=>!v)}>{focusRunning?'Pause':'Start'}</button><button onClick={()=>{setFocusRunning(false);setFocusSeconds(25*60);}}>Reset</button></div><p className="adapt-small-muted">Timer runs while this page remains open.</p></>;
       case 'weather':
-      case 'sun': return <>{weather.weather ? id==='sun'?<div className="adapt-metrics"><Metric value={clock(weather.weather.sunrise.split('T')[1])} label="Sunrise"/><Metric value={clock(weather.weather.sunset.split('T')[1])} label="Sunset"/></div>:<div className="adapt-weather"><span>{Math.round(weather.weather.temp)}{weather.weather.unit}</span><p>{weather.weather.location} · H {Math.round(weather.weather.hi)}° · L {Math.round(weather.weather.lo)}° · Rain {weather.weather.precip}%</p><button type="button" className="adapt-weather-more" onClick={()=>setWeatherDetailsOpen(true)}>View detailed forecast</button></div>:<p className="adapt-small-muted">Choose a ZIP to show local conditions.</p>}<form className="adapt-input-form" onSubmit={e=>{e.preventDefault();void weather.load(weather.draft);}}><input inputMode="numeric" aria-label="Weather ZIP code" maxLength={5} value={weather.draft} onChange={e=>weather.setDraft(e.target.value.replace(/\D/g,''))} placeholder="ZIP code"/><button disabled={weather.loading}>{weather.loading?'Loading':'Apply'}</button></form>{weather.error&&<p role="alert" className="adapt-small-muted">{weather.error}</p>}</>;
+      case 'sun': return <>
+        {weather.weather ? id==='sun'
+          ? <div className="adapt-metrics">
+              <Metric value={clock(weather.weather.sunrise.split('T')[1])} label="Sunrise"/>
+              <Metric value={clock(weather.weather.sunset.split('T')[1])} label="Sunset"/>
+            </div>
+          : <div className="adapt-weather">
+              <span>{Math.round(weather.weather.temp)}{weather.weather.unit}</span>
+              <p>{weather.weather.location} · H {Math.round(weather.weather.hi)}° · L {Math.round(weather.weather.lo)}° · Rain {weather.weather.precip}%</p>
+              <button type="button" className="adapt-weather-more" onClick={()=>setWeatherDetailsOpen(true)}>View detailed forecast</button>
+            </div>
+          : <p className="adapt-small-muted">Choose a weather location to load conditions.</p>}
+        <details className="adapt-weather-places" open={!weather.weather}>
+          <summary>Change weather location</summary>
+          <form className="adapt-input-form" onSubmit={event=>{event.preventDefault();void weather.load(weather.draft);}}>
+            <input inputMode="numeric" aria-label="Weather ZIP code" maxLength={5} value={weather.draft}
+              onChange={event=>weather.setDraft(event.target.value.replace(/\D/g,''))}
+              placeholder="US ZIP code"/>
+            <button type="submit" disabled={weather.loading}>{weather.loading?'Loading':'Apply ZIP'}</button>
+          </form>
+          {id==='weather'&&<>
+            <form className="adapt-input-form" onSubmit={event=>{event.preventDefault();void weather.searchCity();}}>
+              <input aria-label="Weather city search" maxLength={90} value={weather.cityDraft}
+                onChange={event=>weather.setCityDraft(event.target.value)}
+                placeholder="Search city or region"/>
+              <button type="submit" disabled={weather.loading||weather.cityDraft.trim().length<2}>Search</button>
+            </form>
+            {weather.cityResults.length>0&&<div className="adapt-weather-city-results" role="group" aria-label="Choose a matching city">
+              {weather.cityResults.map(place=><button type="button" key={place.name+String(place.latitude)}
+                onClick={()=>weather.chooseCity(place)} disabled={weather.loading}>{place.name}</button>)}
+            </div>}
+            <button type="button" className="adapt-weather-geo" onClick={weather.useBrowserLocation}
+              disabled={weather.loading}>Use my approximate location (optional)</button>
+          </>}
+        </details>
+        {weather.error&&<p role="alert" className="adapt-small-muted">{weather.error}</p>}
+      </>;
       case 'quicklinks': return <div className="adapt-quicklinks">{[['waypoint','Waypoint'],['chats','Relay'],['askravin','RAVIN'],['calendar','Calendar']].map(([target,label])=><ShortLink key={target} id={target} label={label}/>)}</div>;
       case 'dayprogress': return <div className="adapt-daytime">
         <div className="adapt-meter"><div className="adapt-meter-top">
