@@ -119,3 +119,23 @@ test('live Orbit paints Haven and other light particles from deterministic palet
  assert.match(css,/mix-blend-mode:multiply/);
  assert.match(css,/filter:brightness\(0\) saturate\(100%\)/);
 });
+
+
+test('mobile Orbit routes keep every destination accessible without floating label collisions',()=>{
+ const jsx=fs.readFileSync('src/components/orbit-locations.tsx','utf8');
+ const css=fs.readFileSync('src/app/globals.css','utf8');
+ assert.match(jsx,/className="orbit-mobile-quick-links"/);
+ assert.match(jsx,/aria-label="Quick ARROW locations"/);
+ assert.match(jsx,/pins\.map\(pin=><button/);
+ assert.match(jsx,/onClick=\{\(\)=>navigate\(pin\.href\)\}/);
+ assert.match(jsx,/onClick=\{\(\)=>navigate\(next\?\.href/);
+ assert.match(css,/\.orbit-mobile-quick-links\s*\{\s*display:none/);
+ assert.match(css,/\.orbit-app \.world-shell \.orbit-shortcuts\s*\{\s*display:none!important/);
+ assert.match(css,/\.orbit-app \.world-shell \.orbit-extra-location\s*\{\s*display:none!important/);
+ assert.match(css,/\.orbit-app \.world-shell \.orbit-mobile-quick-links\s*\{/);
+ assert.match(css,/touch-action:pan-x/);
+ assert.match(css,/\.destination-node \.node-copy\s*\{\s*display:none/);
+ assert.match(css,/\.destination-node:is\(\.is-selected,:focus-visible\) \.node-copy/);
+ assert.match(css,/\.world-shell:is\(\.intro-intro,\.intro-collapsing\) \.orbit-mobile-quick-links\s*\{\s*display:none!important/);
+ assert.match(jsx,/aria-label=\{entertainmentMode\s*\?/);
+});
