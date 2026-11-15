@@ -137,5 +137,6 @@ test('mobile Orbit routes keep every destination accessible without floating lab
  assert.match(css,/\.destination-node \.node-copy\s*\{\s*display:none/);
  assert.match(css,/\.destination-node:is\(\.is-selected,:focus-visible\) \.node-copy/);
  assert.match(css,/\.world-shell:is\(\.intro-intro,\.intro-collapsing\) \.orbit-mobile-quick-links\s*\{\s*display:none!important/);
- assert.match(jsx,/aria-label=\{entertainmentMode\s*\?/);
+ const world=fs.readFileSync('src/components/orbit-world.tsx','utf8');
+ assert.match(world,/aria-label=\{entertainmentMode\s*\?/);
 });
