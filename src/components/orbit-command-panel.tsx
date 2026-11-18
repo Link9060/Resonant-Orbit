@@ -265,7 +265,7 @@ export function OrbitCommandPanel({
         <div>
           <p>{view === 'home' ? 'COMMAND' : 'ORBIT CONTROL'}</p>
           <h2>
-            {view === 'home' && (displayName.trim() || 'You')}
+            {view === 'home' && 'Orbit'}
             
       {view === 'profile'  && 'Your profile'}
             {view === 'system' && 'System'}
@@ -332,10 +332,6 @@ export function OrbitCommandPanel({
                 <SearchIcon size={14} />
                 <span>Navigate</span>
               </button>
-              <button type="button" onClick={() => setView('connections')}>
-                <span className="command-link-glyph" aria-hidden="true">⌁</span>
-                <span>Connect</span>
-              </button>
               <button type="button" onClick={() => openSystemPanel('focus')}>
                 <TargetIcon size={14} />
                 <span>Focus</span>
@@ -343,19 +339,15 @@ export function OrbitCommandPanel({
             </div>
           </div>
 
-          <div className="command-section">
-            <div className="command-section-title"><span>SHARED WORKSPACE</span></div>
+          <details className="command-utilities">
+            <summary>Workspace tools</summary>
             <div className="command-quick-grid">
               <button type="button" onClick={() => openSystemPanel('notes')}><span>Notes</span></button>
               <button type="button" onClick={() => openSystemPanel('tasks')}><span>To-dos</span></button>
               <button type="button" onClick={() => openSystemPanel('calendar')}><span>Calendar</span></button>
               <button type="button" onClick={() => shellApi()?.navigate?.('/relay/contacts/','orbit')}><span>Contacts ↗</span></button>
             </div>
-          </div>
-
-          <div className="command-home-footer">
-            <button type="button" className="command-settings-link" onClick={() => setView('system')}>System · {statusSummary.active} centers</button>
-          </div>
+          </details>
 
           <button type="button" className="command-settings-link" onClick={() => setView('settings')}>
             <span>System settings</span>
@@ -468,6 +460,14 @@ export function OrbitCommandPanel({
         <div className="command-subview">
           <button type="button" className="command-settings-row" onClick={() => openSystemPanel('appearance')}>
             <span><strong>Appearance</strong><small>theme, motion, accent, experience</small></span>
+            <ArrowUpRightIcon size={13} />
+          </button>
+          <button type="button" className="command-settings-row" onClick={() => setView('system')}>
+            <span><strong>System</strong><small>centers and their status</small></span>
+            <ArrowUpRightIcon size={13} />
+          </button>
+          <button type="button" className="command-settings-row" onClick={() => setView('connections')}>
+            <span><strong>Connections</strong><small>accounts and connected services</small></span>
             <ArrowUpRightIcon size={13} />
           </button>
           <button type="button" className="command-settings-row" onClick={() => openSystemPanel('focus')}>

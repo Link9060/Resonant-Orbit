@@ -1717,3 +1717,186 @@
   :root:not([data-arrow-motion="full"]) .orbit-app .adapt-view-switch::before {transition:none!important;}
   :root:not([data-arrow-motion="full"]) .orbit-app .adapt-dashboard {animation:none!important;}
 }
+
+
+/* Integrated ARROW Beta: identity colors describe the material, not the
+   contrast of text. Keep readable semantic ink across every accent preset. */
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] .adapt-dashboard {
+  --adapt-ink:#1c2633;
+  --adapt-muted:#536171;
+  --adapt-on-accent:var(--arrow-accent-on,#ffffff);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#60748c) 18%,#cad3df);
+  --adapt-radius:12px;
+  color-scheme:light;
+}
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt] .adapt-dashboard {
+  --adapt-ink:#f2f5f8;
+  --adapt-muted:#b5c0cd;
+  --adapt-on-accent:var(--arrow-accent-on,#121722);
+  --adapt-border:color-mix(in srgb,var(--arrow-adapt-primary,#7f91a8) 19%,#444b59);
+  --adapt-radius:12px;
+  color-scheme:dark;
+}
+:root .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-widget-content,.adapt-native-widget,.native-header-copy,
+  .native-content-bloom,.adapt-widget-library,.orbit-widget-gallery
+) {
+  min-width:0; max-width:100%;
+}
+:root .orbit-app[data-orbit-adapt] .adapt-dashboard :is(input,textarea,select) {
+  color:var(--adapt-ink); border-color:var(--adapt-border);
+}
+:root .orbit-app[data-orbit-adapt] .adapt-dashboard :is(.adapt-edit-button,.adapt-widget-actions button,.adapt-input-form button,.adapt-note-form button) {
+  background:var(--arrow-adapt-primary,var(--adapt-accent));
+  background-image:none;
+  color:var(--arrow-accent-on,var(--adapt-on-accent));
+}
+:root .orbit-app[data-orbit-adapt] .adapt-dashboard :is(button,input,textarea,select):focus-visible {
+  outline:2px solid var(--adapt-ink); outline-offset:2px;
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .adapt-dashboard {
+  --adapt-radius:2px;
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .adapt-dashboard-inner {
+  width:100%; max-width:min(1160px,100%);
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .adapt-native-widget.native-atelier {
+  min-width:0;
+  padding:clamp(12px,1.5vw,18px)!important;
+  padding-bottom:27px!important;
+  border-color:var(--adapt-border)!important;
+  border-top-color:var(--adapt-ink)!important;
+  background:var(--adapt-surface)!important;
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .native-atelier-header {
+  grid-template-columns:28px minmax(0,1fr) auto; gap:8px;
+  padding-bottom:9px; min-width:0;
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .native-header-copy strong {
+  min-width:0; overflow-wrap:anywhere;
+  font-size:clamp(14px,1.7vw,22px);
+}
+:root .orbit-app[data-orbit-adapt="atelier"] .adapt-widget-content {
+  padding-top:3px; max-width:100%;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard-inner {
+  max-width:1080px;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-dashboard-heading h1 {
+  font-size:clamp(28px,3vw,38px); font-weight:660;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .adapt-native-widget.native-bloom {
+  border-radius:17px!important;
+  background:var(--adapt-surface)!important;
+  box-shadow:none!important; border:1px solid var(--adapt-border);
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .native-bloom-ornament,
+:root .orbit-app[data-orbit-adapt="bloom"] .native-bloom-spark {
+  display:none;
+}
+:root .orbit-app[data-orbit-adapt="bloom"] .native-content-bloom {
+  background:transparent!important; padding:4px!important;
+}
+@media(max-width:600px) {
+  :root .orbit-app[data-orbit-adapt="atelier"] .native-atelier-header {
+    grid-template-columns:22px minmax(0,1fr) auto;gap:6px;
+  }
+  :root .orbit-app[data-orbit-adapt] .adapt-dashboard {
+    padding-inline:12px;
+  }
+}
+
+/* Compact widget actions open dedicated weather dialogs instead of expanding
+   search forms inside a saved 1- or 2-row dashboard card. */
+.orbit-app .adapt-weather-location-trigger {
+  display:inline-flex; width:fit-content; max-width:100%;
+  align-items:center; justify-content:center;
+  min-height:34px; padding:6px 10px; margin-top:6px;
+  border-radius:9px; border:1px solid var(--adapt-border);
+  color:var(--adapt-ink); background:var(--adapt-surface);
+  font-size:11px; font-weight:600; cursor:pointer;
+}
+.orbit-app .adapt-weather-more { width:fit-content; max-width:100%; }
+.orbit-app .adapt-widget-content:has(.adapt-weather) { gap:5px; }
+.orbit-app .adapt-weather-location-trigger:hover {
+  border-color:var(--arrow-adapt-primary,var(--adapt-accent));
+}
+
+
+/* Visual QA: prevent the Orbit brand, dashboard switch and ARROW island from
+   forcing a horizontal header overflow on narrow phones (all 5 identities). */
+@media(max-width:520px) {
+  .orbit-app .orbit-header {
+    gap:6px; justify-content:space-between;
+    padding:max(10px,env(safe-area-inset-top)) max(9px,env(safe-area-inset-right))
+      10px max(9px,env(safe-area-inset-left)) !important;
+    min-width:0; max-width:100vw;
+  }
+  .orbit-app .suite-lockup {
+    min-width:0; flex:0 1 auto;
+    height:38px; padding:0 8px; gap:5px;
+    white-space:nowrap;
+  }
+  .orbit-app .arrow-mark { width:18px; min-width:18px; }
+  .orbit-app .suite-name,.orbit-app .product-name {
+    font-size:11px!important; letter-spacing:.035em!important;
+    white-space:nowrap;
+  }
+  .orbit-app .orbit-header-right { min-width:0; flex-shrink:0; gap:4px; }
+  .orbit-app .adapt-view-switch {
+    min-width:166px; width:166px; max-width:166px;
+  }
+  .orbit-app .adapt-view-switch button,
+  :root[data-arrow-adapt="atelier"] .orbit-app .adapt-view-switch button {
+    padding:6px 4px!important; font-size:10px!important;
+    letter-spacing:0!important;
+  }
+}
+@media(max-width:365px) {
+  .orbit-app .suite-lockup { padding:0 6px; gap:4px; }
+  .orbit-app .suite-divider,.orbit-app .product-name { display:none; }
+  .orbit-app .adapt-view-switch { width:140px; min-width:140px; max-width:140px; }
+  .orbit-app .adapt-view-switch button { font-size:9px!important; }
+}
+
+
+/* Visual QA found dark-on-dark disabled actions in Haven, Bloom and Atelier.
+   Use color-paired action materials that remain legible even for arbitrary
+   custom accent colors, rather than relying on the accent's historical
+   on-color, which was computed before theme tinting and disabled opacity. */
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-edit-button,.adapt-widget-actions button,
+  .adapt-input-form button,.adapt-note-form button
+) {
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#7c93b5) 14%,#eef2f7)!important;
+  background-image:none!important; color:#182331!important;
+  border:1px solid color-mix(in srgb,var(--arrow-adapt-primary,#7c93b5) 32%,#b1bfce)!important;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-edit-button,.adapt-widget-actions button,
+  .adapt-input-form button,.adapt-note-form button
+) {
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#657caa) 13%,#202d3e)!important;
+  background-image:none!important; color:#fefefe!important;
+  border:1px solid color-mix(in srgb,var(--arrow-adapt-primary,#657caa) 25%,#33485d)!important;
+}
+:root[data-arrow-theme="dark"] .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-edit-button,.adapt-widget-actions button,
+  .adapt-input-form button,.adapt-note-form button
+):disabled {
+  opacity:1!important;
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#7c93b5) 7%,#394350)!important;
+  color:#bfcbd9!important;
+  border-color:#556071!important;
+  cursor:not-allowed!important;
+}
+:root[data-arrow-theme="light"] .orbit-app[data-orbit-adapt] .adapt-dashboard :is(
+  .adapt-edit-button,.adapt-widget-actions button,
+  .adapt-input-form button,.adapt-note-form button
+):disabled {
+  opacity:1!important;
+  background:color-mix(in srgb,var(--arrow-adapt-primary,#657caa) 8%,#dce4ec)!important;
+  color:#516070!important;
+  border-color:#b4c0cf!important;
+  cursor:not-allowed!important;
+}

@@ -12,6 +12,17 @@ export function OrbitLocations({hidden=false}:{hidden?:boolean}) {
   const nameInput=useRef<HTMLInputElement>(null);
   useEffect(()=>{if(editing)nameInput.current?.focus();},[editing]);
   const [title,setTitle]=useState(''); const [href,setHref]=useState('/waypoint/?tab=today');
+  const [targetQuery,setTargetQuery]=useState('');
+  const quickDestinations=[
+    {href:'/waypoint/?tab=today',label:'Tasks'},
+    {href:'/waypoint/?tab=plans',label:'Plans'},
+    {href:'/waypoint/?tab=calendar',label:'Calendar'},
+    {href:'/waypoint/?tab=direction',label:'Goals'},
+    {href:'/atlas/',label:'Atlas'},
+    {href:'/ravin/',label:'RAVIN'},
+    {href:'/relay/',label:'Relay'},
+  ];
+  const filteredTargets=targets.filter(target=>target.title.toLowerCase().includes(targetQuery.trim().toLowerCase())).slice(0,30);
   const [next,setNext]=useState<Next|null>(null); const [source,setSource]=useState('loading'); const [notice,setNotice]=useState('');
   const [ready,setReady]=useState(false); const [busy,setBusy]=useState(false); const timer=useRef<ReturnType<typeof setTimeout>|null>(null);
   useEffect(()=>{
@@ -62,6 +73,16 @@ export function OrbitLocations({hidden=false}:{hidden?:boolean}) {
   }
   if(hidden)return null;
   return <>
+    {/* On touch screens, keep every saved destination accessible without
+        projecting additional floating labels across the Orbit sphere. */}
+    <nav className="orbit-mobile-quick-links" aria-label="Quick ARROW locations" onPointerDown={event=>event.stopPropagation()}>
+      <button type="button" className="orbit-mobile-next" onClick={()=>navigate(next?.href||'/waypoint/?tab=today')} aria-label={next?'Open next move: '+next.title:'Open your next move in Waypoint'} title={next?.title||'Open your next move'}>
+        <kbd>0</kbd><span>Next move</span>
+      </button>
+      {pins.map(pin=><button type="button" key={pin.number} onClick={()=>navigate(pin.href)} title={pin.title} aria-label={'Open quick location '+pin.number+': '+pin.title}>
+        <kbd>{pin.number}</kbd><span>{pin.title}</span>
+      </button>)}
+    </nav>
     <button className="orbit-extra-location orbit-smart-location" data-orbit-extra data-anchor=".04,.65,-.74" type="button" onClick={()=>navigate(next?.href||'/waypoint/?tab=today')} title={next?`${next.title} · ${next.date||'No date'} ${next.time||''} · ${next.reason}`:'Open your next move in Waypoint'}>
       <kbd>0</kbd><span><strong>What’s next</strong><small>{next?next.title:source==='loading'?'Checking your plans…':source==='unavailable'?'Open Waypoint':'You’re clear'}{next?.date?` · ${next.date}`:''}{next?.time?` ${next.time}`:''}</small></span>
     </button>
@@ -73,7 +94,31 @@ export function OrbitLocations({hidden=false}:{hidden?:boolean}) {
       {pins.map(pin=><div className="orbit-pin-row" key={pin.number}><kbd>{pin.number}</kbd><span>{pin.title}</span><button disabled={busy} type="button" onClick={()=>void save(pins.filter(p=>p.number!==pin.number).map((p,i)=>({...p,number:i+5,anchor:anchors[i]})))}>Remove</button></div>)}
       {pins.length<5&&<form onSubmit={event=>{event.preventDefault();const safe=safeHref(href);if(!safe||!title.trim()){setNotice('Name this location and choose an ARROW destination.');return;}void save([...pins,{number:5+pins.length,title:title.trim().slice(0,60),href:safe,anchor:anchors[pins.length]}]);}}>
         <label>Name<input ref={nameInput} required maxLength={60} value={title} onChange={e=>setTitle(e.target.value)} placeholder="Homework, next ride, project…"/></label>
-        <label>Destination<select value={href} onChange={e=>{setHref(e.target.value);const target=targets.find(t=>t.href===e.target.value);if(target)setTitle(target.title);}}><option value="/waypoint/?tab=today">Tasks</option><option value="/waypoint/?tab=plans">Plans</option><option value="/waypoint/?tab=calendar">Calendar</option><option value="/waypoint/?tab=direction">Goals</option><option value="/atlas/">Atlas</option><option value="/ravin/">RAVIN</option><option value="/relay/">Relay</option>{targets.map(target=><option key={target.id} value={target.href}>{target.title}</option>)}</select></label>
+        <fieldset className="orbit-location-choice-fieldset">
+          <legend>Destination</legend>
+          <div className="orbit-location-choice-list">
+            {quickDestinations.map(option=><label className="orbit-location-choice" key={option.href}>
+              <input type="radio" name="orbit-quick-location-destination" checked={href===option.href} onChange={()=>setHref(option.href)} disabled={busy}/>
+              <span>{option.label}</span>
+            </label>)}
+          </div>
+          {targets.length>0&&<details className="orbit-location-targets">
+            <summary>Choose a specific task or plan ({targets.length})</summary>
+            <label className="orbit-location-search">Search your tasks and plans
+              <input type="search" value={targetQuery} onChange={event=>setTargetQuery(event.target.value)} placeholder="Search by name" />
+            </label>
+            <div className="orbit-location-choice-list orbit-location-target-list">
+              {filteredTargets.map(target=><label className="orbit-location-choice" key={target.id}>
+                <input type="radio" name="orbit-quick-location-destination" checked={href===target.href} onChange={()=>{setHref(target.href);setTitle(target.title);}} disabled={busy}/>
+                <span>{target.title}</span>
+              </label>)}
+              {filteredTargets.length===0&&<p>No matching tasks or plans.</p>}
+            </div>
+          </details>}
+          <p className="orbit-location-selection" aria-live="polite">
+            Selected: {quickDestinations.find(option=>option.href===href)?.label || targets.find(target=>target.href===href)?.title || 'Custom destination'}
+          </p>
+        </fieldset>
         <button type="submit" disabled={busy||!ready}>{busy?'Saving…':'Add location'}</button>
       </form>}
     </section>}

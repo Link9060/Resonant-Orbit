@@ -652,9 +652,12 @@ export function OrbitWorld() {
   useLayoutEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       const ui = uiRef.current;
-      const target = event.target as HTMLElement | null;
-      const isTyping =
-        target?.matches('input, textarea, select, [contenteditable="true"]') ?? false;
+      const target = event.target instanceof HTMLElement ? event.target : null;
+      const isTyping = Boolean(target?.closest('input, textarea, select, [contenteditable], [role="textbox"]'));
+      // Orbit's world remains mounted when the dashboard is shown. Never let
+      // world-wide shortcuts hijack the dashboard or an open location editor.
+      if (document.querySelector('.orbit-app')?.getAttribute('data-orbit-view') === 'widgets' ||
+          document.querySelector('.orbit-location-editor')) return;
 
       if (event.key === 'Escape' && activeGameRef.current) {
         event.preventDefault();
@@ -746,7 +749,9 @@ export function OrbitWorld() {
 
     window.addEventListener('keydown', onKeyDown);
     return () => window.removeEventListener('keydown', onKeyDown);
-  }, []);
+  // Rebind when access changes: the initial render is relay-only, and a stale
+  // closure otherwise permanently disables shortcuts 1, 2 and 4 in full Orbit.
+  }, [accessMode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;

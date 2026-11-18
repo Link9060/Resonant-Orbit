@@ -129,3 +129,24 @@
 .reduce-motion .entertainment-beat { animation:none; opacity:0; }
 .reduce-motion .entertainment-beat.beat-two { opacity:1; transform:translate(-50%,-50%); }
 @media(max-width:900px) { .entertainment-mode .orbit-command-toggle { display:none; } .entertainment-mode .orbit-left-zone { top:92px; max-width:calc(100% - 32px); width:auto; } .entertainment-copy h1 { font-size:28px; } .entertainment-copy > p:last-of-type { margin:12px 0; max-width:260px; } .entertainment-copy .eyebrow { display:none; } }
+
+
+/* Integrated beta: a small primary command surface with secondary tools tucked away. */
+.world-shell .command-section > .command-quick-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+.world-shell .command-section > .command-quick-grid button { justify-content:center; text-align:center; font-size:12px; }
+.command-utilities { margin-top:12px; border-top:1px solid var(--line); }
+.command-utilities > summary {
+  display:flex; align-items:center; justify-content:space-between;
+  min-height:44px; padding:8px 3px; color:var(--muted);
+  cursor:pointer; list-style:none; font-size:12px; font-weight:500;
+}
+.command-utilities > summary::-webkit-details-marker { display:none; }
+.command-utilities > summary::after { content:'+'; font-size:18px; font-weight:400; }
+.command-utilities[open] > summary::after { content:'−'; }
+.command-utilities .command-quick-grid { grid-template-columns:repeat(2,minmax(0,1fr)); margin-bottom:10px; }
+.command-utilities button { justify-content:flex-start; font-size:12px; }
+.command-utilities > summary:hover,.command-utilities > summary:focus-visible { color:var(--text); }
+@media(max-width:640px) {
+  .world-shell .command-section > .command-quick-grid { grid-template-columns:repeat(3,minmax(0,1fr)); }
+  .command-utilities .command-quick-grid { grid-template-columns:repeat(2,minmax(0,1fr)); }
+}
