@@ -73,6 +73,16 @@ export function OrbitLocations({hidden=false}:{hidden?:boolean}) {
   }
   if(hidden)return null;
   return <>
+    {/* On touch screens, keep every saved destination accessible without
+        projecting additional floating labels across the Orbit sphere. */}
+    <nav className="orbit-mobile-quick-links" aria-label="Quick ARROW locations" onPointerDown={event=>event.stopPropagation()}>
+      <button type="button" className="orbit-mobile-next" onClick={()=>navigate(next?.href||'/waypoint/?tab=today')} aria-label={next?'Open next move: '+next.title:'Open your next move in Waypoint'} title={next?.title||'Open your next move'}>
+        <kbd>0</kbd><span>Next move</span>
+      </button>
+      {pins.map(pin=><button type="button" key={pin.number} onClick={()=>navigate(pin.href)} title={pin.title} aria-label={'Open quick location '+pin.number+': '+pin.title}>
+        <kbd>{pin.number}</kbd><span>{pin.title}</span>
+      </button>)}
+    </nav>
     <button className="orbit-extra-location orbit-smart-location" data-orbit-extra data-anchor=".04,.65,-.74" type="button" onClick={()=>navigate(next?.href||'/waypoint/?tab=today')} title={next?`${next.title} · ${next.date||'No date'} ${next.time||''} · ${next.reason}`:'Open your next move in Waypoint'}>
       <kbd>0</kbd><span><strong>What’s next</strong><small>{next?next.title:source==='loading'?'Checking your plans…':source==='unavailable'?'Open Waypoint':'You’re clear'}{next?.date?` · ${next.date}`:''}{next?.time?` ${next.time}`:''}</small></span>
     </button>
