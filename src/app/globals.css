@@ -4076,3 +4076,124 @@ button.command-connection-row:hover,
   .orbit-weather-location-geo { align-items:stretch; flex-direction:column; }
   .orbit-weather-location-geo button { width:100%; }
 }
+
+
+/* Integrated ARROW Beta mobile map, pinned-source module styling.
+   Show one compact row of actionable saved locations instead of projected
+   floating labels. Desktop Orbit keeps its original world navigation. */
+.orbit-mobile-quick-links { display:none; }
+
+@media (max-width:680px) {
+  /* Destination bubbles already navigate; the 4-icon route bar duplicates them. */
+  .orbit-app .world-shell .orbit-shortcuts { display:none!important; }
+
+  /* Extra locations are represented by real buttons in the mobile rail below,
+     rather than projected on top of the world and obscuring primary routes. */
+  .orbit-app .world-shell .orbit-extra-location { display:none!important; }
+  .orbit-app .world-shell .orbit-mobile-quick-links {
+    position:absolute;
+    z-index:52;
+    top:calc(148px + env(safe-area-inset-top));
+    left:max(12px,env(safe-area-inset-left));
+    right:max(12px,env(safe-area-inset-right));
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+    gap:6px;
+    min-height:50px;
+    padding:4px 6px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    background:var(--panel-strong);
+    color:var(--text);
+    box-shadow:0 6px 22px #0002;
+    overflow-x:auto;
+    overflow-y:hidden;
+    overscroll-behavior-x:contain;
+    scrollbar-width:none;
+    touch-action:pan-x;
+    user-select:none;
+    -webkit-user-select:none;
+  }
+  .orbit-app .orbit-mobile-quick-links::-webkit-scrollbar { display:none; }
+  .orbit-app .orbit-mobile-quick-links button {
+    display:inline-flex;
+    flex:0 0 auto;
+    min-width:0;
+    max-width:min(170px,52vw);
+    min-height:44px;
+    align-items:center;
+    gap:6px;
+    padding:7px 11px;
+    border:1px solid var(--line);
+    border-radius:10px;
+    background:rgb(var(--orbit-fg) / .035);
+    color:var(--text);
+    cursor:pointer;
+    text-align:left;
+    font-size:12px;
+    touch-action:manipulation;
+  }
+  .orbit-app .orbit-mobile-quick-links button:focus-visible {
+    outline:2px solid var(--arrow-accent-color,var(--text));
+    outline-offset:-2px;
+  }
+  .orbit-app .orbit-mobile-quick-links button kbd {
+    display:grid;
+    flex:0 0 22px;
+    width:22px;
+    height:24px;
+    place-items:center;
+    border-radius:6px;
+    background:rgb(var(--orbit-fg) / .1);
+    font:600 11px/1 system-ui,sans-serif;
+  }
+  .orbit-app .orbit-mobile-quick-links button span {
+    display:block;
+    min-width:0;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+    font-size:12px;
+  }
+
+  /* Map nodes retain their full accessible names, but display only landmark
+     icons until selected or keyboard-focused. This prevents label collisions
+     as the projected sphere rotates on narrow viewports. */
+  .orbit-app .world-shell .destination-node {
+    min-width:44px;
+    min-height:44px;
+    width:44px;
+    padding:0;
+    justify-content:center;
+  }
+  .orbit-app .world-shell .destination-node .node-copy { display:none; }
+  .orbit-app .world-shell .destination-node:is(.is-selected,:focus-visible) .node-copy {
+    position:absolute;
+    top:calc(100% + 5px);
+    left:50%;
+    display:block;
+    width:max-content;
+    max-width:110px;
+    margin:0;
+    padding:3px 5px;
+    text-align:center;
+    transform:translateX(-50%);
+    pointer-events:none;
+    white-space:nowrap;
+    overflow:hidden;
+    text-overflow:ellipsis;
+  }
+  .orbit-app .world-shell .destination-node:is(.is-selected,:focus-visible) .node-copy strong {
+    display:block;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    font-size:11px;
+    white-space:nowrap;
+  }
+
+  /* The welcome sequence must remain just the welcome and animated sphere. */
+  .orbit-app .world-shell:is(.intro-intro,.intro-collapsing) .orbit-mobile-quick-links {
+    display:none!important;
+  }
+}
