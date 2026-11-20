@@ -16,6 +16,7 @@ const RELAY_PRESETS = 'relay-dashboard-custom-presets-v1';
 type ArrowShell = {
   data?: (path: string, options?: { method?: string; headers?: Record<string, string>; body?: unknown; readOnly?: boolean }) => Promise<unknown>;
   openPanel?: (name: string, module?: string) => void;
+  openQuickRavin?: (module?: string, prompt?: string) => void;
   resolveHref?: (href: string) => string;
 };
 export function shell(): ArrowShell | undefined {
