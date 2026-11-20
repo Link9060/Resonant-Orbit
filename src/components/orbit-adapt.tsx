@@ -30,11 +30,13 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
   const [theme, setTheme] = useState<Identity>('core');
   const [view, setView] = useState<View>('orbit');
   const [owner, setOwner] = useState('guest');
-  const [selectedView, setSelectedView] = useState<View>('orbit');
-  const [transition, setTransition] = useState<'idle'|'switching-to-dashboard'|'dashboard-enter'|'dashboard-exit'|'switching-to-orbit'>('idle');
+  const [selectedView, setSelectedView] = useState<View | 'staff'>('orbit');
+  const [staffVisible,setStaffVisible] = useState(false);
+  const [transition, setTransition] = useState<'idle'|'switching-to-dashboard'|'dashboard-enter'|'dashboard-exit'|'switching-to-orbit'|'switching-to-staff'>('idle');
   const timers = useRef<number[]>([]);
   const stageRef = useRef<HTMLElement>(null);
   const dashboardButtonRef = useRef<HTMLButtonElement>(null);
+  const staffButtonRef = useRef<HTMLButtonElement>(null);
   const [origin, setOrigin] = useState({ x:'calc(100% - 173px)', y:'137px' });
   useEffect(() => {
     const sync = () => {
@@ -59,8 +61,39 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
     window.addEventListener('arrow:adaptchange',themeOnly);
     return () => { window.removeEventListener('storage',sync); window.removeEventListener('arrow:adaptchange',themeOnly); timers.current.forEach(window.clearTimeout); };
   },[]);
-  function choose(next: View) {
+  useEffect(() => {
+    let active=true;
+    const timers:number[]=[];
+    const discover=async(attempt=0)=>{
+      const api=(window as Window & {ArrowOS?:{staffRole?:()=>Promise<string>}}).ArrowOS;
+      if(!api?.staffRole){
+        if(attempt<16)timers.push(window.setTimeout(()=>void discover(attempt+1),300));
+        return;
+      }
+      try{
+        const role=await api.staffRole();
+        if(active)setStaffVisible(['owner','admin','moderator'].includes(role));
+      }catch{if(active)setStaffVisible(false);}
+    };
+    void discover();
+    const refresh=()=>void discover();
+    window.addEventListener('focus',refresh);
+    window.addEventListener('relay-role-preview-change',refresh);
+    return()=>{active=false;timers.forEach(window.clearTimeout);window.removeEventListener('focus',refresh);window.removeEventListener('relay-role-preview-change',refresh);};
+  },[]);
+  function choose(next: View | 'staff') {
     if (transition !== 'idle' || view === next) return;
+    if(next==='staff'){
+      if(!staffVisible)return;
+      setSelectedView('staff');setTransition('switching-to-staff');
+      const api=(window as Window & {ArrowOS?:{resolveHref?:(s:string)=>string}}).ArrowOS;
+      const href=api?.resolveHref?.('/orbit/staff/')||
+        (location.pathname.startsWith('/Resonant-Relay/')?'/Resonant-Relay/arrow/orbit/staff/':'/staff/');
+      const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches||
+        document.documentElement.dataset.arrowMotion==='reduce';
+      window.setTimeout(()=>location.assign(href),reduced?0:460);
+      return;
+    }
     const button = dashboardButtonRef.current?.getBoundingClientRect();
     const stage = stageRef.current?.getBoundingClientRect();
     if (button && stage) setOrigin({
@@ -95,7 +128,7 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
     }
   }
   return (
-    <main className="orbit-app" data-orbit-adapt={theme} data-orbit-view={view} data-orbit-selection={selectedView === 'widgets' ? 'dashboard' : 'orbit'} data-orbit-transition={transition} style={{ '--orbit-dashboard-origin-x':origin.x, '--orbit-dashboard-origin-y':origin.y } as CSSProperties}>
+    <main className="orbit-app" data-orbit-adapt={theme} data-orbit-view={view} data-orbit-selection={selectedView === 'widgets' ? 'dashboard' : selectedView === 'staff' ? 'staff' : 'orbit'} data-staff-visible={staffVisible ? 'true' : 'false'} data-orbit-transition={transition} style={{ '--orbit-dashboard-origin-x':origin.x, '--orbit-dashboard-origin-y':origin.y } as CSSProperties}>
       <header className="orbit-header">
         <div className="suite-lockup" aria-label="ARROW Orbit">
           <span className="arrow-mark" aria-hidden="true"><ArrowMarkIcon size={18}/></span>
@@ -108,6 +141,7 @@ export function OrbitAdapt({ children, destinationCount, liveRouteCount }: {
             <span>{destinationCount} centers</span><span>{liveRouteCount} available</span>
           </div>
           <div className="adapt-view-switch" role="group" aria-label="Orbit display">
+            {staffVisible && <button ref={staffButtonRef} type="button" aria-pressed={selectedView==='staff'} aria-disabled={transition!=='idle'} onClick={()=>choose('staff')}>Staff</button>}
             <button type="button" aria-pressed={selectedView==='orbit'} aria-disabled={transition!=='idle'} onClick={()=>choose('orbit')}>Orbit</button>
             <button ref={dashboardButtonRef} type="button" aria-pressed={selectedView==='widgets'} aria-disabled={transition!=='idle'} onClick={()=>choose('widgets')}>Dashboard</button>
           </div>

@@ -1900,3 +1900,49 @@
   border-color:#b4c0cf!important;
   cursor:not-allowed!important;
 }
+
+
+/* Staff / Orbit / Dashboard: one segmented navigation rail.
+   The Staff entrance travels in the opposite direction to Dashboard. */
+.orbit-app[data-staff-visible="true"] .adapt-view-switch {
+  display:grid!important;
+  grid-template-columns:repeat(3,minmax(0,1fr))!important;
+  width:clamp(178px,17vw,235px)!important;
+  min-width:178px!important;
+  max-width:235px!important;
+}
+.orbit-app[data-staff-visible="true"] .adapt-view-switch::before {
+  width:calc(33.333% - 2px)!important;
+  transform:translateX(0)!important;
+}
+.orbit-app[data-staff-visible="true"][data-orbit-selection="orbit"] .adapt-view-switch::before {
+  transform:translateX(100%)!important;
+}
+.orbit-app[data-staff-visible="true"][data-orbit-selection="dashboard"] .adapt-view-switch::before {
+  transform:translateX(200%)!important;
+}
+.orbit-app[data-staff-visible="true"] .adapt-view-switch button {
+  min-width:0;padding:8px 5px!important;font-size:11px!important;
+}
+.orbit-app[data-orbit-transition="switching-to-staff"] .orbit-stage {
+  animation:orbit-staff-mirror-out 460ms cubic-bezier(.4,0,.58,.2) both;
+  pointer-events:none;
+}
+@keyframes orbit-staff-mirror-out {
+  from {opacity:1;clip-path:circle(150vmax at 36px 64px);transform:translateX(0);}
+  to {opacity:.1;clip-path:circle(0 at 36px 64px);transform:translateX(-18px);}
+}
+@media(max-width:680px) {
+  .orbit-app[data-staff-visible="true"] .adapt-view-switch {
+    width:180px!important;min-width:180px!important;max-width:180px!important;
+  }
+  .orbit-app[data-staff-visible="true"] .adapt-view-switch button {font-size:10px!important;}
+}
+:root[data-arrow-motion="reduce"] .orbit-app[data-orbit-transition="switching-to-staff"] .orbit-stage {
+  animation:none!important;
+}
+@media(prefers-reduced-motion:reduce) {
+  :root:not([data-arrow-motion="full"]) .orbit-app[data-orbit-transition="switching-to-staff"] .orbit-stage {
+    animation:none!important;
+  }
+}
