@@ -56,10 +56,11 @@ function clock(time: string | null | undefined): string {
 function open(id: string) {
   if (id === 'quicklinks') { shell()?.openPanel?.('links', 'orbit'); return; }
   if (id === 'focus') { shell()?.openPanel?.('focus', 'orbit'); return; }
+  if (id === 'askravin' || id === 'ravinbrief') { if(shell()?.openQuickRavin){shell()?.openQuickRavin?.('orbit');return;} }
   window.location.assign(widgetUrl(id));
 }
 function ShortLink({ id, label }: { id: string; label: string }) {
-  return <a className="adapt-dashboard-link" href={widgetUrl(id)}>{label} ↗</a>;
+  return <a className="adapt-dashboard-link" href={widgetUrl(id)} onClick={event=>{if((id==='askravin'||id==='ravinbrief')&&shell()?.openQuickRavin){event.preventDefault();shell()?.openQuickRavin?.('orbit');}}}>{label} ↗</a>;
 }
 function Meter({ number, total }: { number: number; total: number }) {
   const percentage = total ? Math.round(100 * number / total) : 0;
@@ -436,7 +437,7 @@ export function OrbitDashboard() {
       case 'assignments': return <>{taskList(future,count)}{rows>=2 && <ShortLink id="tasks" label="View all tasks"/>}</>;
       case 'countdowns': return <>{next ? <><strong>{next.title}</strong><p>{next.event_date} · {clock(next.start_time)}</p></>:<p className="adapt-small-muted">No upcoming scheduled events.</p>}<ShortLink id="calendar" label="Open calendar"/></>;
       case 'ravinbrief': return <><div className="adapt-metrics"><Metric value={String(summary.tasks-summary.done)} label="Tasks left"/><Metric value={String(summary.unread)} label="Unread"/><Metric value={String(data.events.length)} label="Events"/></div><ShortLink id="ravinbrief" label="Open RAVIN"/></>;
-      case 'askravin': return compact ? <ShortLink id="askravin" label="Ask RAVIN"/> : <form className="adapt-note-form" onSubmit={e=>{e.preventDefault();if(!prompt.trim())return;window.location.assign(widgetUrl('askravin')+'?'+new URLSearchParams({from:'orbit',surface:'orbit',prompt:prompt.trim()}));}}><textarea maxLength={4000} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="Ask RAVIN…" aria-label="Ask RAVIN"/><button disabled={!prompt.trim()}>Continue in RAVIN ↗</button></form>;
+      case 'askravin': return compact ? <ShortLink id="askravin" label="Ask RAVIN"/> : <form className="adapt-note-form" onSubmit={e=>{e.preventDefault();if(!prompt.trim())return;if(shell()?.openQuickRavin){shell()?.openQuickRavin?.('orbit',prompt.trim());setPrompt('');}else window.location.assign(widgetUrl('askravin')+'?'+new URLSearchParams({from:'orbit',surface:'orbit',prompt:prompt.trim()}));}}><textarea maxLength={4000} value={prompt} onChange={e=>setPrompt(e.target.value)} placeholder="Ask RAVIN…" aria-label="Ask RAVIN"/><button disabled={!prompt.trim()}>Ask RAVIN</button></form>;
       default: return <p className="adapt-small-muted">This widget is awaiting its integration.</p>;
     }
   }
